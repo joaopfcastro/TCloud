@@ -66,8 +66,20 @@ patch_*.py
 TCloudMobile/test_*
 TCloudMobile/darken.py
 
-# Local agent memory/runtime, not part of the product repository
-agent-system/
+# Agent plan generator: publish the engine, not local runtime/history
+agent-system/*
+!agent-system/.env.example
+!agent-system/PLAN_TEMPLATE.md
+!agent-system/README_USO.md
+!agent-system/archive_feedback.py
+!agent-system/config.py
+!agent-system/memory_store.py
+!agent-system/rag.py
+!agent-system/register_plan.py
+!agent-system/requirements.txt
+agent-system/.venv/
+agent-system/final_md/
+agent-system/memory.json
 
 # Generated deployment mirror; root source is the canonical package
 deploy/src/
