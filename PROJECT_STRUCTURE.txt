@@ -1,0 +1,210 @@
+# ☁️ TCloud - Estrutura e Arquitetura Detalhada
+
+Este documento fornece um mergulho profundo na arquitetura técnica do TCloud, detalhando o funcionamento interno de streaming, gerenciamento de arquivos virtuais e integração com o Telegram.
+
+---
+
+## 🏗️ Arquitetura de Alto Nível
+
+O TCloud opera como um **VFS (Virtual File System)**. Ele desacopla a visualização dos arquivos (nomes, pastas, metadados) do armazenamento real dos dados.
+
+```mermaid
+graph TD
+    User((Usuário)) --> Web[Interface Web :8080]
+    User --> FTP[Servidor FTP :2121]
+    User --> FUSE[Drive Virtual MacOS]
+    
+    Web --> API[HTTP API Layer]
+    FTP --> FTPS[FTP Service]
+    FUSE --> FUSES[FUSE Driver]
+    
+    API & FTPS & FUSES --> FM[File Manager - Orquestrador]
+    
+    FM --> DB[(MongoDB - Metadados)]
+    FM --> Cache[(Disk Cache - LRU)]
+    FM --> TG[Telegram Manager - Armazenamento]
+    
+    TG --> Cloud((Telegram Cloud))
+```
+
+---
+
+## 📺 Streaming de Vídeo e Áudio (Deep Dive)
+
+O streaming é a funcionalidade mais complexa do TCloud, projetada para oferecer playback instantâneo mesmo com arquivos de Gigabytes armazenados no Telegram.
+
+### 1. Suporte a HTTP Range Requests
+Ao abrir um vídeo, o navegador não baixa o arquivo inteiro. Ele envia headers `Range: bytes=start-end`.
+- **Intercepção**: O `http_server.py` recebe o pedido e identifica o intervalo exato de bytes.
+- **Mapeamento de Chunks**: O `FileManager` consulta o MongoDB para saber em quais "chunks" do Telegram esse intervalo de bytes reside.
+- **Streaming Parcial**: O sistema baixa apenas os pedaços necessários do Telegram, entregando-os ao player em tempo real.
+
+### 2. Gerenciamento de Cache (LRU)
+Para evitar downloads repetidos e latência:
+- **Download em background**: Ao iniciar um vídeo, o TCloud inicia um download silencioso do arquivo completo para o cache local (`/staging/cache`).
+- **Serviço prioritário**: Se os bytes solicitados já estão no disco, eles são servidos instantaneamente. Se não, são baixados "just-in-time" do Telegram.
+- **Expulsão Inteligente**: O `DownloadCache` monitora o espaço em disco. Quando atinge o limite, remove os arquivos menos acessados recentemente (**Least Recently Used**).
+
+### 3. Transcodificação ao Vivo (FFmpeg Pipeline)
+Arquivos não nativos (MKV, AVI, etc.) ou quando o usuário seleciona uma trilha de áudio específica, acionam o pipeline de transcodificação:
+- **Comando**: `ffmpeg -i pipe:0 -c:v libx264 -preset ultrafast -f mp4 pipe:1`
+- **Pipes**: O TCloud alimenta o `stdin` do FFmpeg com dados vindos do Telegram e lê o `stdout` para enviar ao navegador.
+- **fMP4 (Fragmented MP4)**: O FFmpeg é configurado para gerar fragmentos (`movflags: frag_keyframe+empty_moov`). Isso permite que o vídeo comece a tocar imediatamente, sem que o arquivo final precise ter um tamanho fixo conhecido.
+- **Troca de Áudio**: O parâmetro `?audio=1` instrui o FFmpeg a mapear a trilha de áudio secundária durante a transcodificação.
+
+---
+
+## 📂 Sistema de Arquivos Virtual (VFS)
+
+### 1. Renomear e Mover (Atomicidade Virtual)
+Renomear um arquivo ou pasta no TCloud **não move nenhum dado no Telegram**.
+- **Arquivos**: Apenas o campo `path` e `filename` no MongoDB são atualizados.
+- **Pastas**: Quando uma pasta é renomeada, o TCloud realiza uma atualização recursiva via Regex no MongoDB, alterando o prefixo do `path` de todos os arquivos e subpastas contidos nela. Isso torna a operação instantânea, independente do tamanho da pasta.
+
+### 2. Normalização Unicode (NFC/NFD)
+Diferentes sistemas operacionais lidam com acentos de formas diferentes (ex: o 'á' no macOS é diferente do 'á' no Windows/Linux).
+- O `database.py` implementa uma lógica de busca robusta que tenta múltiplas normalizações (`NFC`, `NFD`) para garantir que links e acessos funcionem de forma transparente entre a Web e o Drive Virtual.
+
+---
+
+## ⬆️ Fluxo de Upload (Chunking)
+
+Para contornar os limites de tamanho do Telegram (2GB por arquivo):
+1. **Divisão**: Arquivos grandes são cortados em partes menores (ex: 20MB) definidas no `config.py`.
+2. **Upload Paralelo**: O `FileManager` usa múltiplos "Bots" do Telegram em paralelo para subir as partes simultaneamente, maximizando o uso da banda.
+3. **Consolidação**: O MongoDB salva a lista ordenada de `message_id` de cada parte. No download, o TCloud junta essas partes de forma transparente.
+
+---
+
+## 🛠️ Detalhamento dos Componentes Principais
+
+### `http_server.py`
+- Gerencia autenticação JWT.
+- Implementa endpoints de busca global indexada.
+- Controla o ciclo de vida dos processos FFmpeg para streaming.
+
+### `file_manager.py`
+- Calcula hashes para evitar duplicidade.
+- Coordena a extração de metadados (capas de álbum, duração, dimensões de vídeo) usando `ffprobe` e `mutagen`.
+- Gerencia o `upload_semaphore` para não sobrecarregar a conexão.
+
+### `telegram_client.py`
+- Gerencia o pool de sessões do Telegram.
+- Implementa lógica de re-tentativa (retry) em caso de erros de rede.
+- Lida com a criptografia e descriptografia das mensagens de mídia.
+
+### `fuse_drive.py`
+- Traduz chamadas de sistema (Read, Write, Readdir) para operações assíncronas do Python.
+- Permite que qualquer aplicativo (VLC, Finder, Office) interaja com o Telegram como se fosse um HD local.
+
+---
+
+## 🖥️ Lógica Detalhada do Frontend (`index.html`)
+
+O frontend é uma SPA (Single Page Application) construída com Vanilla JavaScript, HTML5 e CSS3. Ele gerencia o estado da aplicação, interações de usuário e comunica-se com o backend via API REST.
+
+### 1. Gerenciamento de Estado Core
+- **Modo Atual (`currentMode`)**: Alterna entre 'cloud' (VFS do Telegram) e 'local' (armazenamento do servidor).
+- **Navegação**: Mantém `currentPath` (diretório atual) e `currentItems` (lista de arquivos carregados).
+- **Seleção**: O array `selectedItems` rastreia múltiplos arquivos para operações em lote.
+- **Filas de Transferência**: `uploadQueue` e `downloadQueue` monitoram o progresso de arquivos em tempo real no navegador.
+- **Cache do Servidor**: `serverDownloads` sincroniza o status de arquivos sendo baixados do Telegram para o cache local do servidor ou via torrent.
+
+### 2. Player de Mídia e Legendas (Video.js)
+A função `openPlayer(item)` orquestra uma experiência premium de playback:
+- **Resolução de Capas (`resolvePlayerPoster`)**: Busca thumbnails dinamicamente.
+- **Menu de Legendas Unificado**: Um componente customizado que centraliza:
+    - **Legendas Embutidas**: Extraídas diretamente do stream (MP4/MKV).
+    - **Sidecar Files**: Arquivos `.srt` ou `.vtt` com o mesmo nome na pasta.
+    - **Upload Local**: Permite ao usuário arrastar uma legenda do computador para o player.
+    - **Busca no TCloud**: Interface para navegar e selecionar qualquer legenda armazenada no drive.
+- **Processamento de Idiomas**: `normalizeSubtitleValue` e `buildSubtitleLabel` limpam metadados técnicos para exibir nomes legíveis como "Português (Brasil) [Forced]".
+- **Troca de Áudio e Seeking**: Para arquivos transcodificados, o frontend gerencia o parâmetro `ss` (start time) e `audio` para permitir que o FFmpeg reinicie o stream na posição correta e com a trilha desejada.
+
+### 3. Operações de Arquivo e Clipboard
+- **Copiar/Recortar/Colar**: O `clipboard` armazena referências de arquivos. Ao colar (`performPaste`), o sistema decide entre:
+    - **Cloud -> Cloud**: Movimentação rápida de metadados.
+    - **Local -> Cloud (Import)**: Inicia o processo de upload para o Telegram a partir do servidor.
+    - **Resolução de Conflitos**: Diálogo interativo para "Manter Ambos" (renomeação automática) ou "Substituir".
+- **Drag & Drop**: Suporta tanto o upload de arquivos do Sistema Operacional quanto o movimento interno de arquivos entre pastas e breadcrumbs.
+
+### 4. Sistema de Aplicativos (Apps)
+- O TCloud permite estender funcionalidades via micro-frontends.
+- `loadApps()` e `openApp(app)` carregam estas interfaces em iframes protegidos.
+- **Segurança**: O `authToken` é passado via `postMessage` para garantir que apenas apps autorizados acessem os dados do usuário.
+
+### 5. Sincronização em Tempo Real
+- **Polling de Status**: O frontend consulta `/api/server_downloads` e `/api/import/status` a cada 2 segundos para atualizar barras de progresso sem recarregar a página.
+- **Busca Instantânea**: A `performSearch()` filtra os arquivos localmente ou via API, dependendo da visualização atual.
+
+---
+
+## 🎭 Sistema de Legendas (Subtitle Engine)
+
+O TCloud possui um motor de legendas robusto e inteligente, projetado para garantir que o usuário sempre tenha a melhor identificação possível das trilhas, evitando rótulos genéricos como "undefined".
+
+### 1. Descoberta e Candidatos (Backend - `http_server.py`)
+- **Trilhas Embutidas (Inband)**: O backend utiliza `ffprobe` para extrair metadados de todas as streams do tipo `subtitle`. Ele lê o `handler_name`, `title` e os campos de `disposition` (forced, default, etc.).
+- **Legendas Externas (Sidecar)**:
+    - **Algoritmo de Matching**: O `TCloud` usa um sistema de tokenização (`_tokenize_name`) e strips de acentos (`_strip_accents`) para comparar o nome do vídeo com os arquivos na mesma pasta.
+    - **Vínculo Probabilístico**: Se os tokens iniciais do arquivo de legenda batem exatamente com os tokens do vídeo, ele é considerado um "candidato sidecar".
+    - **Extração de Metadados via Nome**: O `_parse_sidecar_metadata` analisa tokens adicionais no nome do arquivo (ex: "forced", "sdh", "pt-BR") para preencher as flags de exibição automaticamente.
+
+### 2. Extração e Conversão On-the-Fly
+- **Pipeline FFmpeg**: Para trilhas embutidas em containers como MKV (que podem estar em formatos como ASS, SRT ou PGS), o endpoint `/api/subtitle` executa um pipeline que:
+    - Mapeia apenas a trilha selecionada.
+    - Converte em tempo real para o formato **WebVTT** (`-f webvtt pipe:1`).
+    - Serve o conteúdo via stream HTTP, permitindo que o Video.js carregue como um `<track>` nativo.
+
+### 3. Lógica de Rotulagem (Labeling Engine)
+A rotulagem ocorre em duas camadas para garantir resiliência:
+
+#### Backend Logic (`_build_subtitle_label`)
+Prioritiza os metadados na seguinte ordem:
+1. **Título da Trilha**: Se definido no arquivo original.
+2. **Filename Stem**: O nome do arquivo limpo (sem extensão e caminhos).
+3. **Source Stem**: Se for uma URL/API, extrai a parte final significativa da URL.
+- **Flags**: Adiciona sufixos como `[Forçada]`, `[SDH]`, `[Padrão]` baseando-se nos bits de disposição.
+
+#### Frontend Logic (`resolveSubtitleDisplayName`)
+O frontend atua como o filtro final (`index.html`):
+- **Normalização Agressiva**: A função `normalizeSubtitleValue` remove qualquer string que contenha "undefined", "null", "unknown" ou "subtitlehandler".
+- **Sanitização de Menus**: Ao montar o menu do player, o `sanitizeSubtitleLabel` garante que, se todos os metadados falharem, o usuário veja o nome real do arquivo envolvido na trilha, em vez de um texto genérico.
+
+### 4. Suporte a Legendas do Usuário
+- **Upload Local**: O player aceita drag-and-drop de arquivos SRT/VTT. O frontend converte SRT para VTT no navegador usando Blobs e URLs temporárias (`URL.createObjectURL`).
+- **Navegador VFS**: Integrado ao `SubtitleButton`, permite abrir um modal de seleção de arquivos direto do Telegram Cloud para associar ao vídeo atual sem sair do player.
+
+### 6. Referência Técnica de Funções (Subtitles)
+
+#### Backend (`http_server.py`)
+- **`_handle_api_subtitle_candidates`**: Ponto de entrada da API que coordena a descoberta de legendas embutidas (via ffprobe) e externas (via scan de diretório).
+- **`_discover_sidecar_subtitles`**: Função de busca que varre o sistema de arquivos (local ou VFS) em busca de arquivos com extensões de legenda.
+- **`_match_sidecar_basename`**: Implementa a lógica "fuzzy" de matching, comparando tokens do nome do vídeo com o arquivo de legenda para garantir que pertencem à mesma mídia.
+- **`_handle_api_subtitle`**: Realiza a extração binária e conversão para WebVTT usando um subprocesso FFmpeg com output em pipe.
+- **`_build_subtitle_label`**: Constrói a string de exibição combinando título, nome do arquivo e flags de acessibilidade.
+- **`_subtitle_source_stem`**: Utilitário que limpa caminhos de sistema e URLs para extrair apenas o "nome base" da legenda.
+
+#### Frontend (`index.html`)
+- **`openPlayer`**: Inicializa o player Video.js e dispara as requisições paralelas para buscar candidatos de legenda.
+- **`resolveSubtitleDisplayName`**: Decide qual o melhor nome para exibir no menu (Título > Label > Nome do Arquivo > Fonte).
+- **`buildSubtitleLabel`**: Orquestra a junção do nome resolvido com colchetes de metadados (`[Forçada]`, `[SDH]`, etc.).
+- **`sanitizeSubtitleLabel`**: Um "wrapper" de segurança que utiliza todas as estratégias de fallback para garantir que o usuário nunca veja um rótulo vazio ou "undefined".
+- **`normalizeSubtitleValue`**: Filtro crítico que invalida strings inúteis (placeholders de codecs ou erros de parsing) retornando vazio para acionar fallbacks.
+- **`getSubtitleSourceStem`**: Réplica da lógica de limpeza de nomes no lado do cliente para tratar URLs de Blobs e API.
+- **`addSidecarCandidate` / `addEmbeddedTrackCandidate`**: Funções que injetam as legendas descobertas no estado interno do player e na interface customizada.
+- **`handleLocalSubtitleFile`**: Gerencia a leitura de arquivos arrastados para o player, gerando Blobs VTT temporários.
+
+---
+
+### 5. Testes e Validação (`test_subtitle_labels.py`)
+Existe um conjunto de testes unitários dedicado a validar a lógica de geração de nomes, garantindo que:
+- Placeholders sejam filtrados corretamente.
+- Idiomas sejam normalizados (ex: `pt-BR` -> `Português`).
+- Flags de acessibilidade sejam anexadas de forma harmoniosa.
+
+---
+
+### Conclusão
+
+Este documento fornece um blueprint completo do ecossistema TCloud, desde os schemas de banco de dados de baixo nível até a orquestração complexa do frontend e mecânicas de streaming. Serve como a principal referência técnica para manutenção e expansão da plataforma.

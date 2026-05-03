@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "webtorrent": "^2.8.5",
+    "webtorrent-cli": "^5.1.3"
+  }
+}

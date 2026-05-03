@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estatísticas — TCloud App</title>
+    <!-- Phosphor Icons (same as TCloud) -->
+    <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.0.3/src/regular/style.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg: #1c1e26;
+            --bg-card: rgba(255, 255, 255, 0.03);
+            --border: rgba(255, 255, 255, 0.06);
+            --text: #e4e4e7;
+            --text-secondary: #71717a;
+            --accent: #6C5CE7;
+            --accent-soft: rgba(108, 92, 231, 0.15);
+            --green: #30D158;
+            --blue: #0A84FF;
+            --orange: #FF9F0A;
+            --radius: 10px;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            padding: 28px;
+            min-height: 100vh;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 6px;
+        }
+
+        .header i {
+            font-size: 22px;
+            color: var(--accent);
+        }
+
+        h1 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .subtitle {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 24px;
+        }
+
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 16px 18px;
+            transition: 0.2s;
+        }
+
+        .card:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .card-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+
+        .card-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .card-value.accent {
+            color: var(--accent);
+        }
+
+        .card-value.green {
+            color: var(--green);
+        }
+
+        .card-value.blue {
+            color: var(--blue);
+        }
+
+        .card-value.orange {
+            color: var(--orange);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+        .section {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 18px 20px;
+            margin-bottom: 16px;
+        }
+
+        .section h2 {
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 14px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .bar-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+
+        .bar-label {
+            width: 65px;
+            font-size: 12px;
+            color: var(--text-secondary);
+            text-align: right;
+            flex-shrink: 0;
+        }
+
+        .bar-track {
+            flex: 1;
+            height: 18px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .bar-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            background: linear-gradient(90deg, var(--accent), #a29bfe);
+            opacity: 0.85;
+        }
+
+        .bar-count {
+            width: 32px;
+            font-size: 12px;
+            color: var(--text-secondary);
+            text-align: right;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <i class="ph ph-chart-bar"></i>
+        <h1>Estatísticas do TCloud</h1>
+    </div>
+    <p class="subtitle">Visão geral do seu armazenamento</p>
+
+    <div id="content">
+        <div class="loading">Carregando dados...</div>
+    </div>
+
+    <script>
+        // TCloud App Auth: receive token securely via postMessage
+        let _parentToken = '';
+
+        function apiFetch(url, opts = {}) {
+            if (_parentToken) {
+                if (!opts.headers) opts.headers = {};
+                opts.headers['Authorization'] = `Bearer ${_parentToken}`;
+            }
+            return fetch(url, opts);
+        }
+
+        // Listen for auth token from parent
+        window.addEventListener('message', (event) => {
+            if (event.data && event.data.type === 'tcloud-auth') {
+                _parentToken = event.data.token || '';
+                loadStats(); // Reload with auth
+            }
+        });
+
+        // Start loading (works immediately if auth is disabled)
+        setTimeout(() => { if (!_parentToken) loadStats(); }, 500);
+
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+        }
+
+        async function loadStats() {
+            try {
+                const [usageRes, filesRes, favsRes, cachedRes] = await Promise.all([
+                    apiFetch('/api/usage'),
+                    apiFetch('/api/files?path=/'),
+                    apiFetch('/api/favorites'),
+                    apiFetch('/api/cached'),
+                ]);
+
+                const usage = await usageRes.json();
+                const files = await filesRes.json();
+                const favs = await favsRes.json();
+                const cached = await cachedRes.json();
+
+                const totalBytes = usage.total_bytes || 0;
+                const totalFiles = (files.items || []).filter(i => !i.is_directory).length;
+                const totalDirs = (files.items || []).filter(i => i.is_directory).length;
+                const totalFavs = (favs.items || []).length;
+                const totalCached = (cached.items || []).length;
+
+                // Count file types
+                const typeCounts = {};
+                (files.items || []).filter(i => !i.is_directory).forEach(item => {
+                    const ext = (item.name || item.path || '').split('.').pop().toLowerCase();
+                    const category = getCategory(ext);
+                    typeCounts[category] = (typeCounts[category] || 0) + 1;
+                });
+
+                const content = document.getElementById('content');
+                content.innerHTML = `
+                    <div class="cards">
+                        <div class="card">
+                            <div class="card-label">Espaço Utilizado</div>
+                            <div class="card-value accent">${formatBytes(totalBytes)}</div>
+                        </div>
+                        <div class="card">
+                            <div class="card-label">Arquivos na Raiz</div>
+                            <div class="card-value blue">${totalFiles}</div>
+                        </div>
+                        <div class="card">
+                            <div class="card-label">Pastas na Raiz</div>
+                            <div class="card-value green">${totalDirs}</div>
+                        </div>
+                        <div class="card">
+                            <div class="card-label">Favoritos</div>
+                            <div class="card-value orange">${totalFavs}</div>
+                        </div>
+                        <div class="card">
+                            <div class="card-label">No Servidor</div>
+                            <div class="card-value green">${totalCached}</div>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <h2>Tipos de Arquivo (raiz)</h2>
+                        <div id="bars"></div>
+                    </div>
+                `;
+
+                // Render bars
+                const barsEl = document.getElementById('bars');
+                const maxCount = Math.max(...Object.values(typeCounts), 1);
+                const sorted = Object.entries(typeCounts).sort((a, b) => b[1] - a[1]);
+
+                sorted.forEach(([cat, count]) => {
+                    const pct = (count / maxCount) * 100;
+                    barsEl.innerHTML += `
+                        <div class="bar-row">
+                            <div class="bar-label">${cat}</div>
+                            <div class="bar-track">
+                                <div class="bar-fill" style="width: ${pct}%"></div>
+                            </div>
+                            <div class="bar-count">${count}</div>
+                        </div>
+                    `;
+                });
+
+                if (sorted.length === 0) {
+                    barsEl.innerHTML = '<div style="color:var(--text-secondary); font-size:13px;">Nenhum arquivo encontrado</div>';
+                }
+
+            } catch (err) {
+                console.error('Stats error:', err);
+                document.getElementById('content').innerHTML =
+                    `<div class="loading">❌ Erro ao carregar: ${err.message}</div>`;
+            }
+        }
+
+        function getCategory(ext) {
+            const map = {
+                'Vídeos': ['mp4', 'mkv', 'avi', 'mov', 'webm', 'wmv', 'flv', 'm4v'],
+                'Áudio': ['mp3', 'flac', 'ogg', 'aac', 'wav', 'wma', 'm4a', 'opus'],
+                'Imagens': ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp', 'heic', 'ico'],
+                'Docs': ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'rtf', 'csv'],
+                'Código': ['py', 'js', 'html', 'css', 'json', 'xml', 'yaml', 'yml', 'sh', 'md'],
+                'Arquivos': ['zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'dmg', 'iso', 'pkg'],
+            };
+            for (const [category, exts] of Object.entries(map)) {
+                if (exts.includes(ext)) return category;
+            }
+            return 'Outros';
+        }
+
+    </script>
+</body>
+
+</html>

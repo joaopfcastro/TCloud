@@ -1,0 +1,17 @@
+node_modules/
+venv/
+.env
+sessions/
+staging/
+*.sqlite3
+__pycache__/
+*.pyc
+.DS_Store
+.git/
+.gitignore
+README.md
+docker-compose.yml
+fuse-t-macos-installer*.pkg
+TCloudMobile/
+*mac*
+brain/

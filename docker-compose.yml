@@ -1,0 +1,17 @@
+services:
+  tcloud:
+    build: .
+    container_name: tcloud
+    restart: unless-stopped
+    ports:
+      - "${FTP_PORT:-2121}:2121"
+      - "60000-60100:60000-60100"
+      - "${HTTP_PORT:-8080}:8080"
+      - "${WEBDAV_PORT:-8085}:8085"
+    env_file:
+      - .env
+    environment:
+      - TCLOUD_RUNTIME_DIR=/app/staging
+    volumes:
+      - ./sessions:/app/sessions
+      - ./staging:/app/staging

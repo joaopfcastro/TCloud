@@ -1,0 +1,81 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environment
+venv/
+.venv/
+env/
+agent-system/.venv/
+
+# Environment
+.env
+*.env
+!.env.example
+agent-system/.env
+deploy/.env
+
+# Staging / temp files
+staging/
+tmp/
+cache/
+agent-system/output/
+agent-system/scratch/
+agent-system/vector_store/
+deploy/backup_pre_*/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Telethon sessions
+*.session
+*.session-journal
+
+# Logs
+*.log
+logs/
+
+# Dependencies
+node_modules/
+TCloudMobile/node_modules/
+
+# Nested/local repositories and Expo build state
+TCloudMobile/
+TCloudMobile/.git/
+TCloudMobile/.expo/
+TCloudMobile/android/.gradle/
+TCloudMobile/android/app/build/
+TCloudMobile/android/build/
+
+# Tests and one-off diagnostics excluded from publication package
+test_*
+*_test.*
+debug.js
+drag_test.js
+fix.js
+patch_*.py
+TCloudMobile/test_*
+TCloudMobile/darken.py
+
+# Local agent memory/runtime, not part of the product repository
+agent-system/
+
+# Generated deployment mirror; root source is the canonical package
+deploy/src/
+
+# Historical local plans, not required to run the project
+Plano*.md
+Mapeamento_Funcional_Web_vs_Mobile.md
+
+# OS
+.DS_Store
+Thumbs.db

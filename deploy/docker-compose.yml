@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  tcloud:
+    build:
+      context: ./src
+    container_name: tcloud_orangepi
+    restart: unless-stopped
+    ports:
+      - "${HTTP_PORT:-8080}:${HTTP_PORT:-8080}"
+    volumes:
+      - ./data/staging:/app/data/staging
+      - ./data/logs:/app/data/logs
+      - ./sessions:/app/sessions
+    env_file:
+      - .env
+    environment:
+      # Desativa especificamente o modo FTP/FUSE (Acesso somente Web UI / Mobile App)
+      - FTP_ENABLED=false
+      - FUSE_ENABLED=false
+      - TCLOUD_RUNTIME_DIR=/app/data/staging

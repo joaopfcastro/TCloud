@@ -1,0 +1,8 @@
+{
+    "id": "statistics",
+    "name": "Estatísticas",
+    "icon": "ph-chart-bar",
+    "description": "Mostra estatísticas de uso do TCloud",
+    "version": "1.0.0",
+    "author": "TCloud Team"
+}

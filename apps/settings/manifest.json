@@ -1,0 +1,42 @@
+{
+  "id": "settings",
+  "name": "Configurações",
+  "icon": "ph-gear-six",
+  "description": "Central de configuração, diagnóstico e visão geral do TCloud",
+  "version": "1.0.0",
+  "author": "TCloud Team",
+  "order": 0,
+  "default": true,
+  "featured": true,
+  "category": "system",
+  "system": true,
+  "protected": true,
+  "trust_level": "system",
+  "capabilities": [
+    "settings.read",
+    "settings.write",
+    "diagnostics.read",
+    "shell.preferences"
+  ],
+  "requested_permissions": [
+    "settings.read",
+    "settings.write",
+    "diagnostics.read",
+    "apps.read",
+    "apps.install",
+    "apps.update",
+    "apps.uninstall",
+    "apps.permissions.read",
+    "apps.permissions.write",
+    "logs.read",
+    "shell.preferences.read",
+    "shell.preferences.write"
+  ],
+  "functions": [
+    "apps.list",
+    "apps.getPermissions",
+    "diagnostics.status",
+    "shell.showToast"
+  ],
+  "accent_color": "#0A84FF"
+}
