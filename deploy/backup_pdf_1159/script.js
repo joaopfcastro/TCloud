@@ -14,12 +14,6 @@ const PDF_TOOLS_PREFERENCE_VALUES = {
 };
 const PDF_SPREAD_GAP = 18;
 const PDF_CONTINUOUS_RENDER_MARGIN = "1400px 0px";
-const PDF_VIEWER_STATE = {
-  IDLE: "idle",
-  LOADING: "loading",
-  READY: "ready",
-  ERROR: "error",
-};
 ensurePdfRuntimeCompatibility();
 const initialPreferences = loadPdfToolsPreferences();
 
@@ -56,7 +50,6 @@ const app = {
   textStatusReason: "",
   thumbsCollapsed: initialPreferences.thumbsCollapsed,
   externalTabs: false,
-  viewerState: PDF_VIEWER_STATE.IDLE,
 };
 
 const els = {
@@ -73,7 +66,7 @@ const els = {
   currentPath: document.getElementById("current-path"),
   thumbs: document.getElementById("thumbs"),
   stage: document.getElementById("page-stage"),
-  documentHost: document.getElementById("pdf-viewer") || document.getElementById("document-host"),
+  documentHost: document.getElementById("document-host"),
   pageLayer: null,
   canvas: null,
   textLayer: null,
@@ -141,10 +134,6 @@ const PDF_FIND_MIN_QUERY_CHARS = 2;
 const PDF_FIND_MAX_RESULTS = 5000;
 const PDF_FIND_MAX_MATCHES_PER_PAGE = 50;
 const PDF_FIND_DEBOUNCE_MS = 220;
-
-const toolbarState = {
-  zoom: 1,
-};
 
 function createSearchState() {
   return {
@@ -230,31 +219,8 @@ function toolbarMode() {
   return app.tabs.length > 0 ? "reader" : "home";
 }
 
-function setViewerState(state, session = getActiveSession()) {
-  const normalized = Object.values(PDF_VIEWER_STATE).includes(state) ? state : PDF_VIEWER_STATE.IDLE;
-  app.viewerState = normalized;
-  els.shell.dataset.viewerState = normalized;
-  els.stage.dataset.viewerState = normalized;
-  els.documentHost.dataset.viewerState = normalized;
-  if (session?.elements?.view) session.elements.view.dataset.viewerState = normalized;
-}
-
-function rememberToolbarZoom(value) {
-  const zoom = Number(value);
-  if (Number.isFinite(zoom) && zoom > 0) toolbarState.zoom = zoom;
-  return toolbarState.zoom;
-}
-
-function applySessionZoom(session, value) {
-  if (!session) return toolbarState.zoom;
-  session.zoom = Math.max(0.45, Math.min(3.5, Number(value) || toolbarState.zoom || 1));
-  rememberToolbarZoom(session.zoom);
-  return session.zoom;
-}
-
 function syncEmptyState() {
-  const hasActiveDocument = app.tabs.length > 0 || Boolean(getActiveSession()?.pdf) || Boolean(getVisibleSession()?.pdf);
-  const shouldShow = !hasActiveDocument && app.viewerState !== PDF_VIEWER_STATE.LOADING && app.viewerState !== PDF_VIEWER_STATE.READY;
+  const shouldShow = app.tabs.length === 0;
   els.empty.classList.toggle("hidden", !shouldShow);
   els.shell.classList.toggle("no-document", shouldShow);
   els.shell.dataset.toolbarMode = toolbarMode();
@@ -286,8 +252,7 @@ function syncLegacyDocumentState(session = getActiveSession()) {
   app.pdf = session?.pdf || null;
   app.page = session?.page || 1;
   app.totalPages = session?.totalPages || 0;
-  app.zoom = session?.zoom || toolbarState.zoom || 1;
-  if (session?.zoom) rememberToolbarZoom(session.zoom);
+  app.zoom = session?.zoom || 1;
   app.fitMode = session?.fitMode || "page";
   app.renderTask = session?.renderTask || null;
   app.textLayerTask = session?.textLayerTask || null;
@@ -411,7 +376,7 @@ function createDocumentSession(tab) {
     pdf: null,
     page: 1,
     totalPages: 0,
-    zoom: toolbarState.zoom || 1,
+    zoom: 1,
     fitMode: "page",
     renderGeneration: 0,
     renderTask: null,
@@ -460,7 +425,6 @@ function setDocumentHostVisibility(documentKey, options = {}) {
   app.documents.forEach((session) => {
     session.elements.view.classList.toggle("active", session.documentKey === app.visibleKey);
   });
-  if (target) setViewerState(target.status === "ready" ? PDF_VIEWER_STATE.READY : PDF_VIEWER_STATE.LOADING, target);
 }
 
 function activateSession(documentKey, options = {}) {
@@ -471,7 +435,6 @@ function activateSession(documentKey, options = {}) {
   }
   if (!session) {
     syncLegacyDocumentState(null);
-    setViewerState(PDF_VIEWER_STATE.IDLE);
     syncEmptyState();
     updateToolbar();
     return null;
@@ -1128,15 +1091,11 @@ async function loadActiveTab() {
 
 async function ensureSessionLoaded(session) {
   if (!session || session.destroyed) return null;
-  if (session.status === "ready" && session.pdf) {
-    if (session.documentKey === app.activeKey) setViewerState(PDF_VIEWER_STATE.READY, session);
-    return session;
-  }
+  if (session.status === "ready" && session.pdf) return session;
   if (session.loadPromise) return session.loadPromise;
 
   session.status = "loading";
   session.error = null;
-  if (session.documentKey === app.activeKey) setViewerState(PDF_VIEWER_STATE.LOADING, session);
   setDocumentLoadingText(session, "Preparando documento");
   session.elements.view.classList.remove("load-error");
   session.elements.view.classList.add("loading", "loading-document");
@@ -1186,11 +1145,11 @@ async function ensureSessionLoaded(session) {
         const viewport = getPageViewport(page, session, session.page, 1);
         const spreadFactor = app.preferences.pageSpread === "double" ? 2 : 1;
         const available = Math.max(320, els.stage.clientWidth - 72 - (spreadFactor > 1 ? PDF_SPREAD_GAP : 0));
-        applySessionZoom(session, available / (viewport.width * spreadFactor));
+        session.zoom = Math.max(0.45, Math.min(3.5, available / (viewport.width * spreadFactor)));
       } else if (session.fitMode === "custom") {
-        applySessionZoom(session, savedState.zoom || toolbarState.zoom || session.zoom || 1);
+        session.zoom = Math.max(0.45, Math.min(3.5, Number(savedState.zoom || 1)));
       } else {
-        applySessionZoom(session, await computeFitPageZoom(session, session.page));
+        session.zoom = await computeFitPageZoom(session, session.page);
       }
       markPdfPerf("document:fit-ready", { documentKey: session.documentKey, zoom: session.zoom });
       await renderPage(session, session.page);
@@ -1202,7 +1161,6 @@ async function ensureSessionLoaded(session) {
       session.elements.view.classList.remove("loading", "loading-document", "rendering-page", "load-error");
       session.elements.view.classList.add("has-render");
       if (session.documentKey === app.activeKey) {
-        setViewerState(PDF_VIEWER_STATE.READY, session);
         syncLegacyDocumentState(session);
         updateToolbar();
       }
@@ -1210,7 +1168,6 @@ async function ensureSessionLoaded(session) {
     } catch (error) {
       session.status = "error";
       session.error = error;
-      if (session.documentKey === app.activeKey) setViewerState(PDF_VIEWER_STATE.ERROR, session);
       session.elements.view.classList.remove("loading", "loading-document", "rendering-page");
       session.elements.view.classList.add("load-error");
       setDocumentLoadingText(session, "Nao foi possivel abrir");
@@ -1291,7 +1248,6 @@ function clearRenderState(removeTabs = true) {
     app.visibleKey = "";
     renderTabs();
   }
-  if (!app.tabs.length) setViewerState(PDF_VIEWER_STATE.IDLE);
   syncLegacyDocumentState(getActiveSession());
   syncEmptyState();
   updateToolbar();
@@ -1303,7 +1259,6 @@ function clearDocument() {
   if (!app.tabs.length) {
     app.activeKey = "";
     app.visibleKey = "";
-    setViewerState(PDF_VIEWER_STATE.IDLE);
   }
   syncEmptyState();
   showThumbsForSession(null);
@@ -2678,7 +2633,7 @@ async function fitPageWidth(session = getActiveSession()) {
   const viewport = getPageViewport(page, session, session.page, 1);
   const spreadFactor = app.preferences.pageSpread === "double" ? 2 : 1;
   const available = Math.max(320, els.stage.clientWidth - 72 - (spreadFactor > 1 ? PDF_SPREAD_GAP : 0));
-  applySessionZoom(session, available / (viewport.width * spreadFactor));
+  session.zoom = Math.max(0.45, Math.min(3.5, available / (viewport.width * spreadFactor)));
   syncLegacyDocumentState(session);
   await renderPage(session, session.page);
 }
@@ -2701,7 +2656,7 @@ async function computeFitPageZoom(sessionOrPageNumber = getActiveSession(), mayb
 async function fitPageToView(session = getActiveSession()) {
   if (!session?.pdf) return;
   session.fitMode = "page";
-  applySessionZoom(session, await computeFitPageZoom(session, session.page));
+  session.zoom = await computeFitPageZoom(session, session.page);
   syncLegacyDocumentState(session);
   await renderPage(session, session.page);
 }
@@ -2742,7 +2697,7 @@ async function rotateCurrentPageRight(session = getActiveSession()) {
     teardownContinuousView(session, { keepNodes: false });
   }
   if (app.presentationActive || session.fitMode === "page") {
-    applySessionZoom(session, await computeFitPageZoom(session, pageNumber));
+    session.zoom = await computeFitPageZoom(session, pageNumber);
     syncLegacyDocumentState(session);
     await renderPage(session, pageNumber);
   } else if (session.fitMode === "width") {
@@ -2786,7 +2741,7 @@ async function exitPresentationMode() {
   if (app.presentationZoomBefore) {
     const session = getActiveSession();
     if (session) {
-      applySessionZoom(session, app.presentationZoomBefore);
+      session.zoom = app.presentationZoomBefore;
       session.fitMode = app.presentationFitModeBefore || "custom";
       syncLegacyDocumentState(session);
     }
@@ -3049,13 +3004,13 @@ async function goToPage(pageNumber, session = getActiveSession()) {
     return;
   }
   if (app.presentationActive || session.fitMode === "page") {
-    applySessionZoom(session, await computeFitPageZoom(session, target));
+    session.zoom = await computeFitPageZoom(session, target);
   } else if (session.fitMode === "width") {
     const page = await session.pdf.getPage(target);
     const viewport = getPageViewport(page, session, target, 1);
     const spreadFactor = app.preferences.pageSpread === "double" ? 2 : 1;
     const available = Math.max(320, els.stage.clientWidth - 72 - (spreadFactor > 1 ? PDF_SPREAD_GAP : 0));
-    applySessionZoom(session, available / (viewport.width * spreadFactor));
+    session.zoom = Math.max(0.45, Math.min(3.5, available / (viewport.width * spreadFactor)));
   }
   syncLegacyDocumentState(session);
   await renderPage(session, target);
@@ -3149,21 +3104,21 @@ function handlePageKeyboard(event) {
   } else if (key === "+" || key === "=") {
     event.preventDefault();
     if (!session) return;
-    applySessionZoom(session, session.zoom + 0.15);
+    session.zoom = Math.min(3.5, session.zoom + 0.15);
     session.fitMode = "custom";
     syncLegacyDocumentState(session);
     renderPage(session, session.page);
   } else if (key === "-") {
     event.preventDefault();
     if (!session) return;
-    applySessionZoom(session, session.zoom - 0.15);
+    session.zoom = Math.max(0.45, session.zoom - 0.15);
     session.fitMode = "custom";
     syncLegacyDocumentState(session);
     renderPage(session, session.page);
   } else if (key === "0") {
     event.preventDefault();
     if (!session) return;
-    applySessionZoom(session, 1);
+    session.zoom = 1;
     session.fitMode = "custom";
     syncLegacyDocumentState(session);
     renderPage(session, session.page);
@@ -3332,7 +3287,7 @@ function wireEvents() {
   document.getElementById("zoom-out").onclick = async () => {
     const session = getActiveSession();
     if (!session) return;
-    applySessionZoom(session, session.zoom - 0.15);
+    session.zoom = Math.max(0.5, session.zoom - 0.15);
     session.fitMode = "custom";
     syncLegacyDocumentState(session);
     await renderPage(session, session.page);
@@ -3340,7 +3295,7 @@ function wireEvents() {
   document.getElementById("zoom-in").onclick = async () => {
     const session = getActiveSession();
     if (!session) return;
-    applySessionZoom(session, session.zoom + 0.15);
+    session.zoom = Math.min(3, session.zoom + 0.15);
     session.fitMode = "custom";
     syncLegacyDocumentState(session);
     await renderPage(session, session.page);
@@ -3348,7 +3303,7 @@ function wireEvents() {
   document.getElementById("zoom-reset").onclick = async () => {
     const session = getActiveSession();
     if (!session) return;
-    applySessionZoom(session, 1);
+    session.zoom = 1;
     session.fitMode = "custom";
     syncLegacyDocumentState(session);
     await renderPage(session, session.page);
@@ -3435,7 +3390,7 @@ function wireEvents() {
         const previousZoom = app.presentationZoomBefore;
         app.presentationZoomBefore = null;
         if (session) {
-          applySessionZoom(session, previousZoom);
+          session.zoom = previousZoom;
           session.fitMode = app.presentationFitModeBefore || "custom";
           syncLegacyDocumentState(session);
           renderPage(session, session.page).catch(showError);
@@ -3492,7 +3447,7 @@ async function handleShellCommand(command, payload = {}) {
   if (command === "zoomOut") {
     const session = getActiveSession();
     if (!session) return undefined;
-    applySessionZoom(session, session.zoom - 0.15);
+    session.zoom = Math.max(0.5, session.zoom - 0.15);
     session.fitMode = "custom";
     syncLegacyDocumentState(session);
     return renderPage(session, session.page);
@@ -3500,7 +3455,7 @@ async function handleShellCommand(command, payload = {}) {
   if (command === "zoomIn") {
     const session = getActiveSession();
     if (!session) return undefined;
-    applySessionZoom(session, session.zoom + 0.15);
+    session.zoom = Math.min(3, session.zoom + 0.15);
     session.fitMode = "custom";
     syncLegacyDocumentState(session);
     return renderPage(session, session.page);
@@ -3508,7 +3463,7 @@ async function handleShellCommand(command, payload = {}) {
   if (command === "zoomReset") {
     const session = getActiveSession();
     if (!session) return undefined;
-    applySessionZoom(session, 1);
+    session.zoom = 1;
     session.fitMode = "custom";
     syncLegacyDocumentState(session);
     return renderPage(session, session.page);
