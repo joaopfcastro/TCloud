@@ -1293,7 +1293,7 @@
 
         /* Context Menu */
         .context-menu {
-            position: absolute;
+            position: fixed;
             background: rgba(30, 30, 30, 0.95);
             backdrop-filter: blur(10px);
             border: 1px solid var(--border);
@@ -1305,6 +1305,7 @@
             display: none;
             z-index: 1000;
             box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+            overflow-y: auto;
         }
 
         .context-item {
@@ -9539,6 +9540,48 @@
         let contextMenuTarget = null;
         let backgroundContextPath = null;
 
+        function positionContextMenu(event, menu, container = null) {
+            const padding = 8;
+            const targetContainer = container
+                || event.target?.closest?.('#app-window')
+                || document.getElementById('app-window');
+            const containerRect = targetContainer?.getBoundingClientRect?.() || {
+                left: 0,
+                top: 0,
+                right: window.innerWidth,
+                bottom: window.innerHeight,
+                width: window.innerWidth,
+                height: window.innerHeight,
+            };
+            const bounds = {
+                left: Math.max(padding, containerRect.left + padding),
+                top: Math.max(padding, containerRect.top + padding),
+                right: Math.min(window.innerWidth - padding, containerRect.right - padding),
+                bottom: Math.min(window.innerHeight - padding, containerRect.bottom - padding),
+            };
+            const availableWidth = Math.max(0, bounds.right - bounds.left);
+            const availableHeight = Math.max(0, bounds.bottom - bounds.top);
+            menu.scrollTop = 0;
+            menu.style.maxWidth = `${availableWidth}px`;
+            menu.style.maxHeight = `${availableHeight}px`;
+
+            const menuRect = menu.getBoundingClientRect();
+            const menuWidth = Math.min(menuRect.width, availableWidth);
+            const menuHeight = Math.min(menuRect.height, availableHeight);
+            let x = event.clientX;
+            let y = event.clientY;
+
+            if (x + menuWidth > bounds.right) x = event.clientX - menuWidth;
+            if (y + menuHeight > bounds.bottom) y = event.clientY - menuHeight;
+
+            x = Math.min(Math.max(x, bounds.left), Math.max(bounds.left, bounds.right - menuWidth));
+            y = Math.min(Math.max(y, bounds.top), Math.max(bounds.top, bounds.bottom - menuHeight));
+
+            menu.style.left = `${Math.round(x)}px`;
+            menu.style.top = `${Math.round(y)}px`;
+            menu.style.visibility = 'visible';
+        }
+
         function showContextMenu(e, item) {
             e.preventDefault(); // IMPORTANTE: Impede o menu nativo neste nível individual
             e.stopPropagation(); // Impede de borbulhar para o file-view geral!
@@ -9651,19 +9694,7 @@
 
                 menu.querySelectorAll('.context-sep').forEach(s => s.style.display = 'none');
 
-                let x = e.pageX;
-                let y = e.pageY;
-
-                if (x + menu.offsetWidth > window.innerWidth) {
-                    x = window.innerWidth - menu.offsetWidth - 10;
-                }
-                if (y + menu.offsetHeight > window.innerHeight) {
-                    y = window.innerHeight - menu.offsetHeight - 10;
-                }
-
-                menu.style.left = x + 'px';
-                menu.style.top = y + 'px';
-                menu.style.visibility = 'visible';
+                positionContextMenu(e, menu);
                 return;
             }
 
@@ -9820,20 +9851,7 @@
                 pasteBtn.style.pointerEvents = 'none';
             }
 
-            // Boundary collision detection AFTER all items are shown/hidden
-            let x = e.pageX;
-            let y = e.pageY;
-
-            if (x + menu.offsetWidth > window.innerWidth) {
-                x = window.innerWidth - menu.offsetWidth - 10;
-            }
-            if (y + menu.offsetHeight > window.innerHeight) {
-                y = window.innerHeight - menu.offsetHeight - 10;
-            }
-
-            menu.style.left = x + 'px';
-            menu.style.top = y + 'px';
-            menu.style.visibility = 'visible';
+            positionContextMenu(e, menu);
         }
 
 
@@ -9906,20 +9924,7 @@
                 seps.forEach(s => s.style.display = '');
             }
 
-            // Boundary collision detection AFTER all items are shown/hidden
-            let x = e.pageX;
-            let y = e.pageY;
-
-            if (x + menu.offsetWidth > window.innerWidth) {
-                x = window.innerWidth - menu.offsetWidth - 10;
-            }
-            if (y + menu.offsetHeight > window.innerHeight) {
-                y = window.innerHeight - menu.offsetHeight - 10;
-            }
-
-            menu.style.left = x + 'px';
-            menu.style.top = y + 'px';
-            menu.style.visibility = 'visible';
+            positionContextMenu(e, menu);
         }
 
         // Global click to close menus
