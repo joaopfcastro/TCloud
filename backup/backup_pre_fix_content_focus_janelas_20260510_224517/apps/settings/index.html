@@ -1,0 +1,3230 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configurações — TCloud</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.0.3/src/regular/style.css">
+    <style>
+        :root {
+            --bg-app: #1e1e1e;
+            --bg-sidebar: rgba(40, 40, 40, 0.6);
+            --bg-surface: rgba(255, 255, 255, 0.05);
+            --bg-header: rgba(50, 50, 50, 0.7);
+            --border: rgba(255, 255, 255, 0.08);
+            --text-primary: #ffffff;
+            --text-secondary: rgba(255, 255, 255, 0.6);
+            --accent: #0a84ff;
+            --accent-hover: #0071e3;
+            --danger: #ff453a;
+            --success: #30d158;
+            --warning: #ff9f0a;
+            --selection: rgba(10, 132, 255, 0.25);
+            --hover: rgba(255, 255, 255, 0.08);
+            --glass: blur(25px) saturate(190%);
+            --radius-window: 12px;
+            --radius-item: 8px;
+            --shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+            --blue-gradient: linear-gradient(135deg, #0a84ff 0%, #0071e3 100%);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            margin: 0;
+            min-height: 100%;
+            background: var(--bg-app);
+            color: var(--text-primary);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            overscroll-behavior: none;
+        }
+
+        body {
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: var(--bg-app);
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        body.modal-open {
+            overflow: hidden;
+        }
+
+        button,
+        input,
+        textarea,
+        select {
+            font: inherit;
+        }
+
+        .page {
+            min-height: 100vh;
+            display: grid;
+            grid-template-columns: 260px minmax(0, 1fr);
+            background:
+                linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.01)),
+                var(--bg-app);
+            overscroll-behavior: none;
+        }
+
+        .sidebar {
+            background: var(--bg-sidebar);
+            backdrop-filter: var(--glass);
+            -webkit-backdrop-filter: var(--glass);
+            border-right: 1px solid var(--border);
+            padding: 18px 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 4px 8px 0;
+        }
+
+        .brand-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            display: grid;
+            place-items: center;
+            background: linear-gradient(135deg, rgba(10, 132, 255, 0.95), rgba(10, 132, 255, 0.45));
+            box-shadow: 0 10px 24px rgba(10, 132, 255, 0.2);
+            color: #fff;
+            font-size: 20px;
+        }
+
+        .brand h1 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+        }
+
+        .brand p {
+            margin: 4px 0 0;
+            color: var(--text-secondary);
+            font-size: 12px;
+        }
+
+        .nav-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .nav-label {
+            padding: 0 10px 6px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .nav button {
+            width: 100%;
+            border: 1px solid transparent;
+            border-radius: var(--radius-item);
+            padding: 10px;
+            background: transparent;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            text-align: left;
+            transition: background 0.2s ease, border-color 0.2s ease, transform 0.14s ease, box-shadow 0.14s ease, opacity 0.2s ease;
+        }
+
+        .nav button:hover {
+            background: var(--hover);
+        }
+
+        .nav button.active {
+            background: var(--blue-gradient);
+            color: #fff;
+            box-shadow: 0 4px 12px rgba(10, 132, 255, 0.25);
+        }
+
+        .nav button i {
+            font-size: 16px;
+            opacity: 0.84;
+        }
+
+        .nav span {
+            flex: 1;
+        }
+
+        .nav-badge {
+            font-size: 10px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .sidebar-footer {
+            margin-top: auto;
+            padding: 10px;
+            border-top: 1px solid var(--border);
+            color: var(--text-secondary);
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .content {
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+            min-width: 0;
+        }
+
+        .section {
+            display: none;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        .panel,
+        .surface {
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-window);
+            box-shadow: var(--shadow);
+            backdrop-filter: var(--glass);
+            -webkit-backdrop-filter: var(--glass);
+        }
+
+        .panel {
+            padding: 24px;
+        }
+
+        .hero {
+            display: grid;
+            gap: 18px;
+            margin-bottom: 22px;
+            padding: 2px 0 18px;
+            border: none;
+            background: transparent;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .hero-copy {
+            min-width: 0;
+            max-width: 760px;
+        }
+
+        .hero h2 {
+            margin: 0 0 10px;
+            font-size: 32px;
+            font-weight: 700;
+            letter-spacing: -0.03em;
+            line-height: 1.04;
+            white-space: normal;
+            text-wrap: balance;
+        }
+
+        .hero p {
+            margin: 0;
+            color: var(--text-secondary);
+            font-size: 15px;
+            line-height: 1.7;
+            max-width: 68ch;
+            text-wrap: pretty;
+        }
+
+        .hero p strong {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        .hero-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: flex-start;
+            min-width: 0;
+            width: 100%;
+            align-items: center;
+        }
+
+        .button {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--text-primary);
+            padding: 10px 14px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            white-space: nowrap;
+            line-height: 1.1;
+            flex-shrink: 0;
+            min-width: 0;
+            transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.14s ease;
+        }
+
+        .button i {
+            font-size: 15px;
+            line-height: 1;
+            flex: 0 0 auto;
+        }
+
+        .button .button-label {
+            min-width: 0;
+            display: block;
+        }
+
+        .button.icon-leading {
+            gap: 10px;
+        }
+
+        .button.cta-primary,
+        .button.cta-secondary {
+            min-height: 44px;
+            padding: 0 18px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            max-width: 100%;
+        }
+
+        .button.cta-primary {
+            min-inline-size: 176px;
+        }
+
+        .button.cta-secondary {
+            min-inline-size: 154px;
+        }
+
+        .button:hover {
+            background: var(--hover);
+        }
+
+        .button:active {
+            transform: translateY(1px) scale(0.98);
+        }
+
+        .button.is-busy {
+            background: rgba(10, 132, 255, 0.14);
+            border-color: rgba(10, 132, 255, 0.26);
+            box-shadow: 0 0 0 1px rgba(10, 132, 255, 0.1);
+        }
+
+        .button.primary {
+            background: var(--blue-gradient);
+            border-color: rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 12px rgba(10, 132, 255, 0.2);
+        }
+
+        .button.primary:hover {
+            filter: brightness(1.1);
+            box-shadow: 0 6px 16px rgba(10, 132, 255, 0.3);
+        }
+
+        .button.ghost {
+            background: rgba(255, 255, 255, 0.03);
+            border-color: transparent;
+        }
+
+        .button.cta-secondary.ghost {
+            background: rgba(255, 255, 255, 0.03);
+            border-color: rgba(255, 255, 255, 0.08);
+        }
+
+        .button.danger {
+            border-color: rgba(255, 69, 58, 0.35);
+            color: #ffd6d3;
+        }
+
+        .button.small,
+        .button.action-small {
+            padding: 8px 10px;
+            font-size: 12px;
+            min-height: 34px;
+        }
+
+        .button.action-small {
+            border-radius: 9px;
+        }
+
+        .button:disabled {
+            opacity: 0.55;
+            cursor: wait;
+        }
+
+        .banner {
+            display: none;
+            padding: 12px 14px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            margin-bottom: 16px;
+            line-height: 1.5;
+        }
+
+        .banner.info,
+        .banner.error {
+            display: block;
+        }
+
+        .banner.info {
+            background: rgba(10, 132, 255, 0.14);
+            border-color: rgba(10, 132, 255, 0.28);
+            color: #d5e8ff;
+        }
+
+        .banner.error {
+            background: rgba(255, 69, 58, 0.13);
+            border-color: rgba(255, 69, 58, 0.28);
+            color: #ffd6d3;
+        }
+
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+            gap: 14px;
+        }
+
+        #overview-grid,
+        #storage-summary-grid,
+        #apps-summary-grid,
+        #status-grid,
+        #local-grid {
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        }
+
+        .card {
+            padding: 20px;
+            border-radius: 14px;
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.02);
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            transition: background 0.2s, transform 0.2s;
+        }
+
+        .card:hover {
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .card .label {
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .card .value {
+            margin-top: 10px;
+            font-size: 24px;
+            font-weight: 700;
+            word-break: break-word;
+        }
+
+        .card .value.small {
+            font-size: 16px;
+            line-height: 1.5;
+            font-weight: 600;
+        }
+
+        .card .meta {
+            margin-top: 10px;
+            color: var(--text-secondary);
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .card.card-action {
+            justify-content: space-between;
+        }
+
+        .card-actions {
+            margin-top: 14px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .groups {
+            display: grid;
+            gap: 16px;
+        }
+
+        .group-card {
+            border-radius: 14px;
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.02);
+            padding: 22px;
+            min-width: 0;
+        }
+
+        .group-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 14px;
+            margin-bottom: 16px;
+            min-width: 0;
+        }
+
+        .group-head > div:first-child {
+            min-width: 0;
+            flex: 1;
+        }
+
+        .group-head h3 {
+            margin: 0 0 6px;
+            font-size: 18px;
+            line-height: 1.25;
+        }
+
+        .group-head p {
+            margin: 0;
+            color: var(--text-secondary);
+            font-size: 13px;
+            line-height: 1.5;
+            min-width: 0;
+        }
+
+        .group-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            align-items: center;
+            flex: 0 0 auto;
+        }
+
+        .fields {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 14px;
+        }
+
+        .field {
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.025);
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            min-width: 0;
+        }
+
+        .field-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .field label {
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .field-meta {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 8px;
+            border-radius: 999px;
+            font-size: 11px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: var(--text-secondary);
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .chip.warn {
+            color: #ffd59b;
+            border-color: rgba(255, 159, 10, 0.35);
+            background: rgba(255, 159, 10, 0.12);
+        }
+
+        .chip.success {
+            color: #baf5cb;
+            border-color: rgba(48, 209, 88, 0.3);
+            background: rgba(48, 209, 88, 0.12);
+        }
+
+        .field-control {
+            position: relative;
+            min-width: 0;
+        }
+
+        .field input,
+        .field textarea,
+        .field select {
+            width: 100%;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: rgba(0, 0, 0, 0.35);
+            color: var(--text-primary);
+            padding: 11px 12px;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .field input:focus,
+        .field textarea:focus,
+        .field select:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.15);
+            outline: none;
+        }
+
+        .field textarea {
+            min-height: 110px;
+            resize: vertical;
+        }
+
+        .secret-toggle {
+            min-width: 38px;
+            min-height: 38px;
+            padding: 0;
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .muted {
+            color: var(--text-secondary);
+            font-size: 12px;
+            line-height: 1.55;
+        }
+
+        .current {
+            color: var(--text-secondary);
+            font-size: 12px;
+            line-height: 1.55;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+
+        .field small {
+            color: var(--text-secondary);
+            font-size: 12px;
+            line-height: 1.55;
+            overflow-wrap: break-word;
+        }
+
+        .text-wrap-anywhere {
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+
+        .text-ellipsis {
+            min-width: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .text-clamp-2,
+        .text-clamp-3 {
+            display: -webkit-box;
+            overflow: hidden;
+            -webkit-box-orient: vertical;
+        }
+
+        .text-clamp-2 {
+            -webkit-line-clamp: 2;
+        }
+
+        .text-clamp-3 {
+            -webkit-line-clamp: 3;
+        }
+
+        .field-error {
+            min-height: 16px;
+            color: #ffb2ac;
+            font-size: 12px;
+        }
+
+        .paths-list {
+            display: grid;
+            gap: 10px;
+            min-width: 0;
+        }
+
+        .path-row {
+            display: grid;
+            gap: 4px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.025);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            min-width: 0;
+        }
+
+        .path-row strong {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-secondary);
+        }
+
+        .path-row span {
+            min-width: 0;
+        }
+
+        .filter-row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 14px;
+            padding: 4px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            width: fit-content;
+            max-width: 100%;
+        }
+
+        .filter-row button.active {
+            background: var(--selection);
+            border-color: rgba(10, 132, 255, 0.24);
+        }
+
+        .jobs-list,
+        .inventory-list {
+            display: grid;
+            gap: 12px;
+        }
+
+        .job-card,
+        .inventory-card {
+            border-radius: 12px;
+            padding: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.025);
+            min-width: 0;
+        }
+
+        .job-card {
+            display: grid;
+            gap: 8px;
+        }
+
+        .job-card h4,
+        .inventory-card h4 {
+            margin: 0 0 8px;
+            font-size: 15px;
+        }
+
+        .job-card h4 {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: block;
+        }
+
+        .inventory-card h4 {
+            line-height: 1.35;
+            white-space: normal;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+
+        .inventory-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 10px;
+            min-width: 0;
+            flex-wrap: wrap;
+        }
+
+        .inventory-head > div:first-child {
+            min-width: 0;
+            flex: 1;
+        }
+
+        .job-card .muted,
+        .inventory-card .muted {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: block;
+        }
+
+        .inventory-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            flex: 0 0 auto;
+            justify-content: flex-end;
+            max-width: 100%;
+        }
+
+        .inventory-meta {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 10px;
+            min-width: 0;
+        }
+
+        .inventory-meta div {
+            display: grid;
+            gap: 4px;
+            min-width: 0;
+        }
+
+        .inventory-meta strong {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-secondary);
+        }
+
+        .inventory-meta span {
+            min-width: 0;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+
+        .progress {
+            width: 100%;
+            height: 8px;
+            border-radius: 999px;
+            overflow: hidden;
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .progress > span {
+            display: block;
+            height: 100%;
+            background: linear-gradient(90deg, rgba(10, 132, 255, 0.88), rgba(48, 209, 88, 0.8));
+        }
+
+        .table-shell {
+            overflow-x: auto;
+            overflow-y: hidden;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            background: rgba(255, 255, 255, 0.015);
+        }
+
+        .table-shell .apps-table {
+            min-width: 760px;
+        }
+
+        .apps-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .apps-table thead th {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-secondary);
+            background: rgba(255, 255, 255, 0.015);
+        }
+
+        .apps-table th,
+        .apps-table td {
+            padding: 12px 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            text-align: left;
+            vertical-align: top;
+        }
+
+        .apps-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .apps-table td i {
+            margin-right: 6px;
+        }
+
+        .table-primary {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            min-width: 0;
+            font-weight: 600;
+        }
+
+        .table-primary i {
+            flex: 0 0 auto;
+        }
+
+        .table-primary .button-label {
+            display: block;
+            min-width: 0;
+        }
+
+        .table-secondary {
+            display: block;
+            min-width: 0;
+            margin-top: 4px;
+        }
+
+        .table-chip-row {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .apps-form-grid,
+        .permission-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 12px;
+        }
+
+        .apps-inline-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .file-picker {
+            display: grid;
+            gap: 8px;
+            min-width: 0;
+        }
+
+        .file-picker input[type="file"] {
+            position: absolute;
+            inset: auto;
+            width: 1px;
+            height: 1px;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .file-selection {
+            min-width: 0;
+            padding: 9px 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            background: rgba(255, 255, 255, 0.025);
+            color: var(--text-secondary);
+            font-size: 12px;
+        }
+
+        .audit-list {
+            display: grid;
+            gap: 10px;
+        }
+
+        .audit-item {
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.025);
+            padding: 12px;
+        }
+
+        .audit-item strong {
+            display: block;
+            margin-bottom: 4px;
+            font-size: 13px;
+        }
+
+        .function-list {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
+        .detail-modal[hidden] {
+            display: none;
+        }
+
+        .detail-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 40;
+        }
+
+        .detail-modal-backdrop {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.58);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
+        .detail-modal-dialog {
+            position: relative;
+            width: min(980px, calc(100vw - 32px));
+            max-height: calc(100vh - 32px);
+            overflow: auto;
+            margin: 16px auto;
+            border-radius: 18px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(26, 26, 26, 0.96);
+            box-shadow: 0 18px 60px rgba(0, 0, 0, 0.45);
+        }
+
+        .detail-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 16px;
+            padding: 18px 20px 14px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .detail-modal-header h3 {
+            margin: 0;
+            font-size: 20px;
+            line-height: 1.35;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+
+        .detail-modal-header p {
+            margin: 8px 0 0;
+            color: var(--text-secondary);
+            font-size: 13px;
+            line-height: 1.55;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+
+        .detail-modal-body {
+            padding: 18px 20px 20px;
+            display: grid;
+            gap: 16px;
+        }
+
+        .detail-summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+        }
+
+        .detail-block {
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.025);
+            padding: 14px;
+        }
+
+        .detail-block strong {
+            display: block;
+            margin-bottom: 6px;
+            color: var(--text-secondary);
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .detail-block span,
+        .detail-block a {
+            display: block;
+            font-size: 14px;
+            line-height: 1.6;
+            color: var(--text-primary);
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+
+        .detail-meta-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 14px;
+        }
+
+        .detail-list {
+            display: grid;
+            gap: 10px;
+        }
+
+        .detail-list-row {
+            display: grid;
+            gap: 4px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.025);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .detail-list-row strong {
+            margin: 0;
+        }
+
+        .detail-preview {
+            overflow: hidden;
+        }
+
+        .detail-preview-frame {
+            min-height: 280px;
+            display: grid;
+            place-items: center;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background:
+                radial-gradient(circle at top, rgba(255, 255, 255, 0.05), transparent 55%),
+                rgba(0, 0, 0, 0.22);
+            overflow: hidden;
+        }
+
+        .detail-preview img {
+            display: block;
+            width: 100%;
+            max-height: 320px;
+            object-fit: contain;
+            border-radius: 12px;
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .detail-preview-empty {
+            display: grid;
+            gap: 8px;
+            justify-items: center;
+            text-align: center;
+            padding: 28px 20px;
+            color: var(--text-secondary);
+        }
+
+        .detail-preview-empty[hidden] {
+            display: none !important;
+        }
+
+        .detail-preview-empty i {
+            font-size: 26px;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .detail-preview-empty strong {
+            margin: 0;
+            font-size: 14px;
+            letter-spacing: normal;
+            text-transform: none;
+            color: var(--text-primary);
+        }
+
+        .detail-preview-empty span {
+            max-width: 440px;
+        }
+
+        .detail-empty {
+            color: var(--text-secondary);
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .section-stack {
+            margin-top: 18px;
+        }
+
+        @media (max-width: 1200px) {
+            .group-head {
+                flex-wrap: wrap;
+            }
+
+            .group-actions {
+                width: 100%;
+                justify-content: flex-start;
+            }
+
+            .fields,
+            .apps-form-grid,
+            .permission-grid {
+                grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            }
+        }
+
+        @media (max-width: 1120px) {
+            .page {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                border-right: none;
+                border-bottom: 1px solid var(--border);
+                padding: 14px 16px;
+                gap: 12px;
+            }
+
+            .content {
+                padding: 18px;
+            }
+
+            .brand {
+                padding: 0;
+            }
+
+            .brand-icon {
+                width: 34px;
+                height: 34px;
+                border-radius: 10px;
+                font-size: 17px;
+            }
+
+            .brand h1 {
+                font-size: 16px;
+            }
+
+            .brand p,
+            .sidebar-footer,
+            .nav-badge {
+                display: none;
+            }
+
+            .nav {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 10px;
+            }
+
+            .nav-group {
+                min-width: 0;
+                gap: 5px;
+            }
+
+            .nav-label {
+                padding: 0 4px 2px;
+                font-size: 10px;
+            }
+
+            .nav button {
+                min-height: 34px;
+                padding: 7px 9px;
+                gap: 8px;
+            }
+
+            .nav button i {
+                font-size: 15px;
+            }
+
+            .nav span {
+                min-width: 0;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+
+            .hero {
+                gap: 16px;
+                margin-bottom: 18px;
+                padding-bottom: 16px;
+            }
+
+            .hero h2 {
+                font-size: 27px;
+            }
+
+            .hero-actions {
+                width: 100%;
+                justify-content: flex-start;
+            }
+
+            .button.cta-primary,
+            .button.cta-secondary {
+                min-inline-size: 0;
+            }
+
+            .inventory-actions {
+                width: 100%;
+                justify-content: flex-start;
+            }
+        }
+
+        @media (max-width: 760px) {
+            .panel {
+                padding: 20px;
+            }
+
+            .cards-grid,
+            .fields,
+            .apps-form-grid,
+            .permission-grid,
+            .detail-summary-grid,
+            .detail-meta-grid,
+            .inventory-meta {
+                grid-template-columns: 1fr;
+            }
+
+            .hero-actions,
+            .group-actions,
+            .apps-inline-actions,
+            .card-actions {
+                width: 100%;
+            }
+
+            .hero-actions .button,
+            .group-actions .button,
+            .apps-inline-actions .button,
+            .card-actions .button {
+                width: 100%;
+                min-inline-size: 0;
+            }
+
+            .filter-row {
+                width: 100%;
+            }
+
+            .filter-row .button {
+                flex: 1 1 calc(50% - 10px);
+            }
+
+            .table-shell .apps-table {
+                min-width: 640px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="page">
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="brand-icon"><i class="ph ph-gear-six"></i></div>
+                <div>
+                    <h1>Configurações</h1>
+                    <p>App de configurações do sistema</p>
+                </div>
+            </div>
+
+            <div class="nav-group">
+                <div class="nav-label">Painéis</div>
+                <div class="nav">
+                    <button class="active" data-section="overview">
+                        <i class="ph ph-squares-four"></i>
+                        <span>Visão Geral</span>
+                    </button>
+                    <button data-section="system">
+                        <i class="ph ph-sliders-horizontal"></i>
+                        <span>Sistema</span>
+                    </button>
+                    <button data-section="storage">
+                        <i class="ph ph-hard-drives"></i>
+                        <span>Armazenamento</span>
+                    </button>
+                    <button data-section="sharing">
+                        <i class="ph ph-share-network"></i>
+                        <span>Compartilhamento</span>
+                    </button>
+                    <button data-section="interface">
+                        <i class="ph ph-desktop"></i>
+                        <span>Interface</span>
+                    </button>
+                    <button data-section="apps">
+                        <i class="ph ph-app-window"></i>
+                        <span>Aplicativos</span>
+                    </button>
+                    <button data-section="diagnostics">
+                        <i class="ph ph-lifebuoy"></i>
+                        <span>Diagnóstico</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="sidebar-footer">
+                Tudo aqui roda no mesmo domínio do TCloud e usa o token enviado pela shell via <code>postMessage</code>.
+            </div>
+        </aside>
+
+        <main class="content">
+            <section class="panel section active" id="section-overview">
+                <div class="hero">
+                    <div class="hero-copy">
+                        <h2>Visão geral</h2>
+                        <p>Resumo do sistema, do armazenamento e das preferências da shell. Campos com <strong>Requer reinício</strong> só entram em vigor após reiniciar o serviço.</p>
+                    </div>
+                    <div class="hero-actions">
+                        <button class="button primary cta-primary icon-leading" id="reload-all-btn"><i class="ph ph-arrow-clockwise"></i><span class="button-label">Recarregar</span></button>
+                        <button class="button cta-secondary icon-leading" id="reload-apps-btn"><i class="ph ph-app-window"></i><span class="button-label">Recarregar apps</span></button>
+                        <button class="button ghost cta-secondary icon-leading" onclick="setSection('storage')"><i class="ph ph-hard-drives"></i><span class="button-label">Abrir armazenamento</span></button>
+                    </div>
+                </div>
+                <div id="overview-banner" class="banner"></div>
+                <div class="cards-grid" id="overview-grid"></div>
+            </section>
+
+            <section class="panel section" id="section-system">
+                <div class="hero">
+                    <div class="hero-copy">
+                        <h2>Servidor</h2>
+                        <p>Configurações definidas pelo schema do backend. Segredos continuam mascarados e só são revelados quando você usar o olhinho do campo.</p>
+                    </div>
+                </div>
+                <div id="system-banner" class="banner"></div>
+                <div class="groups" id="settings-groups"></div>
+            </section>
+
+            <section class="panel section" id="section-storage">
+                <div class="hero">
+                    <div class="hero-copy">
+                        <h2>Armazenamento</h2>
+                        <p>Resumo do cache em disco, dos itens em <strong>No Servidor</strong> e dos arquivos em <strong>Temporário (24h)</strong>.</p>
+                    </div>
+                    <div class="hero-actions">
+                        <button class="button primary cta-primary icon-leading" onclick="loadStorageOnly()"><i class="ph ph-arrow-clockwise"></i><span class="button-label">Atualizar armazenamento</span></button>
+                    </div>
+                </div>
+                <div id="storage-banner" class="banner"></div>
+                <div class="cards-grid" id="storage-summary-grid"></div>
+                <div class="groups section-stack">
+                    <div class="group-card" id="storage-paths-wrap"></div>
+                    <div class="group-card" id="storage-jobs-wrap"></div>
+                    <div class="group-card" id="storage-inventory-wrap"></div>
+                </div>
+            </section>
+
+            <section class="panel section" id="section-sharing">
+                <div class="hero">
+                    <div class="hero-copy">
+                        <h2>Compartilhamento</h2>
+                        <p>Políticas de links públicos, inventário de itens publicados e controles de acesso externo.</p>
+                    </div>
+                    <div class="hero-actions">
+                        <button class="button primary cta-primary icon-leading" onclick="loadSharingOnly()"><i class="ph ph-arrow-clockwise"></i><span class="button-label">Atualizar compartilhamento</span></button>
+                    </div>
+                </div>
+                <div id="sharing-banner" class="banner"></div>
+                <div class="cards-grid" id="sharing-summary-grid"></div>
+                <div class="groups section-stack">
+                    <div class="group-card" id="sharing-policy-wrap"></div>
+                    <div class="group-card" id="sharing-inventory-wrap"></div>
+                </div>
+            </section>
+
+            <section class="panel section" id="section-interface">
+                <div class="hero">
+                    <div class="hero-copy">
+                        <h2>Interface</h2>
+                        <p>Preferências locais deste navegador para a shell Web, sem alterar o runtime do servidor.</p>
+                    </div>
+                </div>
+                <div class="cards-grid" id="local-grid"></div>
+            </section>
+
+            <section class="panel section" id="section-apps">
+                <div class="hero">
+                    <div class="hero-copy">
+                        <h2>Aplicativos</h2>
+                        <p>Instale apps por ZIP ou GitHub, governe permissões, habilite ou desabilite apps e acompanhe a trilha de auditoria do runtime.</p>
+                    </div>
+                    <div class="hero-actions">
+                        <button class="button primary cta-primary icon-leading" onclick="loadAppsAdminOnly(true)"><i class="ph ph-arrow-clockwise"></i><span class="button-label">Atualizar painel</span></button>
+                    </div>
+                </div>
+                <div id="apps-banner" class="banner"></div>
+                <div class="cards-grid" id="apps-summary-grid"></div>
+                <div class="groups section-stack">
+                    <div class="group-card" id="apps-install-wrap"></div>
+                    <div class="group-card" id="apps-runtime-wrap"></div>
+                    <div class="group-card" id="apps-inventory-wrap"></div>
+                    <div class="group-card" id="apps-permissions-wrap"></div>
+                    <div class="group-card" id="apps-audit-wrap"></div>
+                </div>
+            </section>
+
+            <section class="panel section" id="section-diagnostics">
+                <div class="hero">
+                    <div class="hero-copy">
+                        <h2>Diagnóstico</h2>
+                        <p>Estado do runtime, conectividade principal, chaves pendentes de reinício e apps instalados.</p>
+                    </div>
+                </div>
+                <div class="cards-grid" id="status-grid"></div>
+                <div class="section-stack" id="apps-table-wrap"></div>
+            </section>
+        </main>
+    </div>
+
+    <div class="detail-modal" id="storage-detail-modal" hidden aria-hidden="true">
+        <div class="detail-modal-backdrop" onclick="closeStorageDetailModal()"></div>
+        <div class="detail-modal-dialog surface" role="dialog" aria-modal="true" aria-labelledby="storage-detail-title">
+            <div class="detail-modal-header">
+                <div>
+                    <h3 id="storage-detail-title">Detalhes do item</h3>
+                    <p id="storage-detail-subtitle">Informações completas do arquivo selecionado.</p>
+                </div>
+                <button class="button small ghost" type="button" onclick="closeStorageDetailModal()">Fechar</button>
+            </div>
+            <div class="detail-modal-body" id="storage-detail-body"></div>
+        </div>
+    </div>
+
+    <script>
+        let _parentToken = '';
+        let currentSectionId = 'overview';
+        let schemaPayload = null;
+        let settingsPayload = null;
+        let statusPayload = null;
+        let appsPayload = null;
+        let appsAdminPayload = null;
+        let storagePayload = null;
+        let sharingPayload = null;
+        let storageFilter = 'all';
+        let dirtyFieldKeys = new Set();
+        let secretVisibilityKeys = new Set();
+        let secretLoadingKeys = new Set();
+        let secretDraftValues = new Map();
+        let revealedSecretValues = new Map();
+        let selectedManagedAppId = '';
+        let appAuditCache = {};
+        let activeStorageDetail = null;
+
+        function apiFetch(url, opts = {}) {
+            if (_parentToken) {
+                if (!opts.headers) opts.headers = {};
+                opts.headers['Authorization'] = `Bearer ${_parentToken}`;
+            }
+            return fetch(url, opts);
+        }
+
+        function authAssetUrl(url) {
+            if (!_parentToken || !url) return url;
+            const sep = String(url).includes('?') ? '&' : '?';
+            return `${url}${sep}token=${encodeURIComponent(_parentToken)}`;
+        }
+
+        window.addEventListener('message', (event) => {
+            if (event.data && event.data.type === 'tcloud-auth') {
+                _parentToken = event.data.token || '';
+                init();
+            }
+        });
+
+        setTimeout(() => { if (!_parentToken) init(); }, 500);
+
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function renderButtonContent(icon, label) {
+            const iconHtml = icon ? `<i class="ph ${escapeHtml(icon)}" aria-hidden="true"></i>` : '';
+            return `${iconHtml}<span class="button-label">${escapeHtml(label)}</span>`;
+        }
+
+        function renderMetricCard(card, extraClass = '') {
+            const classes = ['card', extraClass].filter(Boolean).join(' ');
+            return `
+                <div class="${classes}">
+                    <div class="label text-ellipsis" title="${escapeHtml(card.label)}">${escapeHtml(card.label)}</div>
+                    <div class="value ${card.small ? 'small' : ''}" title="${escapeHtml(card.value)}">${escapeHtml(card.value)}</div>
+                    <div class="meta text-clamp-2" title="${escapeHtml(card.meta)}">${escapeHtml(card.meta)}</div>
+                </div>
+            `;
+        }
+
+        function triggerZipPicker() {
+            document.getElementById('apps-zip-file')?.click();
+        }
+
+        function formatBytes(bytes) {
+            const value = Number(bytes || 0);
+            if (!value) return '0 B';
+            const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+            const index = Math.min(units.length - 1, Math.floor(Math.log(value) / Math.log(1024)));
+            return `${(value / Math.pow(1024, index)).toFixed(index === 0 ? 0 : 1)} ${units[index]}`;
+        }
+
+        function formatDate(value) {
+            if (!value) return '—';
+            const date = new Date(value);
+            if (Number.isNaN(date.getTime())) return value;
+            return date.toLocaleString('pt-BR');
+        }
+
+        function boolText(value) {
+            return value ? 'Ligado' : 'Desligado';
+        }
+
+        function formatEffectiveValue(setting, field) {
+            if (field.secret && !secretVisibilityKeys.has(field.key)) {
+                return secretStatusText(setting, field.key);
+            }
+
+            let rawValue = setting?.effective_value;
+            if (field.secret && secretVisibilityKeys.has(field.key)) {
+                rawValue = revealedSecretValues.get(field.key);
+            }
+
+            if (field.type === 'csv' || Array.isArray(rawValue)) {
+                const list = Array.isArray(rawValue) ? rawValue : String(rawValue || '').split(',').map(s => s.trim()).filter(Boolean);
+                if (list.length > 1) {
+                    const isBot = field.label.toLowerCase().includes('bot') || field.key.toLowerCase().includes('bot');
+                    const label = isBot ? 'Bot' : 'Item';
+                    return list.map((item, idx) => `<div style="margin-top: 4px;"><strong>${label} ${idx + 1}:</strong> ${escapeHtml(item)}</div>`).join('');
+                }
+                return escapeHtml(list[0] || '—');
+            }
+
+            return escapeHtml(rawValue ?? '—');
+        }
+
+        function formatPercent(value) {
+            return `${Number(value || 0).toFixed(1)}%`;
+        }
+
+        function showBanner(targetId, kind, message) {
+            const el = document.getElementById(targetId);
+            if (!el) return;
+            if (!message) {
+                el.className = 'banner';
+                el.textContent = '';
+                return;
+            }
+            el.className = `banner ${kind}`;
+            el.textContent = message;
+        }
+
+        async function parseApiData(res) {
+            const contentType = String(res.headers.get('content-type') || '').toLowerCase();
+            if (contentType.includes('application/json')) {
+                try {
+                    return await res.json();
+                } catch (_) {
+                    return {};
+                }
+            }
+            try {
+                const text = await res.text();
+                return text ? { error: text } : {};
+            } catch (_) {
+                return {};
+            }
+        }
+
+        async function apiJson(url, opts = {}) {
+            const res = await apiFetch(url, opts);
+            const data = await parseApiData(res);
+            return { res, data };
+        }
+
+        function persistencePayloadFrom(source) {
+            return source?.persistence || statusPayload?.persistence || settingsPayload?.persistence || null;
+        }
+
+        function envMirrorStatusText(persistence) {
+            const env = persistence?.env || {};
+            const lastResult = env.last_result || {};
+            if (!env.enabled) return 'Desligado';
+            if (!env.exists) return 'Sem .env';
+            if (env.divergent_keys?.length) return 'Divergente';
+            if (lastResult.ok && !lastResult.skipped) return 'Sincronizado';
+            if (lastResult.skipped) return 'Somente runtime';
+            if (lastResult.error) return 'Erro';
+            return 'Disponível';
+        }
+
+        function envMirrorMetaText(persistence) {
+            const env = persistence?.env || {};
+            const lastResult = env.last_result || {};
+            if (!env.enabled) return 'Espelhamento de .env desativado por configuração.';
+            if (!env.exists) return 'Este ambiente não expõe arquivo .env gravável para o app.';
+            if (env.divergent_keys?.length) return `${env.divergent_keys.length} chave(s) gerenciadas estão diferentes do .env.`;
+            if (lastResult.skipped) {
+                const reasonMap = {
+                    env_file_missing: 'arquivo .env ausente neste ambiente',
+                    env_mirror_disabled: 'espelhamento de .env desativado',
+                    env_read_failed: 'falha ao ler o .env',
+                    env_write_failed: 'falha ao gravar o .env',
+                };
+                return `Última gravação ficou apenas no runtime: ${reasonMap[lastResult.reason] || 'espelho indisponível'}.`;
+            }
+            if (lastResult.error) return 'Última tentativa de espelhamento encontrou erro.';
+            return 'Runtime e .env estão prontos para permanecer alinhados.';
+        }
+
+        function buildSettingsSaveMessage(data) {
+            const persistence = persistencePayloadFrom(data);
+            const env = persistence?.env || {};
+            const lastResult = env.last_result || {};
+            let base = 'Configurações salvas no runtime.';
+
+            if (lastResult.ok && !lastResult.skipped) {
+                base = 'Configurações salvas no runtime e espelhadas no .env.';
+            } else if (lastResult.skipped) {
+                const reasonMap = {
+                    env_file_missing: 'arquivo .env ausente neste ambiente',
+                    env_mirror_disabled: 'espelhamento de .env desativado',
+                    env_read_failed: 'falha ao ler o .env',
+                    env_write_failed: 'falha ao gravar o .env',
+                };
+                base = `Configurações salvas no runtime. Espelho do .env ignorado: ${reasonMap[lastResult.reason] || 'indisponível'}.`;
+            } else if (lastResult.error || lastResult.reason) {
+                base = 'Configurações salvas no runtime, mas houve falha ao espelhar o .env.';
+            }
+
+            if (data.pending_restart_keys?.length) {
+                return `${base} ${data.pending_restart_keys.length} chave(s) ainda dependem de reinício.`;
+            }
+            if (data.applied_keys?.length) {
+                return `${base} ${data.applied_keys.length} chave(s) aplicadas por hot reload.`;
+            }
+            return base;
+        }
+
+        function formatDetailValue(value, fallback = '—') {
+            if (value === null || value === undefined || value === '') return fallback;
+            if (typeof value === 'boolean') return value ? 'Sim' : 'Não';
+            if (Array.isArray(value)) return value.length ? value.join(', ') : fallback;
+            if (typeof value === 'number') return String(value);
+            if (typeof value === 'object') {
+                try {
+                    return JSON.stringify(value);
+                } catch (_) {
+                    return fallback;
+                }
+            }
+            return String(value);
+        }
+
+        function renderDetailRows(entries) {
+            if (!entries.length) {
+                return '<div class="detail-empty">Nenhuma informação disponível.</div>';
+            }
+            return `<div class="detail-list">${entries.map(({ label, value }) => `
+                <div class="detail-list-row">
+                    <strong>${escapeHtml(label)}</strong>
+                    <span>${escapeHtml(formatDetailValue(value))}</span>
+                </div>
+            `).join('')}</div>`;
+        }
+
+        function setButtonBusy(button, busy, busyLabel = 'Carregando...') {
+            if (!button) return;
+            if (busy) {
+                if (!button._originalInnerHTML) {
+                    button._originalInnerHTML = button.innerHTML;
+                }
+                button.innerHTML = `<span class="button-label">${escapeHtml(busyLabel)}</span>`;
+                button.disabled = true;
+                button.classList.add('is-busy');
+                button.setAttribute('aria-busy', 'true');
+                return;
+            }
+            button.innerHTML = button._originalInnerHTML || button.innerHTML;
+            button.disabled = false;
+            button.classList.remove('is-busy');
+            button.removeAttribute('aria-busy');
+        }
+
+        function detailPreviewFallbackCopy(detail) {
+            if (detail.is_directory) {
+                return {
+                    title: 'Pasta sem thumbnail',
+                    description: 'Pastas não possuem thumbnail individual neste painel de detalhes.',
+                };
+            }
+            if (detail.preview?.kind === 'thumbnail') {
+                return {
+                    title: 'Sem thumbnail disponível',
+                    description: 'Este arquivo ainda não possui thumbnail gerada ou a miniatura não está acessível no momento.',
+                };
+            }
+            if (detail.preview?.kind === 'image') {
+                return {
+                    title: 'Preview indisponível',
+                    description: 'A imagem não pôde ser exibida agora. Tente novamente em alguns instantes.',
+                };
+            }
+            return {
+                title: 'Sem preview disponível',
+                description: 'Este item não oferece pré-visualização visual neste momento.',
+            };
+        }
+
+        function markDetailPreviewUnavailable(img) {
+            const frame = img?.closest('.detail-preview-frame');
+            if (!frame) return;
+            img.hidden = true;
+            const fallback = frame.querySelector('[data-role="detail-preview-empty"]');
+            if (fallback) fallback.hidden = false;
+        }
+
+        function buildDetailPreviewHtml(detail) {
+            const kindLabel = detail.preview?.kind || 'preview';
+            const fallback = detailPreviewFallbackCopy(detail);
+            const fallbackHtml = `
+                <div class="detail-preview-empty" data-role="detail-preview-empty"${detail.preview?.available && detail.preview?.url ? ' hidden' : ''}>
+                    <i class="ph ph-image-broken"></i>
+                    <strong>${escapeHtml(fallback.title)}</strong>
+                    <span>${escapeHtml(fallback.description)}</span>
+                </div>
+            `;
+            const previewSrc = detail.preview?.available && detail.preview?.url
+                ? authAssetUrl(detail.preview.url)
+                : '';
+            const imageHtml = previewSrc
+                ? `<img src="${escapeHtml(previewSrc)}" alt="Preview de ${escapeHtml(detail.name || detail.path || 'item')}" loading="lazy" onerror="markDetailPreviewUnavailable(this)">`
+                : '';
+
+            return `
+                <div class="group-card detail-preview">
+                    <div class="group-head">
+                        <div>
+                            <h3>Preview</h3>
+                            <p>${escapeHtml(kindLabel)}</p>
+                        </div>
+                    </div>
+                    <div class="detail-preview-frame">
+                        ${imageHtml}
+                        ${fallbackHtml}
+                    </div>
+                </div>
+            `;
+        }
+
+        function closeStorageDetailModal() {
+            activeStorageDetail = null;
+            const modal = document.getElementById('storage-detail-modal');
+            const body = document.getElementById('storage-detail-body');
+            if (!modal || !body) return;
+            modal.hidden = true;
+            modal.setAttribute('aria-hidden', 'true');
+            body.innerHTML = '';
+            document.body.classList.remove('modal-open');
+        }
+
+        function openStorageDetailModal(detail) {
+            activeStorageDetail = detail;
+            const modal = document.getElementById('storage-detail-modal');
+            const body = document.getElementById('storage-detail-body');
+            const title = document.getElementById('storage-detail-title');
+            const subtitle = document.getElementById('storage-detail-subtitle');
+            if (!modal || !body || !title || !subtitle) return;
+
+            const summaryEntries = [
+                { label: 'Nome', value: detail.name || '—' },
+                { label: 'Caminho', value: detail.path || '—' },
+                { label: 'Tipo MIME', value: detail.mime_type || '—' },
+                { label: 'Extensão', value: detail.extension || '—' },
+                { label: 'Tamanho', value: formatBytes(detail.size_bytes || 0) },
+                { label: 'Modificado em', value: formatDate(detail.modified_at) },
+                { label: 'Criado em', value: formatDate(detail.created_at) },
+                { label: 'Favorito', value: detail.status?.is_favorite },
+                { label: 'No Servidor', value: detail.status?.is_offline },
+                { label: 'Em cache', value: detail.status?.is_cached },
+                { label: 'Origem', value: detail.storage?.origin || '—' },
+                { label: 'Chunks', value: detail.storage?.chunk_count ?? '—' },
+            ];
+
+            const storageEntries = [
+                { label: 'Storage scheme', value: detail.storage?.storage_scheme || '—' },
+                { label: 'Storage ID', value: detail.storage?.storage_id_masked || '—' },
+            ];
+
+            const metaEntries = Object.entries(detail.meta || {}).map(([key, value]) => ({
+                label: key.replace(/_/g, ' '),
+                value,
+            }));
+
+            const limitationEntries = (detail.limitations || []).map((value, index) => ({
+                label: `Limitação ${index + 1}`,
+                value,
+            }));
+
+            title.textContent = detail.name || 'Detalhes do item';
+            subtitle.textContent = detail.path || 'Informações completas do arquivo selecionado.';
+            body.innerHTML = `
+                ${buildDetailPreviewHtml(detail)}
+                <div class="detail-summary-grid">
+                    ${summaryEntries.map(({ label, value }) => `
+                        <div class="detail-block">
+                            <strong>${escapeHtml(label)}</strong>
+                            <span>${escapeHtml(formatDetailValue(value))}</span>
+                        </div>
+                    `).join('')}
+                </div>
+                <div class="detail-meta-grid">
+                    <div class="group-card">
+                        <div class="group-head">
+                            <div>
+                                <h3>Storage</h3>
+                                <p>Informações de armazenamento e retenção do item.</p>
+                            </div>
+                        </div>
+                        ${renderDetailRows(storageEntries)}
+                    </div>
+                    <div class="group-card">
+                        <div class="group-head">
+                            <div>
+                                <h3>Metadados</h3>
+                                <p>Dados técnicos retornados por <code>/api/file_info</code>.</p>
+                            </div>
+                        </div>
+                        ${renderDetailRows(metaEntries)}
+                    </div>
+                </div>
+                <div class="group-card">
+                    <div class="group-head">
+                        <div>
+                            <h3>Limitações e observações</h3>
+                            <p>Restrições ou indisponibilidades específicas do item selecionado.</p>
+                        </div>
+                    </div>
+                    ${renderDetailRows(limitationEntries)}
+                </div>
+            `;
+
+            modal.hidden = false;
+            modal.setAttribute('aria-hidden', 'false');
+            document.body.classList.add('modal-open');
+        }
+
+        function navButtons() {
+            return Array.from(document.querySelectorAll('.nav button[data-section]'));
+        }
+
+        function settingsByKey() {
+            return Object.fromEntries((settingsPayload?.settings || []).map((item) => [item.key, item]));
+        }
+
+        function envDivergentKeys() {
+            return new Set(settingsPayload?.persistence?.env?.divergent_keys || []);
+        }
+
+        function schemaFieldByKey(key) {
+            for (const group of schemaPayload?.groups || []) {
+                for (const field of group.fields || []) {
+                    if (field.key === key) return field;
+                }
+            }
+            return null;
+        }
+
+        function setSection(sectionId) {
+            if (currentSectionId === 'system' && sectionId !== 'system') {
+                hideAllSecretFields();
+            }
+            currentSectionId = sectionId;
+            navButtons().forEach((button) => {
+                button.classList.toggle('active', button.dataset.section === sectionId);
+            });
+            document.querySelectorAll('.section').forEach((section) => {
+                section.classList.toggle('active', section.id === `section-${sectionId}`);
+            });
+        }
+
+        navButtons().forEach((button) => {
+            button.addEventListener('click', () => setSection(button.dataset.section));
+        });
+
+        function clearTransientSecretState() {
+            dirtyFieldKeys = new Set();
+            secretVisibilityKeys = new Set();
+            secretLoadingKeys = new Set();
+            secretDraftValues = new Map();
+            revealedSecretValues = new Map();
+        }
+
+        function localPreferenceCards() {
+            const lastApp = localStorage.getItem('tcloud_apps.last_opened_app') || 'nenhum';
+            const tokenSaved = localStorage.getItem('tcloud_token') ? 'sim' : 'nao';
+            const sortKeys = Object.keys(localStorage).filter((key) => key.startsWith('tcloud_sort_pref_'));
+            const columnKeys = Object.keys(localStorage).filter((key) => key.startsWith('col_width_'));
+            const cards = [
+                {
+                    label: 'Último app aberto',
+                    value: lastApp,
+                    meta: 'Última preferência salva pela shell Web.',
+                    small: true,
+                },
+                {
+                    label: 'Token salvo no navegador',
+                    value: tokenSaved,
+                    meta: 'Indica apenas presença local, não o estado do backend.',
+                },
+                {
+                    label: 'Perfis de ordenação',
+                    value: String(sortKeys.length),
+                    meta: 'Contextos com ordenação persistida.',
+                },
+                {
+                    label: 'Larguras de coluna',
+                    value: String(columnKeys.length),
+                    meta: 'Customizações visuais guardadas no browser.',
+                },
+            ];
+            const grid = document.getElementById('local-grid');
+            grid.innerHTML = cards.map((card) => renderMetricCard(card)).join('') + `
+                <div class="card card-action">
+                    <div class="label">Ações locais</div>
+                    <div class="value small">Reset rápido da experiência Web</div>
+                    <div class="meta text-clamp-2" title="Use estas ações quando quiser limpar preferências da shell neste dispositivo sem tocar no servidor.">Use estas ações quando quiser limpar preferências da shell neste dispositivo sem tocar no servidor.</div>
+                    <div class="card-actions">
+                        <button class="button small action-small icon-leading" onclick="clearUiPrefs()">${renderButtonContent('ph-broom', 'Limpar preferências')}</button>
+                        <button class="button small action-small ghost icon-leading" onclick="clearLastApp()">${renderButtonContent('ph-arrow-counter-clockwise', 'Esquecer último app')}</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function clearUiPrefs() {
+            Object.keys(localStorage).forEach((key) => {
+                if (key.startsWith('tcloud_sort_pref_') || key.startsWith('col_width_')) {
+                    localStorage.removeItem(key);
+                }
+            });
+            showBanner('overview-banner', 'info', 'Preferências de ordenação e colunas foram limpas neste navegador.');
+            localPreferenceCards();
+        }
+
+        function clearLastApp() {
+            localStorage.removeItem('tcloud_apps.last_opened_app');
+            showBanner('overview-banner', 'info', 'Preferência do último app removida.');
+            localPreferenceCards();
+        }
+
+        function renderOverview() {
+            const status = statusPayload || {};
+            const storageSummary = storagePayload?.summary || {};
+            const sharingSummary = sharingPayload?.summary || {};
+            const persistence = persistencePayloadFrom(status);
+            const overview = [
+                { label: 'Apps instalados', value: String(status.app_count || 0), meta: 'Inventário carregado pela shell de apps.' },
+                { label: 'App principal', value: status.default_app_id || 'nenhum', meta: 'App marcado como principal no manifesto.', small: true },
+                { label: 'Auth Web', value: boolText(status.auth_enabled), meta: 'Estado efetivo da autenticação na Web.' },
+                { label: 'Links públicos', value: String(sharingSummary.total || 0), meta: `${Number(sharingSummary.active || 0)} ativo(s), ${Number(sharingSummary.expired || 0)} expirado(s).` },
+                { label: 'Armazenamento total', value: formatBytes(storageSummary.total_bytes || 0), meta: 'Uso total registrado pelo TCloud.' },
+                { label: 'No Servidor', value: String(storageSummary.persistent_item_count || storageSummary.offline_item_count || 0), meta: 'Itens mantidos com retenção permanente no servidor.' },
+                { label: 'Cache em disco', value: formatBytes(storageSummary.cache_usage_bytes || 0), meta: 'Uso atual da pasta de cache local.' },
+                { label: 'Telegram', value: boolText(status.telegram_connected), meta: 'Conectividade operacional do manager de bots.' },
+                { label: 'Store settings', value: persistence?.store?.exists ? 'OK' : 'ausente', meta: `${Number(persistence?.store?.managed_key_count || 0)} chave(s) gerenciadas no runtime.` },
+                { label: 'Espelho .env', value: envMirrorStatusText(persistence), meta: envMirrorMetaText(persistence), small: true },
+                { label: 'Pendências de restart', value: String((status.pending_restart_keys || []).length), meta: 'Chaves persistidas aguardando reinício.' },
+            ];
+            document.getElementById('overview-grid').innerHTML = overview.map((item) => renderMetricCard(item)).join('');
+        }
+
+        function fieldPlainValue(setting, field) {
+            if (!setting) return '';
+            const sourceValue = setting.value ?? setting.effective_value;
+            if (field.type === 'csv') {
+                return Array.isArray(sourceValue) ? sourceValue.join(', ') : String(sourceValue || '');
+            }
+            if (field.type === 'bool') {
+                return sourceValue === true ? 'true' : sourceValue === false ? 'false' : '';
+            }
+            return sourceValue ?? '';
+        }
+
+        function secretStatusText(setting, key) {
+            if (dirtyFieldKeys.has(key) && secretDraftValues.has(key)) {
+                if (secretVisibilityKeys.has(key)) {
+                    return secretDraftValues.get(key) || 'Sem valor salvo';
+                }
+                return 'Rascunho alterado não salvo. Clique no olhinho para mostrar novamente.';
+            }
+            if (secretVisibilityKeys.has(key)) {
+                return revealedSecretValues.get(key) || 'Sem valor salvo';
+            }
+            return setting?.has_secret_value ? 'Valor atual oculto. Clique no olhinho para mostrar.' : 'Sem valor salvo';
+        }
+
+        function fieldDisplayValue(setting, field) {
+            if (!field.secret) return fieldPlainValue(setting, field);
+            if (!secretVisibilityKeys.has(field.key)) return '';
+            if (secretDraftValues.has(field.key)) return secretDraftValues.get(field.key) || '';
+            return revealedSecretValues.get(field.key) || '';
+        }
+
+        function inputTypeFor(field) {
+            if (field.type === 'int') return 'number';
+            if (field.secret) return secretVisibilityKeys.has(field.key) ? 'text' : 'password';
+            return 'text';
+        }
+
+        function renderSecretToggle(field) {
+            if (!field.secret) return '';
+            const icon = secretLoadingKeys.has(field.key)
+                ? 'ph-spinner-gap'
+                : secretVisibilityKeys.has(field.key)
+                    ? 'ph-eye-slash'
+                    : 'ph-eye';
+            const label = secretVisibilityKeys.has(field.key) ? 'Ocultar valor atual' : 'Mostrar valor atual';
+            return `
+                <button
+                    class="button small secret-toggle"
+                    id="toggle-${field.key}"
+                    type="button"
+                    title="${escapeHtml(label)}"
+                    onclick="toggleSecretValue('${field.key}')"
+                    ${secretLoadingKeys.has(field.key) ? 'disabled' : ''}
+                >
+                    <i class="ph ${icon}"></i>
+                </button>
+            `;
+        }
+
+        function renderFieldControl(setting, field) {
+            const value = escapeHtml(fieldDisplayValue(setting, field));
+            if (field.type === 'enum') {
+                const selectedValue = String(setting?.value ?? setting?.effective_value ?? '');
+                return `
+                    <select id="field-${field.key}" data-key="${field.key}">
+                        ${(field.options || []).map((option) => `
+                            <option value="${escapeHtml(option)}" ${selectedValue === option ? 'selected' : ''}>${escapeHtml(option)}</option>
+                        `).join('')}
+                    </select>
+                `;
+            }
+            if (field.type === 'bool') {
+                const boolValue = setting?.value === true ? 'true' : setting?.value === false ? 'false' : String(setting?.effective_value ?? 'false');
+                return `
+                    <select id="field-${field.key}" data-key="${field.key}">
+                        <option value="true" ${boolValue === 'true' ? 'selected' : ''}>true</option>
+                        <option value="false" ${boolValue === 'false' ? 'selected' : ''}>false</option>
+                    </select>
+                `;
+            }
+            if (field.type === 'csv') {
+                return `
+                    <textarea
+                        id="field-${field.key}"
+                        data-key="${field.key}"
+                        placeholder="${field.secret ? 'Clique no olhinho para mostrar ou editar um novo valor' : 'valor1, valor2, valor3'}"
+                    >${value}</textarea>
+                `;
+            }
+            return `
+                <input
+                    id="field-${field.key}"
+                    data-key="${field.key}"
+                    type="${inputTypeFor(field)}"
+                    value="${value}"
+                    placeholder="${field.secret ? 'Clique no olhinho para mostrar ou digite um novo valor' : ''}"
+                >
+            `;
+        }
+
+        function renderSettingsGroups() {
+            const settingsMap = settingsByKey();
+            const groups = schemaPayload?.groups || [];
+            const divergentKeys = envDivergentKeys();
+            const container = document.getElementById('settings-groups');
+            container.innerHTML = groups.map((group) => {
+                const editableFields = group.fields.filter((field) => field.mutable);
+                const fieldsHtml = editableFields.map((field) => {
+                    const setting = settingsMap[field.key];
+                    const currentHtml = formatEffectiveValue(setting, field);
+                    return `
+                        <div class="field">
+                            <div class="field-head">
+                                <label for="field-${field.key}">${escapeHtml(field.label)}</label>
+                                ${renderSecretToggle(field)}
+                            </div>
+                            <div class="field-meta">
+                                <span class="chip ${field.apply_mode === 'restart_required' ? 'warn' : 'success'}">${field.apply_mode === 'restart_required' ? 'Requer reinício' : 'Hot reload'}</span>
+                                ${field.secret ? '<span class="chip">Segredo</span>' : ''}
+                                ${setting?.pending_restart ? '<span class="chip warn">Pendente</span>' : ''}
+                                ${setting?.source === 'managed' && divergentKeys.has(field.key) ? '<span class="chip warn">Env divergiu</span>' : ''}
+                                <span class="chip">${escapeHtml(setting?.source || 'env')}</span>
+                            </div>
+                            <div class="field-control">
+                                ${renderFieldControl(setting, field)}
+                            </div>
+                            <div class="current" id="current-${field.key}">Efetivo agora: ${currentHtml}</div>
+                            <small>${escapeHtml(field.description || '')}</small>
+                            <div class="field-error" id="error-${field.key}"></div>
+                        </div>
+                    `;
+                }).join('');
+
+                return `
+                    <div class="group-card">
+                        <div class="group-head">
+                            <div>
+                                <h3>${escapeHtml(group.label)}</h3>
+                                <p>${editableFields.length} campo(s) editáveis neste grupo.</p>
+                            </div>
+                            <div class="group-actions">
+                                <button class="button primary cta-primary icon-leading" onclick="saveGroup('${group.id}')">${renderButtonContent('ph-floppy-disk', 'Salvar grupo')}</button>
+                            </div>
+                        </div>
+                        <div class="fields" data-group="${group.id}">
+                            ${fieldsHtml || '<div class="muted">Sem campos editáveis neste grupo.</div>'}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            bindFieldTrackers();
+        }
+
+        function bindFieldTrackers() {
+            document.querySelectorAll('#settings-groups [data-key]').forEach((input) => {
+                const handler = (event) => {
+                    const key = event.target.dataset.key;
+                    if (!key) return;
+                    dirtyFieldKeys.add(key);
+                    const field = schemaFieldByKey(key);
+                    if (field?.secret) {
+                        secretDraftValues.set(key, event.target.value);
+                    }
+                };
+                input.addEventListener('input', handler);
+                input.addEventListener('change', handler);
+            });
+        }
+
+        function clearFieldErrors() {
+            document.querySelectorAll('.field-error').forEach((el) => {
+                el.textContent = '';
+            });
+        }
+
+        function updateSecretFieldDom(key) {
+            const field = schemaFieldByKey(key);
+            const setting = settingsByKey()[key];
+            const input = document.getElementById(`field-${key}`);
+            const current = document.getElementById(`current-${key}`);
+            const toggle = document.getElementById(`toggle-${key}`);
+            if (!field || !input || !current || !toggle) return;
+
+            if (field.type !== 'csv') {
+                input.type = inputTypeFor(field);
+            }
+
+            if (secretVisibilityKeys.has(key)) {
+                input.value = secretDraftValues.has(key) ? secretDraftValues.get(key) || '' : revealedSecretValues.get(key) || '';
+            } else {
+                input.value = '';
+            }
+
+            const icon = secretLoadingKeys.has(key)
+                ? 'ph-spinner-gap'
+                : secretVisibilityKeys.has(key)
+                    ? 'ph-eye-slash'
+                    : 'ph-eye';
+            const label = secretVisibilityKeys.has(key) ? 'Ocultar valor atual' : 'Mostrar valor atual';
+            toggle.innerHTML = `<i class="ph ${icon}"></i>`;
+            toggle.disabled = secretLoadingKeys.has(key);
+            toggle.title = label;
+
+            current.innerHTML = `Efetivo agora: ${formatEffectiveValue(setting, field)}`;
+        }
+
+        function hideAllSecretFields() {
+            for (const group of schemaPayload?.groups || []) {
+                for (const field of group.fields || []) {
+                    if (!field.secret) continue;
+                    secretVisibilityKeys.delete(field.key);
+                    revealedSecretValues.delete(field.key);
+                    secretLoadingKeys.delete(field.key);
+                    updateSecretFieldDom(field.key);
+                }
+            }
+        }
+
+        async function toggleSecretValue(key) {
+            const field = schemaFieldByKey(key);
+            if (!field?.secret) return;
+            if (secretVisibilityKeys.has(key)) {
+                secretVisibilityKeys.delete(key);
+                revealedSecretValues.delete(key);
+                updateSecretFieldDom(key);
+                return;
+            }
+
+            if (dirtyFieldKeys.has(key) && secretDraftValues.has(key)) {
+                secretVisibilityKeys.add(key);
+                updateSecretFieldDom(key);
+                return;
+            }
+
+            secretLoadingKeys.add(key);
+            updateSecretFieldDom(key);
+
+            try {
+                const { res, data } = await apiJson(`/api/settings/secret/${encodeURIComponent(key)}`);
+                if (!res.ok) {
+                    throw new Error(data.error || 'Falha ao revelar segredo.');
+                }
+                revealedSecretValues.set(key, data.value || '');
+                secretVisibilityKeys.add(key);
+            } catch (error) {
+                showBanner('system-banner', 'error', error.message || 'Falha ao revelar segredo.');
+            } finally {
+                secretLoadingKeys.delete(key);
+                updateSecretFieldDom(key);
+            }
+        }
+
+        async function saveGroup(groupId) {
+            clearFieldErrors();
+            const group = (schemaPayload?.groups || []).find((item) => item.id === groupId);
+            if (!group) return;
+
+            const changes = {};
+            group.fields.filter((field) => field.mutable).forEach((field) => {
+                const input = document.getElementById(`field-${field.key}`);
+                if (!input) return;
+
+                if (field.secret) {
+                    if (!dirtyFieldKeys.has(field.key)) return;
+                    const rawSecretValue = secretDraftValues.has(field.key) ? secretDraftValues.get(field.key) : input.value;
+                    if (!String(rawSecretValue || '').trim()) return;
+                    changes[field.key] = rawSecretValue;
+                    return;
+                }
+
+                changes[field.key] = input.value;
+            });
+
+            if (Object.keys(changes).length === 0) {
+                showBanner('system-banner', 'info', 'Nenhuma alteração pendente neste grupo.');
+                return;
+            }
+
+            try {
+                const { res, data } = await apiJson('/api/settings', {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ changes }),
+                });
+                if (!res.ok) {
+                    Object.entries(data.field_errors || {}).forEach(([key, message]) => {
+                        const el = document.getElementById(`error-${key}`);
+                        if (el) el.textContent = message;
+                    });
+                    showBanner('system-banner', 'error', data.error || 'Falha ao salvar configuração.');
+                    return;
+                }
+
+                showBanner('system-banner', 'info', buildSettingsSaveMessage(data));
+                await loadAll();
+            } catch (error) {
+                showBanner('system-banner', 'error', error.message || 'Falha ao salvar configuração.');
+            }
+        }
+
+        function renderStorage() {
+            const summary = storagePayload?.summary || {};
+            const items = storagePayload?.items || [];
+            const jobs = storagePayload?.jobs || [];
+
+            const cards = [
+                { label: 'Armazenamento total', value: formatBytes(summary.total_bytes || 0), meta: 'Uso total registrado pelo banco do TCloud.' },
+                { label: 'Cache em disco', value: formatBytes(summary.cache_usage_bytes || 0), meta: 'Tamanho atual da pasta de cache local.' },
+                { label: 'No Servidor', value: String(summary.persistent_item_count || summary.offline_item_count || 0), meta: 'Itens mantidos continuamente com retenção permanente.' },
+                { label: 'Temporários', value: String(summary.temporary_item_count || 0), meta: 'Arquivos com cache volátil ativo neste runtime.' },
+                { label: 'Totalmente em cache', value: String(summary.ready_item_count || summary.cached_item_count || 0), meta: 'Arquivos cujos chunks já estão completos em disco.' },
+                { label: 'Preparando', value: String(summary.syncing_item_count || summary.active_offline_download_count || 0), meta: 'Itens permanentes ainda sendo preparados no servidor.' },
+                { label: 'Sync', value: summary.sync_enabled ? 'Ligado' : 'Desligado', meta: summary.sync_enabled ? 'Diretório de sync disponível neste runtime.' : 'Sync desativado no runtime atual.' },
+            ];
+
+            document.getElementById('storage-summary-grid').innerHTML = cards.map((card) => renderMetricCard(card)).join('');
+
+            document.getElementById('storage-paths-wrap').innerHTML = `
+                <div class="group-head">
+                    <div>
+                        <h3>Caminhos operacionais</h3>
+                        <p class="text-clamp-2" title="Locais usados pelo runtime atual para staging, cache, store gerenciada e sync.">Locais usados pelo runtime atual para staging, cache, store gerenciada e sync.</p>
+                    </div>
+                </div>
+                <div class="paths-list">
+                    <div class="path-row">
+                        <strong>Runtime dir</strong>
+                        <span class="text-ellipsis" title="${escapeHtml(summary.runtime_dir || '—')}">${escapeHtml(summary.runtime_dir || '—')}</span>
+                    </div>
+                    <div class="path-row">
+                        <strong>Cache dir</strong>
+                        <span class="text-ellipsis" title="${escapeHtml(summary.cache_dir || '—')}">${escapeHtml(summary.cache_dir || '—')}</span>
+                    </div>
+                    <div class="path-row">
+                        <strong>Store path</strong>
+                        <span class="text-ellipsis" title="${escapeHtml(summary.store_path || '—')}">${escapeHtml(summary.store_path || '—')}</span>
+                    </div>
+                    <div class="path-row">
+                        <strong>.env path</strong>
+                        <span class="text-ellipsis" title="${escapeHtml(summary.env_path || '—')}">${escapeHtml(summary.env_path || '—')}</span>
+                    </div>
+                    <div class="path-row">
+                        <strong>Sync dir</strong>
+                        <span class="text-ellipsis" title="${escapeHtml(summary.sync_dir || (summary.sync_enabled ? '—' : 'Sync desativado'))}">${escapeHtml(summary.sync_dir || (summary.sync_enabled ? '—' : 'Sync desativado'))}</span>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('storage-jobs-wrap').innerHTML = `
+                <div class="group-head">
+                    <div>
+                        <h3>Preparação no Servidor</h3>
+                        <p class="text-clamp-2" title="Arquivos permanentes sendo preparados no runtime atual.">Arquivos permanentes sendo preparados no runtime atual.</p>
+                    </div>
+                </div>
+                <div class="jobs-list">
+                    ${jobs.length ? jobs.map((job) => `
+                        <div class="job-card">
+                            <h4 title="${escapeHtml(job.name || job.path)}">${escapeHtml(job.name || job.path)}</h4>
+                            <div class="muted" title="${escapeHtml(job.path)}">${escapeHtml(job.path)}</div>
+                            <div style="margin:10px 0 8px;" class="progress"><span style="width:${Math.max(0, Math.min(100, Number(job.percent || 0)))}%"></span></div>
+                            <div class="muted">${formatPercent(job.percent)} • ${formatBytes(job.cached_bytes || 0)} de ${formatBytes(job.total_bytes || 0)}</div>
+                        </div>
+                    `).join('') : '<div class="muted">Nenhuma preparação permanente em andamento.</div>'}
+                </div>
+            `;
+
+            const filterButtons = [
+                { key: 'all', label: 'Tudo', count: items.length },
+                { key: 'persistent', label: 'No Servidor', count: items.filter((item) => item.status?.retention_kind === 'persistent').length },
+                { key: 'volatile', label: 'Temporário (24h)', count: items.filter((item) => item.status?.retention_kind === 'temporary').length },
+                { key: 'cached', label: 'Totalmente em cache', count: items.filter((item) => item.status?.is_ready).length },
+                { key: 'syncing', label: 'Preparando', count: items.filter((item) => item.status?.is_syncing).length },
+            ];
+
+            const filteredItems = items.filter((item) => {
+                if (storageFilter === 'persistent') return item.status?.retention_kind === 'persistent';
+                if (storageFilter === 'volatile') return item.status?.retention_kind === 'temporary';
+                if (storageFilter === 'cached') return !!item.status?.is_ready;
+                if (storageFilter === 'syncing') return !!item.status?.is_syncing;
+                return true;
+            });
+
+            document.getElementById('storage-inventory-wrap').innerHTML = `
+                <div class="group-head">
+                    <div>
+                        <h3>Inventário e Ciclo de Vida</h3>
+                        <p>Arquivos em <strong>No Servidor</strong> ficam mantidos com retenção permanente. Arquivos em <strong>Temporário (24h)</strong> representam cache volátil recente e podem expirar automaticamente quando não houver nova atividade.</p>
+                    </div>
+                    <div class="group-actions">
+                        <button class="button small action-small icon-leading" onclick="loadStorageOnly()">${renderButtonContent('ph-arrow-clockwise', 'Atualizar')}</button>
+                    </div>
+                </div>
+                <div class="filter-row">
+                    ${filterButtons.map((filter) => `
+                        <button class="button small action-small ${storageFilter === filter.key ? 'active' : ''}" onclick="setStorageFilter('${filter.key}')">
+                            <span class="button-label">${escapeHtml(filter.label)} (${filter.count})</span>
+                        </button>
+                    `).join('')}
+                </div>
+                <div class="inventory-list">
+                    ${filteredItems.length ? filteredItems.map((item) => {
+                        const encodedPath = encodeURIComponent(item.path || '');
+                        return `
+                            <div class="inventory-card">
+                                <div class="inventory-head">
+                                    <div>
+                                        <h4 title="${escapeHtml(item.name || item.path)}">${escapeHtml(item.name || item.path)}</h4>
+                                        <div class="muted" title="${escapeHtml(item.path || '')}">${escapeHtml(item.path || '')}</div>
+                                    </div>
+                                    <div class="inventory-actions">
+                                        <button class="button small action-small ghost icon-leading" onclick="inspectStorageItem('${encodedPath}', this)">${renderButtonContent('ph-info', 'Detalhes')}</button>
+                                        ${item.actions?.can_remove_offline ? `<button class="button small action-small danger icon-leading" onclick="removeOfflineItem('${encodedPath}')">${renderButtonContent('ph-trash', 'Remover do Servidor')}</button>` : ''}
+                                        ${item.actions?.can_evict_cache ? `<button class="button small action-small icon-leading" onclick="evictCachedItem('${encodedPath}')">${renderButtonContent('ph-broom', 'Limpar cache')}</button>` : ''}
+                                    </div>
+                                </div>
+                                <div class="inventory-meta">
+                                    <div>
+                                        <strong>Status</strong>
+                                        <span style="display: flex; align-items: center; gap: 4px;">
+                                            ${item.status?.retention_kind === 'temporary' ? '<i class="ph ph-clock" style="color:var(--warning)"></i>' : '<i class="ph ph-cloud-check" style="color:var(--success)"></i>'}
+                                            ${item.status?.retention_kind === 'temporary' ? 'Temporário (24h)' : (item.status?.is_syncing ? 'Preparando no Servidor' : 'No Servidor')}
+                                        </span>
+                                    </div>
+                                    <div>
+                                        <strong>Tamanho</strong>
+                                        <span>${formatBytes(item.size_bytes || 0)}</span>
+                                    </div>
+                                    <div>
+                                        <strong>Retenção</strong>
+                                        <span>${item.status?.retention_kind === 'temporary' ? '24 horas' : 'Permanente'}</span>
+                                    </div>
+                                    <div>
+                                        <strong>Alterado em</strong>
+                                        <span>${escapeHtml(formatDate(item.modified_at))}</span>
+                                    </div>
+                                    <div>
+                                        <strong>Chunks</strong>
+                                        <span>${escapeHtml(String(item.storage?.chunk_count ?? 0))}</span>
+                                    </div>
+                                    <div>
+                                        <strong>Storage scheme</strong>
+                                        <span>${escapeHtml(item.storage?.storage_scheme || '—')}</span>
+                                    </div>
+                                    <div>
+                                        <strong>Storage ID</strong>
+                                        <span>${escapeHtml(item.storage?.storage_id_masked || '—')}</span>
+                                    </div>
+                                </div>
+                                <div class="meta text-clamp-2" style="margin-top:12px;" title="Cache: ${escapeHtml(`${formatBytes(item.cache?.cached_bytes || 0)} de ${formatBytes(item.cache?.total_bytes || 0)} • ${formatPercent(item.cache?.percent || 0)}${item.cache?.last_accessed_at ? ` • atividade em ${formatDate(item.cache.last_accessed_at)}` : ''}`)}">Cache: ${formatBytes(item.cache?.cached_bytes || 0)} de ${formatBytes(item.cache?.total_bytes || 0)} • ${formatPercent(item.cache?.percent || 0)}${item.cache?.last_accessed_at ? ` • atividade em ${escapeHtml(formatDate(item.cache.last_accessed_at))}` : ''}</div>
+                            </div>
+                        `;
+                    }).join('') : '<div class="muted">Nenhum item compatível com o filtro atual. A lista temporária mostra apenas arquivos com chunks realmente presentes em disco.</div>'}
+                </div>
+            `;
+        }
+
+        function setStorageFilter(filter) {
+            storageFilter = filter;
+            renderStorage();
+        }
+
+        function renderSharing() {
+            const summary = sharingPayload?.summary || {};
+            const policy = sharingPayload?.policy || {};
+            const items = sharingPayload?.items || [];
+            const settings = settingsByKey();
+            const cards = [
+                { label: 'Links configurados', value: String(summary.total || 0), meta: `${Number(summary.files || 0)} arquivo(s) e ${Number(summary.directories || 0)} pasta(s).` },
+                { label: 'Ativos', value: String(summary.active || 0), meta: 'Links públicos aceitando acesso agora.' },
+                { label: 'Expirados', value: String(summary.expired || 0), meta: 'Links mantidos para auditoria, mas indisponíveis ao público.' },
+                { label: 'Limite esgotado', value: String(summary.exhausted || 0), meta: 'Links cujo contador atingiu o limite configurado.' },
+                { label: 'Com senha', value: String(summary.password || 0), meta: 'Links protegidos por senha pública.' },
+                { label: 'Compartilhamento', value: policy.enabled ? 'Ligado' : 'Desligado', meta: policy.enabled ? 'Criação e acesso público permitidos.' : 'Acesso público bloqueado sem apagar links.' },
+            ];
+            document.getElementById('sharing-summary-grid').innerHTML = cards.map((card) => renderMetricCard(card)).join('');
+
+            const policyRows = [
+                ['Arquivos', policy.allow_file_sharing ? 'permitido' : 'bloqueado'],
+                ['Pastas', policy.allow_folder_sharing ? 'permitido' : 'bloqueado'],
+                ['Senha padrão', policy.require_password_by_default ? 'habilitada' : 'desabilitada'],
+                ['Expiração padrão', Number(policy.default_expiry_hours || 0) > 0 ? `${policy.default_expiry_hours}h` : 'não expira'],
+                ['Expiração máxima', Number(policy.max_expiry_hours || 0) > 0 ? `${policy.max_expiry_hours}h` : 'sem teto'],
+                ['Acessos padrão', Number(policy.default_max_access || 0) > 0 ? String(policy.default_max_access) : 'ilimitado'],
+                ['Teto de acessos', Number(policy.max_access_limit || 0) > 0 ? String(policy.max_access_limit) : 'sem teto'],
+                ['ZIP público', policy.allow_zip_download ? 'permitido' : 'bloqueado'],
+                ['Sessão pública', `${policy.session_ttl_seconds || 0}s`],
+                ['Métricas públicas', `${policy.metrics_ttl_seconds || 0}s / ${policy.metrics_concurrency || 0} worker(s)`],
+            ];
+
+            document.getElementById('sharing-policy-wrap').innerHTML = `
+                <div class="group-head">
+                    <div>
+                        <h3>Política efetiva</h3>
+                        <p class="text-clamp-2" title="Resumo das chaves PUBLIC_SHARE_* aplicadas pelo runtime atual. Edite os campos no painel Sistema, grupo Compartilhamento.">Resumo das chaves <code>PUBLIC_SHARE_*</code> aplicadas pelo runtime atual.</p>
+                    </div>
+                    <div class="group-actions">
+                        <button class="button small action-small icon-leading" onclick="setSection('system')">${renderButtonContent('ph-sliders-horizontal', 'Editar no Sistema')}</button>
+                    </div>
+                </div>
+                <div class="paths-list">
+                    ${policyRows.map(([label, value]) => `
+                        <div class="path-row">
+                            <strong>${escapeHtml(label)}</strong>
+                            <span>${escapeHtml(value)}</span>
+                        </div>
+                    `).join('')}
+                </div>
+                <div class="meta text-clamp-3" style="margin-top:12px;" title="Chaves gerenciadas: ${escapeHtml(Object.keys(settings).filter((key) => key.startsWith('PUBLIC_SHARE_')).join(', ') || 'nenhuma')}">Chaves gerenciadas: ${escapeHtml(Object.keys(settings).filter((key) => key.startsWith('PUBLIC_SHARE_')).join(', ') || 'nenhuma')}</div>
+            `;
+
+            document.getElementById('sharing-inventory-wrap').innerHTML = `
+                <div class="group-head">
+                    <div>
+                        <h3>Inventário de links</h3>
+                        <p class="text-clamp-2" title="Somente itens com link público direto aparecem aqui; filhos herdados de pasta pública ficam fora deste inventário.">Somente itens com link público direto aparecem aqui.</p>
+                    </div>
+                    <div class="group-actions">
+                        <button class="button small action-small icon-leading" onclick="loadSharingOnly()">${renderButtonContent('ph-arrow-clockwise', 'Atualizar')}</button>
+                    </div>
+                </div>
+                <div class="inventory-list">
+                    ${items.length ? items.map((item) => {
+                        const sharing = item.sharing_state || {};
+                        const url = sharing.public_url || '';
+                        const status = item.share_status || sharing.owner_status || (sharing.active === false ? 'inativo' : 'ativo');
+                        return `
+                            <div class="inventory-card">
+                                <div class="inventory-head">
+                                    <div>
+                                        <h4 title="${escapeHtml(item.name || item.path)}">${escapeHtml(item.name || item.path)}</h4>
+                                        <div class="muted" title="${escapeHtml(item.path || '')}">${escapeHtml(item.path || '')}</div>
+                                    </div>
+                                    <div class="inventory-actions">
+                                        ${url ? `<a class="button small action-small ghost icon-leading" href="${escapeHtml(url)}" target="_blank" rel="noopener">${renderButtonContent('ph-arrow-square-out', 'Abrir link')}</a>` : ''}
+                                    </div>
+                                </div>
+                                <div class="inventory-meta">
+                                    <div><strong>Status</strong><span>${escapeHtml(status)}</span></div>
+                                    <div><strong>Tipo</strong><span>${item.is_directory ? 'Pasta' : 'Arquivo'}</span></div>
+                                    <div><strong>Senha</strong><span>${sharing.requires_password ? 'sim' : 'não'}</span></div>
+                                    <div><strong>Acessos</strong><span>${escapeHtml(`${sharing.access_count || 0}${sharing.max_access ? `/${sharing.max_access}` : ''}`)}</span></div>
+                                    <div><strong>Expira em</strong><span>${escapeHtml(formatDate(sharing.expires_at))}</span></div>
+                                    <div><strong>Modificado</strong><span>${escapeHtml(formatDate(item.modified_at))}</span></div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('') : '<div class="muted">Nenhum link público direto configurado.</div>'}
+                </div>
+            `;
+        }
+
+        async function inspectStorageItem(encodedPath, triggerButton = null) {
+            const path = decodeURIComponent(encodedPath);
+            try {
+                setButtonBusy(triggerButton, true, 'Abrindo...');
+                const { res, data } = await apiJson(`/api/file_info?path=${encodeURIComponent(path)}`);
+                if (!res.ok) {
+                    throw new Error(data.error || 'Falha ao buscar detalhes do item.');
+                }
+                openStorageDetailModal(data);
+            } catch (error) {
+                showBanner('storage-banner', 'error', error.message || 'Falha ao buscar detalhes do item.');
+            } finally {
+                setButtonBusy(triggerButton, false);
+            }
+        }
+
+        async function removeOfflineItem(encodedPath) {
+            const path = decodeURIComponent(encodedPath);
+            try {
+                const { res, data } = await apiJson('/api/remove_offline', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ path }),
+                });
+                if (!res.ok) {
+                    showBanner('storage-banner', 'error', data.error || 'Falha ao remover a retenção permanente do item.');
+                    return;
+                }
+                showBanner('storage-banner', 'info', `Item removido de No Servidor: ${path}`);
+                await loadAll();
+                setSection('storage');
+            } catch (error) {
+                showBanner('storage-banner', 'error', error.message || 'Falha ao remover a retenção permanente do item.');
+            }
+        }
+
+        async function evictCachedItem(encodedPath) {
+            const path = decodeURIComponent(encodedPath);
+            try {
+                const { res, data } = await apiJson('/api/evict_cache', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ path }),
+                });
+                if (!res.ok) {
+                    showBanner('storage-banner', 'error', data.error || 'Falha ao limpar cache do item.');
+                    return;
+                }
+                showBanner('storage-banner', 'info', `Cache removido para: ${path}`);
+                await loadAll();
+                setSection('storage');
+            } catch (error) {
+                showBanner('storage-banner', 'error', error.message || 'Falha ao limpar cache do item.');
+            }
+        }
+
+        function managedApps() {
+            return appsAdminPayload?.apps || appsPayload?.apps || [];
+        }
+
+        function managedAppById(appId) {
+            return managedApps().find((item) => item.id === appId) || null;
+        }
+
+        function permissionDomId(prefix, permissionId) {
+            return `${prefix}-${String(permissionId || '').replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+        }
+
+        function ensureManagedAppSelection() {
+            const apps = managedApps();
+            if (!apps.length) {
+                selectedManagedAppId = '';
+                return null;
+            }
+            if (!selectedManagedAppId || !managedAppById(selectedManagedAppId)) {
+                selectedManagedAppId = apps[0].id;
+            }
+            return managedAppById(selectedManagedAppId);
+        }
+
+        async function loadAppAudit(appId) {
+            if (!appId) return;
+            try {
+                const { res, data } = await apiJson(`/api/apps/${encodeURIComponent(appId)}/audit?limit=20`);
+                if (!res.ok) {
+                    showBanner('apps-banner', 'error', data.error || 'Falha ao carregar auditoria do app.');
+                    return;
+                }
+                appAuditCache[appId] = data.events || [];
+                renderAppsPanel();
+            } catch (error) {
+                showBanner('apps-banner', 'error', error.message || 'Falha ao carregar auditoria do app.');
+            }
+        }
+
+        async function loadAppsAdminOnly(silent) {
+            try {
+                const { res, data } = await apiJson('/api/apps/admin');
+                if (!res.ok) {
+                    showBanner('apps-banner', 'error', data.error || 'Falha ao carregar painel de apps.');
+                    return;
+                }
+                appsAdminPayload = data;
+                appsPayload = {
+                    apps: data.apps || [],
+                    default_app_id: data.default_app_id || '',
+                    schema_version: data.schema_version || 3,
+                };
+                renderOverview();
+                renderDiagnostics();
+                renderAppsPanel();
+                if (!silent) {
+                    showBanner('apps-banner', 'info', `Painel de apps atualizado. ${data.apps?.length || 0} app(s) no inventario.`);
+                }
+                const activeApp = ensureManagedAppSelection();
+                if (activeApp) {
+                    await loadAppAudit(activeApp.id);
+                }
+            } catch (error) {
+                showBanner('apps-banner', 'error', error.message || 'Falha ao carregar painel de apps.');
+            }
+        }
+
+        function renderAppsPanel() {
+            const apps = managedApps();
+            const selectedApp = ensureManagedAppSelection();
+            const summaryCards = [
+                { label: 'Aplicativos no inventário', value: String(apps.length), meta: 'Total de apps conhecidos pelo runtime.' },
+                { label: 'Instalados em runtime', value: String(apps.filter((app) => app.source_type !== 'bundled').length), meta: 'Apps vindos de ZIP ou GitHub.' },
+                { label: 'Pendentes de permissão', value: String(apps.filter((app) => app.has_pending_permissions).length), meta: 'Apps com permissões solicitadas ainda não liberadas.' },
+                { label: 'Desabilitados', value: String(apps.filter((app) => !app.enabled).length), meta: 'Apps ocultos da shell até reativação.' },
+            ];
+            document.getElementById('apps-summary-grid').innerHTML = summaryCards.map((card) => renderMetricCard(card)).join('');
+
+            document.getElementById('apps-install-wrap').innerHTML = `
+                <div class="group-head">
+                    <div>
+                        <h3>Instalar app</h3>
+                        <p class="text-clamp-3" title="Apps podem entrar por upload de ZIP validado ou por um link do GitHub. O bundle precisa conter manifest.json e index.html.">Apps podem entrar por upload de ZIP validado ou por um link do GitHub. O bundle precisa conter <code>manifest.json</code> e <code>index.html</code>.</p>
+                    </div>
+                </div>
+                <div class="apps-form-grid">
+                    <div class="field">
+                        <label for="apps-zip-file">Upload ZIP</label>
+                        <div class="file-picker">
+                            <input id="apps-zip-file" type="file" accept=".zip,application/zip">
+                            <button type="button" class="button action-small icon-leading" onclick="triggerZipPicker()">${renderButtonContent('ph-folder-open', 'Escolher ZIP')}</button>
+                            <div id="apps-zip-selection" class="file-selection text-ellipsis" title="Nenhum arquivo selecionado">Nenhum arquivo selecionado</div>
+                        </div>
+                        <small>Use para instalar um app empacotado localmente.</small>
+                        <div class="apps-inline-actions">
+                            <button class="button primary cta-primary icon-leading" onclick="installManagedZip()">${renderButtonContent('ph-upload-simple', 'Instalar ZIP')}</button>
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label for="apps-github-url">GitHub</label>
+                        <input id="apps-github-url" type="text" placeholder="https://github.com/owner/repo ou /tree/ref/subdir">
+                        <div class="apps-form-grid">
+                            <div>
+                                <label for="apps-github-ref">Ref</label>
+                                <input id="apps-github-ref" type="text" placeholder="main">
+                            </div>
+                            <div>
+                                <label for="apps-github-subdir">Subdiretório</label>
+                                <input id="apps-github-subdir" type="text" placeholder="apps/meu-app">
+                            </div>
+                        </div>
+                        <div class="apps-inline-actions">
+                            <button class="button primary cta-primary icon-leading" onclick="installManagedGithub()">${renderButtonContent('ph-github-logo', 'Instalar GitHub')}</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('apps-runtime-wrap').innerHTML = `
+                <div class="group-head">
+                    <div>
+                        <h3>Runtime de apps</h3>
+                        <p class="text-clamp-2" title="Apps instalados em runtime ficam fora do repositório e usam sessões escopadas no lugar do JWT bruto da shell.">Apps instalados em runtime ficam fora do repositório e usam sessões escopadas no lugar do JWT bruto da shell.</p>
+                    </div>
+                </div>
+                <div class="paths-list">
+                    <div class="path-row">
+                        <strong>Diretório de apps do runtime</strong>
+                        <span class="text-ellipsis" title="${escapeHtml(appsAdminPayload?.runtime_apps_dir || '—')}">${escapeHtml(appsAdminPayload?.runtime_apps_dir || '—')}</span>
+                    </div>
+                    <div class="path-row">
+                        <strong>Registry</strong>
+                        <span class="text-ellipsis" title="${escapeHtml(appsAdminPayload?.registry_path || '—')}">${escapeHtml(appsAdminPayload?.registry_path || '—')}</span>
+                    </div>
+                    <div class="path-row">
+                        <strong>Auditoria</strong>
+                        <span class="text-ellipsis" title="${escapeHtml(appsAdminPayload?.audit_path || '—')}">${escapeHtml(appsAdminPayload?.audit_path || '—')}</span>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('apps-inventory-wrap').innerHTML = `
+                <div class="group-head">
+                    <div>
+                        <h3>Inventário e ciclo de vida</h3>
+                        <p class="text-clamp-2" title="Selecione um app para revisar permissões, funções declaradas e eventos recentes.">Selecione um app para revisar permissões, funções declaradas e eventos recentes.</p>
+                    </div>
+                </div>
+                <div class="table-shell">
+                    <table class="apps-table">
+                        <thead>
+                            <tr>
+                                <th>App</th>
+                                <th>Versão</th>
+                                <th>Origem</th>
+                                <th>Trust</th>
+                                <th>Permissões</th>
+                                <th>Status</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${apps.map((app) => `
+                                <tr>
+                                    <td>
+                                        <div class="table-primary" title="${escapeHtml(app.name)}"><i class="ph ${escapeHtml(app.icon)}"></i><span class="button-label text-ellipsis">${escapeHtml(app.name)}</span></div>
+                                        <div class="muted table-secondary text-ellipsis" title="${escapeHtml(`${app.id} • ${app.category || 'custom'}`)}">${escapeHtml(app.id)} • ${escapeHtml(app.category || 'custom')}</div>
+                                    </td>
+                                    <td title="${escapeHtml(app.version || '1.0.0')}">${escapeHtml(app.version || '1.0.0')}</td>
+                                    <td>
+                                        <div class="text-ellipsis" title="${escapeHtml(app.source_type || 'bundled')}">${escapeHtml(app.source_type || 'bundled')}</div>
+                                        <div class="muted table-secondary text-ellipsis" title="${escapeHtml(app.source_repo || app.source_url || app.source_location || '—')}">${escapeHtml(app.source_repo || app.source_url || app.source_location || '—')}</div>
+                                    </td>
+                                    <td><span class="chip ${app.trust_level === 'system' ? 'success' : app.trust_level === 'trusted' ? '' : 'warn'}">${escapeHtml(app.trust_level || 'scoped')}</span></td>
+                                    <td title="${escapeHtml(`${String(app.granted_permission_count || 0)}/${String(app.requested_permission_count || 0)}`)}">${escapeHtml(String(app.granted_permission_count || 0))}/${escapeHtml(String(app.requested_permission_count || 0))}</td>
+                                    <td>
+                                        <div class="table-chip-row">
+                                            ${app.protected ? '<span class="chip success">protegido</span>' : ''}
+                                            ${app.enabled ? '<span class="chip success">habilitado</span>' : '<span class="chip warn">desabilitado</span>'}
+                                            ${app.has_pending_permissions ? '<span class="chip warn">revisão</span>' : ''}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="apps-inline-actions">
+                                            <button class="button small action-small icon-leading" onclick="selectManagedApp('${escapeHtml(app.id)}')">${renderButtonContent('ph-key', 'Permissões')}</button>
+                                            ${app.enabled ? `<button class="button small action-small ghost icon-leading" onclick="toggleManagedApp('${escapeHtml(app.id)}', false)" ${app.protected ? 'disabled' : ''}>${renderButtonContent('ph-toggle-left', 'Desabilitar')}</button>` : `<button class="button small action-small icon-leading" onclick="toggleManagedApp('${escapeHtml(app.id)}', true)">${renderButtonContent('ph-toggle-right', 'Habilitar')}</button>`}
+                                            <button class="button small action-small danger icon-leading" onclick="uninstallManagedApp('${escapeHtml(app.id)}')" ${app.protected ? 'disabled' : ''}>${renderButtonContent('ph-trash', 'Desinstalar')}</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            const zipInput = document.getElementById('apps-zip-file');
+            if (zipInput && !zipInput.dataset.bound) {
+                zipInput.addEventListener('change', updateZipFileSelection);
+                zipInput.dataset.bound = 'true';
+            }
+            updateZipFileSelection();
+
+            if (!selectedApp) {
+                document.getElementById('apps-permissions-wrap').innerHTML = '<div class="muted">Nenhum app disponível para revisar permissões.</div>';
+                document.getElementById('apps-audit-wrap').innerHTML = '<div class="muted">Nenhuma auditoria disponível.</div>';
+                return;
+            }
+
+            document.getElementById('apps-permissions-wrap').innerHTML = `
+                <div class="group-head">
+                    <div>
+                        <h3>Permissões de ${escapeHtml(selectedApp.name)}</h3>
+                        <p class="text-clamp-2" title="Apps fora do modo system nascem com permissões negadas até revisão explícita.">Apps fora do modo <strong>system</strong> nascem com permissões negadas até revisão explícita.</p>
+                    </div>
+                    <div class="group-actions">
+                        <button class="button primary cta-primary icon-leading" onclick="saveManagedAppPermissions()">${renderButtonContent('ph-floppy-disk', 'Salvar permissões')}</button>
+                    </div>
+                </div>
+                <div class="permission-grid">
+                    ${(selectedApp.requested_permissions || []).map((permissionId) => {
+                        const policy = selectedApp.permission_policies?.[permissionId] || {};
+                        return `
+                            <div class="field">
+                                <label>${escapeHtml(permissionId)}</label>
+                                <div class="field-meta">
+                                    ${policy.dangerous ? '<span class="chip warn">sensível</span>' : '<span class="chip">normal</span>'}
+                                </div>
+                                <select id="${permissionDomId('perm-mode', permissionId)}">
+                                    <option value="deny" ${policy.grant_mode === 'deny' ? 'selected' : ''}>deny</option>
+                                    <option value="allow" ${policy.grant_mode === 'allow' ? 'selected' : ''}>allow</option>
+                                    <option value="ask_each_time" ${policy.grant_mode === 'ask_each_time' ? 'selected' : ''}>ask_each_time</option>
+                                </select>
+                                <input id="${permissionDomId('perm-paths', permissionId)}" type="text" value="${escapeHtml((policy.path_prefixes || ['/']).join(', '))}" placeholder="/, /Filmes, /Series">
+                                <input id="${permissionDomId('perm-types', permissionId)}" type="text" value="${escapeHtml((policy.allow_file_types || []).join(', '))}" placeholder=".mp4, .mkv">
+                                <small class="text-clamp-3" title="Escopo por caminho e extensão. Se vazio, o app herda o escopo total do TCloud para essa permissão.">Escopo por caminho e extensão. Se vazio, o app herda o escopo total do TCloud para essa permissão.</small>
+                            </div>
+                        `;
+                    }).join('') || '<div class="muted">Este app não solicitou permissões explícitas.</div>'}
+                </div>
+                <div class="function-list">
+                    ${(selectedApp.requested_functions || []).map((functionId) => {
+                        const allowed = (selectedApp.allowed_functions || []).includes(functionId);
+                        return `<span class="chip ${allowed ? 'success' : 'warn'}">${escapeHtml(functionId)}</span>`;
+                    }).join('') || '<span class="chip">Sem funções declaradas</span>'}
+                </div>
+            `;
+
+            const auditEvents = appAuditCache[selectedApp.id] || [];
+            document.getElementById('apps-audit-wrap').innerHTML = `
+                <div class="group-head">
+                    <div>
+                        <h3>Auditoria de ${escapeHtml(selectedApp.name)}</h3>
+                            <p class="text-clamp-2" title="Eventos recentes de install, grant, revoke, enable, disable e chamadas de runtime.">Eventos recentes de install, grant, revoke, enable, disable e chamadas de runtime.</p>
+                    </div>
+                    <div class="group-actions">
+                        <button class="button small action-small icon-leading" onclick="loadAppAudit('${escapeHtml(selectedApp.id)}')">${renderButtonContent('ph-arrow-clockwise', 'Atualizar auditoria')}</button>
+                    </div>
+                </div>
+                <div class="audit-list">
+                    ${auditEvents.length ? auditEvents.map((event) => `
+                        <div class="audit-item">
+                            <strong>${escapeHtml(event.event || 'evento')}</strong>
+                            <div class="muted text-ellipsis" title="${escapeHtml(formatDate(event.timestamp))}">${escapeHtml(formatDate(event.timestamp))}</div>
+                            <div class="muted text-wrap-anywhere">${escapeHtml(JSON.stringify(event.details || {}))}</div>
+                        </div>
+                    `).join('') : '<div class="muted">Nenhum evento recente para este app.</div>'}
+                </div>
+            `;
+        }
+
+        function updateZipFileSelection() {
+            const input = document.getElementById('apps-zip-file');
+            const label = document.getElementById('apps-zip-selection');
+            if (!input || !label) return;
+            const fileName = input.files?.[0]?.name || 'Nenhum arquivo selecionado';
+            label.textContent = fileName;
+            label.title = fileName;
+        }
+
+        async function selectManagedApp(appId) {
+            selectedManagedAppId = appId;
+            renderAppsPanel();
+            document.getElementById('apps-permissions-wrap')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            await loadAppAudit(appId);
+        }
+
+        async function installManagedZip() {
+            const input = document.getElementById('apps-zip-file');
+            const file = input?.files?.[0];
+            if (!file) {
+                showBanner('apps-banner', 'error', 'Selecione um arquivo ZIP antes de instalar.');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file, file.name);
+
+            try {
+                const { res, data } = await apiJson('/api/apps/install/zip', {
+                    method: 'POST',
+                    body: formData,
+                });
+                if (!res.ok) {
+                    showBanner('apps-banner', 'error', data.error || 'Falha ao instalar app por ZIP.');
+                    return;
+                }
+                input.value = '';
+                updateZipFileSelection();
+                showBanner('apps-banner', 'info', `App instalado por ZIP: ${data.app_id}`);
+                await loadAppsAdminOnly(true);
+            } catch (error) {
+                showBanner('apps-banner', 'error', error.message || 'Falha ao instalar app por ZIP.');
+            }
+        }
+
+        async function installManagedGithub() {
+            const url = document.getElementById('apps-github-url')?.value?.trim() || '';
+            const ref = document.getElementById('apps-github-ref')?.value?.trim() || '';
+            const subdir = document.getElementById('apps-github-subdir')?.value?.trim() || '';
+            if (!url) {
+                showBanner('apps-banner', 'error', 'Informe um link do GitHub.');
+                return;
+            }
+
+            try {
+                const { res, data } = await apiJson('/api/apps/install/github', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url, ref, subdir }),
+                });
+                if (!res.ok) {
+                    showBanner('apps-banner', 'error', data.error || 'Falha ao instalar app do GitHub.');
+                    return;
+                }
+                showBanner('apps-banner', 'info', `App instalado do GitHub: ${data.app_id}`);
+                await loadAppsAdminOnly(true);
+            } catch (error) {
+                showBanner('apps-banner', 'error', error.message || 'Falha ao instalar app do GitHub.');
+            }
+        }
+
+        async function toggleManagedApp(appId, enabled) {
+            const action = enabled ? 'enable' : 'disable';
+            try {
+                const { res, data } = await apiJson(`/api/apps/${encodeURIComponent(appId)}/${action}`, { method: 'POST' });
+                if (!res.ok) {
+                    showBanner('apps-banner', 'error', data.error || 'Falha ao mudar estado do app.');
+                    return;
+                }
+                showBanner('apps-banner', 'info', enabled ? `App habilitado: ${appId}` : `App desabilitado: ${appId}`);
+                await loadAppsAdminOnly(true);
+            } catch (error) {
+                showBanner('apps-banner', 'error', error.message || 'Falha ao mudar estado do app.');
+            }
+        }
+
+        async function uninstallManagedApp(appId) {
+            if (!window.confirm(`Deseja realmente desinstalar o app ${appId}?`)) return;
+            try {
+                const { res, data } = await apiJson(`/api/apps/${encodeURIComponent(appId)}/uninstall`, { method: 'POST' });
+                if (!res.ok) {
+                    showBanner('apps-banner', 'error', data.error || 'Falha ao desinstalar app.');
+                    return;
+                }
+                if (selectedManagedAppId === appId) {
+                    selectedManagedAppId = '';
+                }
+                delete appAuditCache[appId];
+                showBanner('apps-banner', 'info', `App removido: ${appId}`);
+                await loadAppsAdminOnly(true);
+            } catch (error) {
+                showBanner('apps-banner', 'error', error.message || 'Falha ao desinstalar app.');
+            }
+        }
+
+        async function saveManagedAppPermissions() {
+            const app = managedAppById(selectedManagedAppId);
+            if (!app) return;
+
+            const policies = {};
+            (app.requested_permissions || []).forEach((permissionId) => {
+                const mode = document.getElementById(permissionDomId('perm-mode', permissionId))?.value || 'deny';
+                const pathsRaw = document.getElementById(permissionDomId('perm-paths', permissionId))?.value || '/';
+                const typesRaw = document.getElementById(permissionDomId('perm-types', permissionId))?.value || '';
+                policies[permissionId] = {
+                    grant_mode: mode,
+                    path_prefixes: pathsRaw.split(',').map((item) => item.trim()).filter(Boolean),
+                    allow_file_types: typesRaw.split(',').map((item) => item.trim()).filter(Boolean),
+                };
+            });
+
+            try {
+                const { res, data } = await apiJson(`/api/apps/${encodeURIComponent(app.id)}/permissions`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ policies }),
+                });
+                if (!res.ok) {
+                    showBanner('apps-banner', 'error', data.error || 'Falha ao salvar permissoes do app.');
+                    return;
+                }
+                showBanner('apps-banner', 'info', `Permissoes atualizadas para ${app.id}.`);
+                await loadAppsAdminOnly(true);
+            } catch (error) {
+                showBanner('apps-banner', 'error', error.message || 'Falha ao salvar permissoes do app.');
+            }
+        }
+
+        function renderDiagnostics() {
+            const status = statusPayload || {};
+            const archive = status.archive || {};
+            const archiveBackends = archive.backends || {};
+            const persistence = persistencePayloadFrom(status);
+            const cards = [
+                { label: 'Log level', value: status.log_level || '—', meta: 'Nível efetivo de logs do processo.' },
+                { label: 'MongoDB', value: boolText(status.mongo_connected), meta: 'Conectividade do cliente atual com o banco.' },
+                { label: 'Telegram', value: boolText(status.telegram_connected), meta: 'Presença de bots conectados no manager.' },
+                { label: 'Modo playback Web', value: status.web_video_transcode_mode || '—', meta: 'Estratégia ativa de entrega de vídeo na Web.', small: true },
+                { label: 'Timeout legenda', value: `${status.web_subtitle_extract_timeout_seconds || 0}s`, meta: 'Tempo limite efetivo para extração de legenda.' },
+                { label: 'Arquivamento Web', value: boolText(archive.enabled), meta: `${Number(archive.active_job_count || 0)} job(s) ativo(s) de arquivamento.` },
+                { label: 'RAR backend', value: archiveBackends.rar_backend_path ? 'OK' : 'ausente', meta: archiveBackends.rar_backend_path || 'Nenhum backend RAR detectado no host.', small: true },
+                { label: '7Z backend', value: boolText((archive.extract || {})['7z']), meta: archiveBackends.py7zr_installed ? 'py7zr disponível para extração e compactação.' : 'py7zr ainda não está instalado.', small: true },
+                { label: 'Store settings', value: persistence?.store?.exists ? 'OK' : 'ausente', meta: `${Number(persistence?.store?.managed_key_count || 0)} chave(s) persistidas no runtime.`, small: true },
+                { label: 'Espelho .env', value: envMirrorStatusText(persistence), meta: envMirrorMetaText(persistence), small: true },
+                { label: 'Pendências de restart', value: (status.pending_restart_keys || []).join(', ') || 'nenhuma', meta: 'Chaves salvas que ainda aguardam reinício.', small: true },
+            ];
+            document.getElementById('status-grid').innerHTML = cards.map((card) => renderMetricCard(card)).join('');
+
+            const apps = managedApps();
+            document.getElementById('apps-table-wrap').innerHTML = `
+                <div class="group-card">
+                    <div class="group-head">
+                        <div>
+                            <h3>Aplicativos e runtime</h3>
+                            <p class="text-clamp-2" title="Resumo rápido do ecossistema. A gestão completa agora fica no painel Aplicativos.">Resumo rápido do ecossistema. A gestão completa agora fica no painel <strong>Aplicativos</strong>.</p>
+                        </div>
+                        <div class="group-actions">
+                            <button class="button small action-small icon-leading" onclick="setSection('apps')">${renderButtonContent('ph-app-window', 'Abrir painel Aplicativos')}</button>
+                        </div>
+                    </div>
+                    <div class="table-shell">
+                        <table class="apps-table">
+                            <thead>
+                                <tr>
+                                    <th>App</th>
+                                    <th>Origem</th>
+                                    <th>Permissões</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${apps.map((app) => `
+                                    <tr>
+                                        <td>
+                                            <div class="table-primary" title="${escapeHtml(app.name)}"><i class="ph ${escapeHtml(app.icon)}"></i><span class="button-label text-ellipsis">${escapeHtml(app.name)}</span></div>
+                                            <div class="muted table-secondary text-ellipsis" title="${escapeHtml(app.id)}">${escapeHtml(app.id)}</div>
+                                        </td>
+                                        <td title="${escapeHtml(app.source_type || 'bundled')}">${escapeHtml(app.source_type || 'bundled')}</td>
+                                        <td title="${escapeHtml(`${String(app.granted_permission_count || 0)}/${String(app.requested_permission_count || 0)}`)}">${escapeHtml(String(app.granted_permission_count || 0))}/${escapeHtml(String(app.requested_permission_count || 0))}</td>
+                                        <td>
+                                            <div class="table-chip-row">
+                                                ${app.protected ? '<span class="chip success">protegido</span>' : ''}
+                                                ${app.enabled ? '<span class="chip success">habilitado</span>' : '<span class="chip warn">desabilitado</span>'}
+                                                ${app.has_pending_permissions ? '<span class="chip warn">revisao</span>' : ''}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function loadAll() {
+            const [schemaReq, settingsReq, statusReq, appsReq, storageReq, sharingReq] = await Promise.all([
+                apiJson('/api/settings/schema'),
+                apiJson('/api/settings'),
+                apiJson('/api/settings/status'),
+                apiJson('/api/apps/admin'),
+                apiJson('/api/settings/storage'),
+                apiJson('/api/shared'),
+            ]);
+
+            if (!schemaReq.res.ok || !settingsReq.res.ok || !statusReq.res.ok || !appsReq.res.ok) {
+                throw new Error('Nao foi possivel carregar o payload principal de Configurações.');
+            }
+
+            schemaPayload = schemaReq.data;
+            settingsPayload = settingsReq.data;
+            statusPayload = statusReq.data;
+            appsAdminPayload = appsReq.data;
+            appsPayload = {
+                apps: appsAdminPayload.apps || [],
+                default_app_id: appsAdminPayload.default_app_id || '',
+                schema_version: appsAdminPayload.schema_version || 3,
+            };
+            storagePayload = storageReq.res.ok ? storageReq.data : { summary: {}, items: [], jobs: [] };
+            sharingPayload = sharingReq.res.ok ? sharingReq.data : { summary: {}, items: [], policy: {}, filters: {} };
+
+            clearTransientSecretState();
+            closeStorageDetailModal();
+            showBanner('storage-banner', storageReq.res.ok ? '' : 'error', storageReq.res.ok ? '' : 'Nao foi possivel carregar o painel de armazenamento.');
+            showBanner('sharing-banner', sharingReq.res.ok ? '' : 'error', sharingReq.res.ok ? '' : 'Nao foi possivel carregar o painel de compartilhamento.');
+            renderOverview();
+            renderSettingsGroups();
+            renderStorage();
+            renderSharing();
+            renderAppsPanel();
+            renderDiagnostics();
+            localPreferenceCards();
+            const activeApp = ensureManagedAppSelection();
+            if (activeApp) {
+                await loadAppAudit(activeApp.id);
+            }
+        }
+
+        async function loadStorageOnly() {
+            try {
+                const { res, data } = await apiJson('/api/settings/storage');
+                if (!res.ok) {
+                    showBanner('storage-banner', 'error', data.error || 'Falha ao atualizar armazenamento.');
+                    return;
+                }
+                storagePayload = data;
+                renderOverview();
+                renderStorage();
+                showBanner('storage-banner', 'info', 'Painel de armazenamento atualizado.');
+            } catch (error) {
+                showBanner('storage-banner', 'error', error.message || 'Falha ao atualizar armazenamento.');
+            }
+        }
+
+        async function loadSharingOnly() {
+            try {
+                const { res, data } = await apiJson('/api/shared');
+                if (!res.ok) {
+                    showBanner('sharing-banner', 'error', data.error || 'Falha ao atualizar compartilhamento.');
+                    return;
+                }
+                sharingPayload = data;
+                renderOverview();
+                renderSharing();
+                showBanner('sharing-banner', 'info', 'Painel de compartilhamento atualizado.');
+            } catch (error) {
+                showBanner('sharing-banner', 'error', error.message || 'Falha ao atualizar compartilhamento.');
+            }
+        }
+
+        async function init() {
+            try {
+                await loadAll();
+            } catch (error) {
+                console.error(error);
+                showBanner('overview-banner', 'error', error.message || 'Nao foi possivel carregar as configurações do TCloud.');
+            }
+        }
+
+        document.getElementById('reload-all-btn').addEventListener('click', async () => {
+            try {
+                await loadAll();
+                showBanner('overview-banner', 'info', 'Painel principal recarregado.');
+            } catch (error) {
+                showBanner('overview-banner', 'error', error.message || 'Falha ao recarregar o painel principal.');
+            }
+        });
+        document.getElementById('reload-apps-btn').addEventListener('click', async () => {
+            try {
+                const { res, data } = await apiJson('/api/settings/actions/reload-apps', { method: 'POST' });
+                if (!res.ok) {
+                    showBanner('overview-banner', 'error', data.error || 'Falha ao recarregar apps.');
+                    return;
+                }
+                showBanner('overview-banner', 'info', `Apps recarregados. ${data.apps?.length || 0} app(s) visíveis agora.`);
+                await loadAll();
+            } catch (error) {
+                showBanner('overview-banner', 'error', error.message || 'Falha ao recarregar apps.');
+            }
+        });
+        window.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && activeStorageDetail) {
+                closeStorageDetailModal();
+            }
+        });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,3 @@
+Backup criado antes do plano de feedback visual em modais.
+Arquivo novo previsto: agent-system/final_md/plano_feedback_visual_modais_acoes_assincronas.md
+Arquivo existente copiado: agent-system/memory.json

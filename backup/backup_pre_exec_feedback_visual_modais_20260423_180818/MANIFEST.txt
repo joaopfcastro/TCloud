@@ -1,0 +1,5 @@
+Backup antes de executar plano de feedback visual em modais.
+Arquivos copiados:
+- templates/index.html
+- agent-system/memory.json
+Plano: agent-system/final_md/plano_feedback_visual_modais_acoes_assincronas.md

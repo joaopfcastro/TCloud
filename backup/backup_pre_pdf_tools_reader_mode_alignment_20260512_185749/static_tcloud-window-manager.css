@@ -1,0 +1,557 @@
+.tcloud-window,
+:root {
+    --tcloud-window-titlebar-height: 46px;
+    --tcloud-window-toolbar-height: 44px;
+    --tcloud-window-control-size: 10px;
+    --tcloud-window-control-hit-size: 16px;
+    --tcloud-window-control-gap: 8px;
+}
+
+.tcloud-window {
+    position: fixed;
+    top: 0;
+    left: 0;
+    min-width: 360px;
+    min-height: 240px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 14px;
+    background: rgba(18, 18, 20, 0.96);
+    box-shadow: 0 28px 90px rgba(0, 0, 0, 0.62), 0 0 0 1px rgba(255, 255, 255, 0.03);
+    transform: translate3d(0, 0, 0);
+    will-change: transform, width, height;
+    pointer-events: auto;
+    contain: layout paint;
+}
+
+.tcloud-window * {
+    box-sizing: border-box;
+}
+
+.tcloud-window-layer {
+    position: fixed;
+    inset: 0;
+    z-index: 800;
+    pointer-events: none;
+}
+
+.tcloud-window-layer .tcloud-window {
+    pointer-events: auto;
+}
+
+.tcloud-window[hidden] {
+    display: none !important;
+}
+
+.tcloud-window.is-focused {
+    border-color: rgba(255, 255, 255, 0.22);
+    box-shadow: 0 34px 110px rgba(0, 0, 0, 0.72), 0 0 0 1px rgba(124, 110, 255, 0.2);
+}
+
+.tcloud-window.is-window-transitioning {
+    transition: width 180ms cubic-bezier(0.2, 0.8, 0.2, 1),
+                height 180ms cubic-bezier(0.2, 0.8, 0.2, 1),
+                transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+[data-window-titlebar] {
+    cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+}
+
+.tcloud-window.is-dragging [data-window-titlebar] {
+    cursor: grabbing;
+}
+
+.tcloud-window.is-window-maximized,
+.tcloud-window.is-window-snapped {
+    border-radius: 0;
+}
+
+.app-viewer-overlay.tcloud-window {
+    inset: auto;
+    top: 0;
+    left: 0;
+    z-index: 900;
+    background: var(--bg-content);
+}
+
+.app-viewer-overlay.tcloud-window.active {
+    display: flex;
+}
+
+.app-viewer-overlay.tcloud-window.fullscreen {
+    z-index: 900;
+}
+
+.app-viewer-window-dot {
+    appearance: none;
+    -webkit-appearance: none;
+    padding: 0;
+    width: var(--tcloud-window-control-hit-size);
+    height: var(--tcloud-window-control-hit-size);
+    border: 0 !important;
+    border-radius: 50%;
+    background: transparent !important;
+    display: inline-grid;
+    place-items: center;
+    position: relative;
+    cursor: pointer;
+}
+
+.app-viewer-window-dot::after {
+    content: "";
+    width: var(--tcloud-window-control-size);
+    height: var(--tcloud-window-control-size);
+    border-radius: 50%;
+    border: 1px solid transparent;
+    grid-area: 1 / 1;
+    pointer-events: none;
+}
+
+.app-viewer-window-dot.close::after {
+    background: #ff5f57;
+    border-color: #e0443e;
+}
+
+.app-viewer-window-dot.minimize::after {
+    background: #ffbd2e;
+    border-color: #dea123;
+}
+
+.app-viewer-window-dot.maximize::after {
+    background: #28c840;
+    border-color: #1aab29;
+}
+
+.app-viewer-window-dot::before {
+    grid-area: 1 / 1;
+    z-index: 1;
+    opacity: 0;
+    color: rgba(27, 27, 28, 0.86);
+    font-size: 10px;
+    font-weight: 800;
+    line-height: 1;
+    transform: translateY(-0.5px);
+    transition: opacity 80ms ease;
+    pointer-events: none;
+}
+
+.tcloud-window .app-viewer-window-dot:hover::before,
+.tcloud-window .app-viewer-window-dot:focus-visible::before,
+.app-viewer-window-dot:hover::before,
+.app-viewer-window-dot:focus-visible::before {
+    opacity: 1;
+}
+
+.app-viewer-window-dot:active::after {
+    filter: brightness(0.86);
+    transform: scale(0.94);
+}
+
+.app-viewer-window-dot.close::before {
+    content: "×";
+    font-size: 8px;
+}
+
+.app-viewer-window-dot.minimize::before {
+    content: "−";
+    font-size: 9px;
+    transform: translateY(-1px);
+}
+
+.app-viewer-window-dot.maximize::before {
+    content: "";
+    width: 5px;
+    height: 5px;
+    border-top: 1.3px solid currentColor;
+    border-right: 1.3px solid currentColor;
+    transform: translate(-0.2px, 0.2px);
+}
+
+.app-viewer-header {
+    height: var(--tcloud-window-titlebar-height) !important;
+    min-height: var(--tcloud-window-titlebar-height);
+}
+
+.app-viewer-overlay.pdf-tools-viewer:not(.fullscreen) .app-viewer-header {
+    --tcloud-window-titlebar-height: 54px;
+    height: var(--tcloud-window-titlebar-height) !important;
+    min-height: var(--tcloud-window-titlebar-height) !important;
+    align-items: center !important;
+    overflow: visible;
+    z-index: 5;
+}
+
+.app-viewer-overlay.pdf-tools-viewer:not(.fullscreen) .app-viewer-header > * {
+    align-self: center;
+    transform: none !important;
+}
+
+.app-viewer-overlay.pdf-tools-viewer:not(.fullscreen) .app-viewer-actions,
+.app-viewer-overlay.pdf-tools-viewer:not(.fullscreen) .app-viewer-pdf-overflow,
+.app-viewer-overlay.pdf-tools-viewer:not(.fullscreen) .app-viewer-pdf-overflow button {
+    pointer-events: auto;
+}
+
+.app-viewer-overlay.pdf-tools-viewer:not(.fullscreen) .app-viewer-pdf-overflow {
+    z-index: 8;
+}
+
+.app-viewer-overlay.pdf-tools-viewer:not(.fullscreen) .app-viewer-pdf-overflow-menu {
+    z-index: 30;
+}
+
+.app-viewer-window-controls {
+    gap: var(--tcloud-window-control-gap) !important;
+    align-items: center;
+    height: 100%;
+    min-height: 0;
+    flex: 0 0 auto;
+    position: relative;
+    z-index: 12;
+    isolation: isolate;
+}
+
+.app-viewer-window-controls,
+.app-viewer-window-controls * {
+    pointer-events: auto;
+}
+
+.tcloud-window-layout-menu {
+    position: fixed;
+    z-index: 2000;
+    width: 374px;
+    padding: 14px;
+    border: 1px solid rgba(180, 178, 255, 0.24);
+    border-radius: 18px;
+    background: linear-gradient(180deg, rgba(42, 42, 54, 0.9), rgba(27, 27, 34, 0.92));
+    color: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 24px 72px rgba(0, 0, 0, 0.62), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(24px) saturate(165%);
+    -webkit-backdrop-filter: blur(24px) saturate(165%);
+    transform-origin: 38px -10px;
+    animation: tcloud-layout-menu-in 120ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.tcloud-window-layout-menu[hidden] {
+    display: none !important;
+}
+
+.tcloud-window-layout-menu::before {
+    content: "";
+    position: absolute;
+    top: -9px;
+    left: 30px;
+    width: 16px;
+    height: 16px;
+    border-left: 1px solid rgba(180, 178, 255, 0.24);
+    border-top: 1px solid rgba(180, 178, 255, 0.24);
+    background: rgba(42, 42, 54, 0.9);
+    transform: rotate(45deg);
+}
+
+.tcloud-window-layout-head {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr);
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.tcloud-window-layout-orb {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    background: rgba(122, 113, 255, 0.18);
+    box-shadow: inset 0 0 0 1px rgba(180, 178, 255, 0.22);
+}
+
+.tcloud-window-layout-orb span {
+    position: relative;
+    width: 18px;
+    height: 14px;
+    border: 2px solid rgba(255, 255, 255, 0.8);
+    border-radius: 4px;
+}
+
+.tcloud-window-layout-orb span::before {
+    content: "";
+    position: absolute;
+    left: 4px;
+    right: 4px;
+    top: -5px;
+    height: 2px;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.72);
+}
+
+.tcloud-window-layout-kicker {
+    color: rgba(255, 255, 255, 0.46);
+    font-size: 10px;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.tcloud-window-layout-title {
+    min-width: 0;
+    margin-top: 3px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: rgba(255, 255, 255, 0.94);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.tcloud-window-layout-section {
+    margin: 0 0 10px;
+    color: rgba(255, 255, 255, 0.42);
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: 0.03em;
+}
+
+.tcloud-window-layout-divider {
+    height: 1px;
+    margin: 14px 0;
+    background: rgba(255, 255, 255, 0.13);
+}
+
+.tcloud-window-layout-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+}
+
+.tcloud-window-layout-grid:last-child {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+
+.tcloud-window-layout-option {
+    min-width: 0;
+    min-height: 64px;
+    border: 1px solid transparent;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.045);
+    color: rgba(255, 255, 255, 0.9);
+    display: grid;
+    grid-template-rows: 30px auto;
+    align-items: center;
+    justify-content: center;
+    justify-items: center;
+    gap: 4px;
+    padding: 8px 6px 7px;
+    cursor: pointer;
+    transition: background 120ms ease, border-color 120ms ease, transform 120ms ease;
+}
+
+.tcloud-window-layout-option span:last-child {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: rgba(255, 255, 255, 0.62);
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.tcloud-window-layout-option:hover,
+.tcloud-window-layout-option:focus-visible {
+    border-color: rgba(134, 124, 255, 0.42);
+    background: rgba(122, 113, 255, 0.17);
+    outline: none;
+    transform: translateY(-1px);
+}
+
+.layout-icon {
+    position: relative;
+    width: 36px;
+    height: 27px;
+    border: 2px solid rgba(255, 255, 255, 0.82);
+    border-radius: 7px;
+    background: rgba(0, 0, 0, 0.12);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+    overflow: hidden;
+}
+
+.layout-icon::after {
+    content: "";
+    position: absolute;
+    background: rgba(255, 255, 255, 0.72);
+}
+
+.layout-icon.half-left::after,
+.layout-icon.half-right::after {
+    top: 0;
+    bottom: 0;
+    width: 2px;
+}
+
+.layout-icon.half-left::after { left: 50%; }
+.layout-icon.half-right::after { right: 50%; }
+
+.layout-icon.half-top::after,
+.layout-icon.half-bottom::after {
+    left: 0;
+    right: 0;
+    height: 2px;
+}
+
+.layout-icon.half-top::after { top: 50%; }
+.layout-icon.half-bottom::after { bottom: 50%; }
+
+.layout-icon.full {
+    background:
+        linear-gradient(180deg, rgba(122, 113, 255, 0.38), rgba(122, 113, 255, 0.18)),
+        rgba(255, 255, 255, 0.08);
+}
+
+.layout-icon.restore::after {
+    inset: 6px;
+    border: 2px solid rgba(255, 255, 255, 0.72);
+    border-radius: 3px;
+    background: transparent;
+}
+
+.layout-icon.quadrant::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(to right, transparent calc(50% - 1px), rgba(255, 255, 255, 0.62) calc(50% - 1px), rgba(255, 255, 255, 0.62) calc(50% + 1px), transparent calc(50% + 1px)),
+        linear-gradient(to bottom, transparent calc(50% - 1px), rgba(255, 255, 255, 0.62) calc(50% - 1px), rgba(255, 255, 255, 0.62) calc(50% + 1px), transparent calc(50% + 1px));
+}
+
+.layout-icon.quadrant::after {
+    width: 50%;
+    height: 50%;
+    background: linear-gradient(135deg, rgba(134, 124, 255, 0.7), rgba(86, 201, 255, 0.34));
+}
+
+.layout-icon.quadrant.top-left::after { top: 0; left: 0; }
+.layout-icon.quadrant.top-right::after { top: 0; right: 0; }
+.layout-icon.quadrant.bottom-left::after { bottom: 0; left: 0; }
+.layout-icon.quadrant.bottom-right::after { right: 0; bottom: 0; }
+
+@keyframes tcloud-layout-menu-in {
+    from {
+        opacity: 0;
+        transform: translateY(-4px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.window-resize-handle {
+    position: absolute;
+    z-index: 8;
+    background: transparent;
+    touch-action: none;
+}
+
+.window-resize-handle.n,
+.window-resize-handle.s {
+    left: 14px;
+    right: 14px;
+    height: 12px;
+    cursor: ns-resize;
+}
+
+.window-resize-handle.e,
+.window-resize-handle.w {
+    top: 14px;
+    bottom: 14px;
+    width: 12px;
+    cursor: ew-resize;
+}
+
+.window-resize-handle.n { top: -6px; }
+.window-resize-handle.s { bottom: -6px; }
+.window-resize-handle.e { right: -6px; }
+.window-resize-handle.w { left: -6px; }
+
+.window-resize-handle.ne,
+.window-resize-handle.nw,
+.window-resize-handle.se,
+.window-resize-handle.sw {
+    width: 22px;
+    height: 22px;
+}
+
+.window-resize-handle.ne { top: -8px; right: -8px; cursor: nesw-resize; }
+.window-resize-handle.nw { top: -8px; left: -8px; cursor: nwse-resize; }
+.window-resize-handle.se { right: -8px; bottom: -8px; cursor: nwse-resize; }
+.window-resize-handle.sw { left: -8px; bottom: -8px; cursor: nesw-resize; }
+
+.tcloud-window.is-window-maximized .window-resize-handle {
+    display: none;
+}
+
+.tcloud-window-iframe-shield {
+    position: absolute;
+    inset: 52px 0 0;
+    z-index: 4;
+    cursor: inherit;
+    background: transparent;
+}
+
+.tcloud-window-iframe-shield[hidden] {
+    display: none;
+}
+
+.tcloud-window-dock {
+    position: fixed;
+    left: 50%;
+    bottom: 14px;
+    z-index: 1900;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    max-width: min(720px, calc(100vw - 32px));
+    padding: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 16px;
+    background: rgba(22, 22, 24, 0.72);
+    backdrop-filter: blur(18px) saturate(150%);
+    -webkit-backdrop-filter: blur(18px) saturate(150%);
+    box-shadow: 0 18px 52px rgba(0, 0, 0, 0.48);
+}
+
+.tcloud-window-dock:empty {
+    display: none;
+}
+
+.tcloud-dock-item {
+    width: 42px;
+    height: 42px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: background 0.16s ease, transform 0.16s ease;
+}
+
+.tcloud-dock-item:hover {
+    background: rgba(255, 255, 255, 0.14);
+    transform: translateY(-1px);
+}

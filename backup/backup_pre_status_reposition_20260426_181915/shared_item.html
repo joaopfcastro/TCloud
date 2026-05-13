@@ -1,0 +1,3939 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TCloud - Compartilhamento</title>
+    <link rel="icon" type="image/png" sizes="16x16" href="/static/icons/favicon-16x16.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/icons/favicon-32x32.png">
+    <link rel="shortcut icon" href="/favicon.ico">
+    <meta name="theme-color" content="#1A1D23">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://vjs.zencdn.net/8.10.0/video-js.css" rel="stylesheet" />
+    <link href="https://unpkg.com/@videojs/themes@1/dist/fantasy/index.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg-app: #1e1e1e;
+            --bg-sidebar: rgba(40, 40, 40, 0.64);
+            --bg-content: rgba(30, 30, 30, 0.92);
+            --bg-header: rgba(50, 50, 50, 0.74);
+            --border: rgba(255, 255, 255, 0.1);
+            --text-primary: #ffffff;
+            --text-secondary: rgba(255, 255, 255, 0.62);
+            --accent: #0A84FF;
+            --accent-hover: #0071e3;
+            --danger: #FF453A;
+            --selection: rgba(10, 132, 255, 0.2);
+            --hover: rgba(255, 255, 255, 0.055);
+            --glass: blur(20px) saturate(180%);
+            --radius-window: 12px;
+            --radius-item: 6px;
+            --shadow: 0 20px 70px rgba(0, 0, 0, 0.55);
+        }
+
+        /* Skeleton & Loading States */
+        .public-window.is-loading .real-content {
+            display: none !important;
+        }
+
+        .public-window:not(.is-loading) .skeleton-content {
+            display: none !important;
+        }
+
+        .skeleton-content {
+            width: 100%;
+            height: 100%;
+            display: grid;
+            grid-template-columns: 270px minmax(0, 1fr);
+        }
+
+        .skeleton {
+            background: rgba(255, 255, 255, 0.05);
+            background: linear-gradient(
+                90deg,
+                rgba(255, 255, 255, 0.05) 25%,
+                rgba(255, 255, 255, 0.08) 37%,
+                rgba(255, 255, 255, 0.05) 63%
+            );
+            background-size: 400% 100%;
+            animation: skeletonPulse 1.4s ease infinite;
+            border-radius: 4px;
+        }
+
+        @keyframes skeletonPulse {
+            0% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .skeleton-sidebar {
+            padding: 14px;
+            background: var(--bg-sidebar);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .skeleton-sidebar-item {
+            height: 32px;
+            width: 100%;
+        }
+
+        .skeleton-main {
+            background: var(--bg-content);
+            display: grid;
+            grid-template-rows: 62px minmax(0, 1fr);
+        }
+
+        .skeleton-toolbar {
+            padding: 0 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .skeleton-breadcrumb {
+            height: 24px;
+            width: 200px;
+        }
+
+        .skeleton-list {
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .skeleton-list-item {
+            height: 58px;
+            width: 100%;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            color: var(--text-primary);
+            background: #000;
+            background-image: url('https://4kwallpapers.com/images/wallpapers/macos-monterey-stock-black-dark-mode-layers-5k-8k-6016x6016-5889.jpg');
+            background-size: cover;
+            background-position: center;
+            overflow: hidden;
+        }
+
+        a {
+            color: inherit;
+        }
+
+        button,
+        input {
+            font: inherit;
+        }
+
+        .page {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 4vh 4vw;
+        }
+
+        .public-window {
+            width: min(1280px, 94vw);
+            height: min(840px, 88vh);
+            min-height: 620px;
+            display: grid;
+            grid-template-rows: minmax(0, 1fr);
+            overflow: hidden;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-window);
+            background: var(--bg-app);
+            box-shadow: var(--shadow);
+        }
+
+        body.public-modal-open {
+            overflow: hidden;
+        }
+
+        .control {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: 1px solid rgba(0, 0, 0, 0.24);
+        }
+
+        button.control {
+            appearance: none;
+            -webkit-appearance: none;
+            padding: 0;
+            cursor: pointer;
+        }
+
+        .control.close { background: #FF5F56; }
+        .control.minimize { background: #FFBD2E; }
+        .control.zoom { background: #27C93F; }
+
+        .window-body {
+            min-height: 0;
+            display: grid;
+            grid-template-columns: 270px minmax(0, 1fr);
+        }
+
+        .sidebar {
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            padding: 14px;
+            background: var(--bg-sidebar);
+            border-right: 1px solid var(--border);
+            backdrop-filter: var(--glass);
+            -webkit-backdrop-filter: var(--glass);
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        .sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.12);
+            border-radius: 999px;
+        }
+
+        .sidebar-section {
+            display: grid;
+            gap: 8px;
+        }
+
+        .sidebar-section.details {
+            min-height: 0;
+        }
+
+        .sidebar-section.enriched {
+            gap: 10px;
+        }
+
+        .sidebar-label {
+            padding: 0 8px;
+            color: var(--text-secondary);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .sidebar-item,
+        .fact {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            min-height: 32px;
+            padding: 0 8px;
+            border-radius: var(--radius-item);
+            color: var(--text-secondary);
+            font-size: 13px;
+            min-width: 0;
+        }
+
+        .sidebar-item.active {
+            background: var(--selection);
+            color: var(--text-primary);
+        }
+
+        .sidebar-item i,
+        .fact i {
+            flex: 0 0 auto;
+            color: var(--accent);
+            font-size: 16px;
+        }
+
+        .sidebar-item span,
+        .fact span {
+            min-width: 0;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+        }
+
+        .fact.detail-fact {
+            align-items: flex-start;
+            min-height: 40px;
+            padding-top: 7px;
+            padding-bottom: 7px;
+        }
+
+        .fact.detail-fact > span {
+            display: grid;
+            gap: 2px;
+            overflow: visible;
+            white-space: normal;
+            text-overflow: clip;
+            line-height: 1.25;
+        }
+
+        .fact-label {
+            color: var(--text-secondary);
+            font-size: 11px;
+            font-weight: 650;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+        }
+
+        .fact-value {
+            color: rgba(255, 255, 255, 0.82);
+            font-size: 12px;
+            font-weight: 550;
+            overflow-wrap: anywhere;
+        }
+
+        .sidebar-mini-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+        }
+
+        .sidebar-metric {
+            min-width: 0;
+            padding: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.045);
+        }
+
+        .sidebar-metric strong {
+            display: block;
+            color: var(--text-primary);
+            font-size: 18px;
+            font-weight: 750;
+            line-height: 1;
+        }
+
+        .sidebar-metric span {
+            display: block;
+            margin-top: 5px;
+            color: var(--text-secondary);
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .sidebar-note {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            padding: 10px;
+            border: 1px solid rgba(10, 132, 255, 0.16);
+            border-radius: 10px;
+            background: rgba(10, 132, 255, 0.075);
+            color: rgba(255, 255, 255, 0.78);
+            font-size: 11px;
+            font-weight: 600;
+            line-height: 1.35;
+        }
+
+        .sidebar-note i {
+            flex: 0 0 auto;
+            color: var(--accent);
+            font-size: 16px;
+            margin-top: 1px;
+        }
+
+        .sidebar-link-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 30px;
+            gap: 8px;
+            align-items: center;
+            min-width: 0;
+            overflow: visible;
+            white-space: normal;
+        }
+
+        .sidebar-link-value {
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .sidebar-copy-button {
+            width: 30px;
+            height: 30px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.055);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: background 0.16s ease, color 0.16s ease, border-color 0.16s ease;
+        }
+
+        .sidebar-copy-button:hover {
+            background: rgba(10, 132, 255, 0.14);
+            border-color: rgba(10, 132, 255, 0.28);
+            color: var(--text-primary);
+        }
+
+        .sidebar-section.is-hidden {
+            display: none;
+        }
+
+        .main {
+            min-width: 0;
+            min-height: 0;
+            display: grid;
+            grid-template-rows: auto minmax(0, 1fr);
+            background: var(--bg-content);
+        }
+
+        .toolbar {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            min-height: 62px;
+            padding: 0 16px;
+            border-bottom: 1px solid var(--border);
+            background: rgba(35, 35, 35, 0.88);
+        }
+
+        .tool-group {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
+        }
+
+        .tool-group:first-child {
+            flex: 1 1 auto;
+        }
+
+        .tool-group:last-child {
+            flex: 0 0 auto;
+        }
+
+        .btn-icon {
+            width: 42px;
+            height: 42px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid transparent;
+            border-radius: 10px;
+            background: transparent;
+            color: var(--text-primary);
+            font-size: 21px;
+            cursor: pointer;
+            transition: background 0.16s ease, border-color 0.16s ease, transform 0.16s ease;
+            flex: 0 0 auto;
+        }
+
+        .btn-icon:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.06);
+        }
+
+        .btn-icon:disabled {
+            opacity: 0.42;
+            cursor: default;
+        }
+
+        .btn-icon:disabled:hover {
+            background: transparent;
+            border-color: transparent;
+        }
+
+        .btn-icon.active,
+        .btn-icon.search-active {
+            background: rgba(255, 255, 255, 0.11);
+            border-color: rgba(255, 255, 255, 0.08);
+        }
+
+        .breadcrumb {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
+            max-width: 100%;
+            overflow: hidden;
+            color: var(--text-secondary);
+            font-size: 16px;
+            font-weight: 700;
+        }
+
+        .readonly-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            min-height: 32px;
+            padding: 0 10px;
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.055);
+            color: var(--text-secondary);
+            font-size: 12px;
+            font-weight: 650;
+            white-space: nowrap;
+        }
+
+        .view-toggles {
+            display: flex;
+            gap: 2px;
+            padding: 4px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        .view-btn {
+            width: 34px;
+            height: 34px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 9px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: background 0.16s ease, color 0.16s ease;
+        }
+
+        .view-btn.active {
+            background: var(--accent);
+            color: #fff;
+        }
+
+        .search-wrapper {
+            display: flex;
+            align-items: center;
+            position: relative;
+            gap: 6px;
+            flex: 0 0 auto;
+            width: auto;
+            z-index: 2;
+        }
+
+        .search-wrapper.search-open {
+            z-index: 12;
+        }
+
+        .search-bar {
+            display: flex;
+            align-items: center;
+            position: static;
+            max-width: 0;
+            overflow: hidden;
+            opacity: 0;
+            pointer-events: none;
+            border: 1px solid transparent;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.06);
+            box-shadow: none;
+            margin-right: 0;
+            padding: 0;
+            transition: max-width 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease, padding 0.35s ease, border-color 0.2s ease, box-shadow 0.2s ease, margin 0.2s ease;
+        }
+
+        .search-wrapper.search-open .search-bar {
+            max-width: 360px;
+            opacity: 1;
+            padding: 5px 12px;
+            border-color: var(--accent);
+            pointer-events: auto;
+            margin-right: 6px;
+        }
+
+        .search-editor {
+            width: 260px;
+            min-height: 24px;
+            padding: 2px 0;
+            border: 0;
+            outline: 0;
+            background: transparent;
+            color: var(--text-primary);
+            font-size: 14px;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .search-editor:empty::before {
+            content: attr(data-placeholder);
+            color: var(--text-secondary);
+            opacity: 0.7;
+            pointer-events: none;
+        }
+
+        .search-close {
+            width: 28px;
+            height: 28px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            flex: 0 0 auto;
+        }
+
+        .search-close:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-primary);
+        }
+
+        .toolbar-filter-wrap {
+            position: relative;
+        }
+
+        .toolbar-filter-menu {
+            position: absolute;
+            top: calc(100% + 8px);
+            right: 0;
+            min-width: 210px;
+            display: none;
+            padding: 8px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: rgba(34, 34, 36, 0.96);
+            box-shadow: 0 18px 44px rgba(0, 0, 0, 0.42);
+            backdrop-filter: var(--glass);
+            -webkit-backdrop-filter: var(--glass);
+            z-index: 20;
+        }
+
+        .toolbar-filter-menu.visible {
+            display: grid;
+            gap: 4px;
+        }
+
+        .directory-meta .directory-path {
+            color: rgba(255, 255, 255, 0.48);
+            font-size: 11px;
+            font-weight: 600;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+        }
+
+        .toolbar-filter-option {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-height: 34px;
+            padding: 0 10px;
+            border: 0;
+            border-radius: 8px;
+            background: transparent;
+            color: var(--text-primary);
+            cursor: pointer;
+            text-align: left;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .toolbar-filter-option:hover,
+        .toolbar-filter-option.active {
+            background: rgba(10, 132, 255, 0.18);
+        }
+
+        .icon-button {
+            width: 42px;
+            height: 42px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid transparent;
+            border-radius: 10px;
+            background: transparent;
+            color: var(--text-primary);
+            font-size: 21px;
+            cursor: pointer;
+            transition: background 0.16s ease, border-color 0.16s ease, transform 0.16s ease;
+        }
+
+        .icon-button:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.06);
+        }
+
+        .icon-button:disabled {
+            opacity: 0.42;
+            cursor: default;
+        }
+
+        .icon-button:disabled:hover {
+            background: transparent;
+            border-color: transparent;
+        }
+
+        .icon-button.active {
+            background: rgba(255, 255, 255, 0.11);
+            border-color: rgba(255, 255, 255, 0.08);
+        }
+
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
+        .crumb {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            max-width: 240px;
+            min-height: 34px;
+            padding: 0 11px;
+            border: 1px solid transparent;
+            border-radius: 9px;
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            white-space: nowrap;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .crumb:hover:not(:disabled) {
+            background: var(--hover);
+            color: var(--text-primary);
+        }
+
+        .crumb.current {
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-primary);
+            cursor: default;
+        }
+
+        .crumb span {
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .crumb-ellipsis {
+            display: inline-flex;
+            align-items: center;
+            min-height: 34px;
+            padding: 0 6px;
+            color: var(--text-secondary);
+            font-size: 14px;
+            font-weight: 700;
+            opacity: 0.55;
+            pointer-events: none;
+            flex-shrink: 0;
+        }
+
+        .button-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .button,
+        .link-button,
+        .mini-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-height: 36px;
+            padding: 0 12px;
+            border: 1px solid var(--border);
+            border-radius: 9px;
+            background: rgba(255, 255, 255, 0.055);
+            color: var(--text-primary);
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.16s ease, border-color 0.16s ease, transform 0.16s ease;
+        }
+
+        .button:hover,
+        .link-button:hover,
+        .mini-button:hover {
+            background: rgba(255, 255, 255, 0.09);
+            transform: translateY(-1px);
+        }
+
+        .button.primary,
+        .link-button.primary,
+        .mini-button.primary {
+            background: var(--accent);
+            border-color: rgba(10, 132, 255, 0.65);
+            color: #fff;
+        }
+
+        .content-grid {
+            min-height: 0;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr);
+        }
+
+        .content-grid.single-file-mode {
+            grid-template-columns: minmax(0, 1fr);
+        }
+
+        .content-grid.hide-preview-panel {
+            grid-template-columns: minmax(0, 1fr);
+        }
+
+        .content-grid.hide-preview-panel .list-panel {
+            border-right: 0;
+        }
+
+        .content-grid.hide-preview-panel .preview-panel {
+            display: none;
+        }
+
+        .list-panel,
+        .preview-panel {
+            min-height: 0;
+            overflow: hidden;
+        }
+
+        .list-panel {
+            border-right: 1px solid var(--border);
+            display: grid;
+            grid-template-rows: auto minmax(0, 1fr);
+        }
+
+        .panel-heading {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            min-height: 44px;
+            padding: 0 14px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            color: var(--text-secondary);
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .directory-list {
+            min-height: 0;
+            overflow: auto;
+            padding: 8px;
+        }
+
+        .directory-list.is-empty {
+            display: grid;
+            place-items: center;
+            padding: 28px;
+        }
+
+        .directory-list::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .directory-list::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.14);
+            border-radius: 999px;
+        }
+
+        .directory-item {
+            display: grid;
+            grid-template-columns: 34px minmax(0, 1fr) auto;
+            gap: 10px;
+            align-items: center;
+            min-height: 58px;
+            padding: 7px 8px;
+            border-radius: var(--radius-item);
+            border: 1px solid transparent;
+            color: var(--text-primary);
+        }
+
+        .directory-item:hover {
+            position: relative;
+            z-index: 20;
+            background: var(--hover);
+            border-color: rgba(255, 255, 255, 0.06);
+        }
+
+        .directory-item.selected {
+            position: relative;
+            z-index: 10;
+            background: var(--selection);
+        }
+
+
+        .directory-icon {
+            width: 34px;
+            height: 34px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.07);
+            color: var(--accent);
+            font-size: 18px;
+        }
+
+        .directory-meta {
+            min-width: 0;
+            display: grid;
+            gap: 4px;
+        }
+
+        .directory-name {
+            position: relative;
+            min-width: 0;
+            font-size: 14px;
+            font-weight: 600;
+            z-index: 2;
+        }
+
+        .directory-name-clip {
+            display: block;
+            min-width: 0;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+        }
+
+        .directory-name-text {
+            display: inline-block;
+            min-width: 100%;
+            will-change: transform;
+        }
+
+        .directory-name.has-overflow-name:hover .directory-name-text {
+            animation: directoryNameMarquee 7s linear infinite;
+        }
+
+        .directory-name.has-overflow-name:hover::after {
+            content: attr(data-full-name);
+            position: absolute;
+            left: 0;
+            top: calc(100% + 8px);
+            max-width: min(720px, 78vw);
+            padding: 6px 10px;
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            border-radius: 4px;
+            background: rgba(36, 36, 40, 0.98);
+            color: var(--text-primary);
+            box-shadow: 0 10px 28px rgba(0, 0, 0, 0.38);
+            font-size: 12px;
+            line-height: 1.3;
+            white-space: normal;
+            overflow-wrap: anywhere;
+            pointer-events: none;
+            z-index: 80;
+        }
+
+        .directory-item {
+            cursor: default;
+        }
+
+        @keyframes directoryNameMarquee {
+            0%,
+            12% {
+                transform: translateX(0);
+            }
+
+            88%,
+            100% {
+                transform: translateX(calc(-1 * var(--directory-name-scroll, 0px)));
+            }
+        }
+
+        .directory-subtitle {
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            color: var(--text-secondary);
+            font-size: 12px;
+        }
+
+        .directory-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            justify-content: flex-end;
+        }
+
+        .content-grid.single-file-mode .directory-item {
+            grid-template-columns: 34px minmax(0, 1fr);
+            align-items: start;
+        }
+
+        .content-grid.single-file-mode .directory-actions {
+            grid-column: 1 / -1;
+            justify-content: flex-start;
+            padding-left: 44px;
+        }
+
+        .mini-button {
+            min-height: 32px;
+            padding: 0 10px;
+        }
+
+        .mini-button.icon-only {
+            width: 32px;
+            height: 32px;
+            padding: 0;
+            flex: 0 0 auto;
+            position: relative;
+        }
+
+        .mini-button.icon-only i {
+            font-size: 18px;
+        }
+
+        .mini-button.icon-only:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            top: calc(100% + 10px);
+            right: 50%;
+            transform: translateX(50%);
+            padding: 6px 12px;
+            background: rgba(30, 30, 35, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 6px;
+            color: #fff;
+            font-size: 11px;
+            font-weight: 600;
+            white-space: nowrap;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+            z-index: 1000;
+            pointer-events: none;
+            animation: tooltipFadeIn 0.15s ease-out;
+        }
+
+        @keyframes tooltipFadeIn {
+            from { opacity: 0; transform: translateX(50%) translateY(-4px); }
+            to { opacity: 1; transform: translateX(50%) translateY(0); }
+        }
+
+
+
+
+        .viewer-placeholder,
+        .empty-state,
+        .terminal,
+        .unlock-card {
+            width: min(430px, 100%);
+            display: grid;
+            justify-items: center;
+            gap: 12px;
+            padding: 28px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: rgba(0, 0, 0, 0.22);
+            text-align: center;
+        }
+
+        .empty-state {
+            width: min(420px, 100%);
+            padding: 10px 12px;
+            border: 0;
+            background: transparent;
+            box-shadow: none;
+        }
+
+        .empty-state i {
+            width: 64px;
+            height: 64px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 18px;
+            background: rgba(10, 132, 255, 0.08);
+        }
+
+        .viewer-placeholder i,
+        .empty-state i,
+        .terminal i {
+            color: var(--accent);
+            font-size: 42px;
+        }
+
+        .terminal i {
+            color: #FFB44C;
+        }
+
+        .viewer-caption {
+            display: grid;
+            gap: 8px;
+        }
+
+        .viewer-caption h3 {
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .viewer-caption p {
+            color: var(--text-secondary);
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+
+
+        .facts {
+            display: grid;
+            gap: 2px;
+            padding: 4px 0 0;
+        }
+
+        .facts.inline {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 14px;
+            align-items: center;
+        }
+
+        .status {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            min-height: 34px;
+            padding: 0 10px;
+            border: 1px solid rgba(10, 132, 255, 0.22);
+            border-radius: 999px;
+            background: rgba(10, 132, 255, 0.12);
+            color: var(--text-primary);
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status.visible {
+            display: inline-flex;
+        }
+
+        .status.error {
+            border-color: rgba(255, 69, 58, 0.28);
+            background: rgba(255, 69, 58, 0.12);
+        }
+
+        .status.success {
+            border-color: rgba(48, 209, 88, 0.28);
+            background: rgba(48, 209, 88, 0.12);
+        }
+
+        .unlock-card {
+            display: none;
+            width: min(520px, 100%);
+            justify-items: stretch;
+            text-align: left;
+        }
+
+        .unlock-card.visible {
+            display: grid;
+        }
+
+        .field {
+            display: grid;
+            gap: 8px;
+        }
+
+        .field label {
+            color: var(--text-secondary);
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .input {
+            width: 100%;
+            min-height: 42px;
+            padding: 0 12px;
+            border: 1px solid var(--border);
+            border-radius: 9px;
+            outline: none;
+            background: rgba(0, 0, 0, 0.28);
+            color: var(--text-primary);
+        }
+
+        .input:focus {
+            border-color: rgba(10, 132, 255, 0.52);
+            box-shadow: 0 0 0 4px rgba(10, 132, 255, 0.14);
+        }
+
+        .public-media-stage {
+            position: relative;
+            width: 100%;
+            height: min(64vh, 640px);
+            min-height: 320px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            background: #000;
+        }
+
+        .public-media-stage.is-portrait .video-js,
+        .public-media-stage.is-portrait video {
+            width: min(100%, 520px) !important;
+            height: 100% !important;
+        }
+
+        .public-media-stage video,
+        .public-media-stage .video-js {
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: contain;
+        }
+
+        .public-media-stage .video-js .vjs-tech {
+            inset: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: contain !important;
+            object-position: center center !important;
+        }
+
+        .public-media-stage.is-portrait .video-js .vjs-tech {
+            object-fit: contain !important;
+        }
+
+        .public-media-stage .video-js .vjs-control-bar {
+            opacity: 1 !important;
+            visibility: visible !important;
+            transform: none !important;
+        }
+
+        .public-media-stage .video-js.vjs-user-inactive.vjs-playing .vjs-control-bar {
+            opacity: 0.92 !important;
+            visibility: visible !important;
+        }
+
+        .content-grid.single-file-mode .public-media-stage {
+            height: min(58vh, 560px);
+        }
+
+        .public-modal-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 3000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 4vh 4vw;
+            background: rgba(0, 0, 0, 0.52);
+            backdrop-filter: blur(18px) saturate(150%);
+            -webkit-backdrop-filter: blur(18px) saturate(150%);
+        }
+
+        .public-modal-overlay.active {
+            display: flex;
+        }
+
+        .public-player-box {
+            width: 80vw;
+            height: 80vh;
+            max-width: 1200px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-window);
+            background: #000;
+            box-shadow: 0 24px 80px rgba(0, 0, 0, 0.62);
+            animation: modalScaleUp 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes modalScaleUp {
+            from { transform: scale(0.97); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .public-modal-titlebar {
+            position: relative;
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr) auto;
+            align-items: center;
+            height: 52px;
+            gap: 14px;
+            padding: 0 14px;
+            border-bottom: 1px solid var(--border);
+            background: rgba(34, 34, 34, 0.96);
+        }
+
+        .public-modal-titlebar .window-controls {
+            display: flex;
+            gap: 8px;
+        }
+
+        .public-modal-title {
+            min-width: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 9px;
+            color: var(--text-primary);
+            font-size: 13px;
+            font-weight: 650;
+        }
+
+        .public-modal-title span {
+            min-width: 0;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+        }
+
+        .public-modal-actions {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .public-modal-icon-button {
+            width: 32px;
+            height: 32px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--text-primary);
+            cursor: pointer;
+        }
+
+        .public-modal-icon-button:hover {
+            background: rgba(255, 255, 255, 0.11);
+        }
+
+        .public-modal-body {
+            min-width: 0;
+            min-height: 0;
+            flex: 1;
+            display: grid;
+            place-items: center;
+            overflow: hidden;
+            background: linear-gradient(180deg, rgba(14, 15, 18, 0.98), #000);
+        }
+
+        .public-modal-body .public-media-stage {
+            height: 100%;
+            min-height: 0;
+            border: 0;
+            border-radius: 0;
+        }
+
+        .public-modal-body .public-media-stage.is-portrait .video-js,
+        .public-modal-body .public-media-stage.is-portrait video {
+            width: min(100%, 520px) !important;
+        }
+
+        .public-modal-body .public-image-preview,
+        .public-modal-body .public-pdf-preview {
+            width: 100%;
+            height: 100%;
+            min-height: 0;
+            border: 0;
+            border-radius: 0;
+        }
+
+        .public-audio-stage {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: grid;
+            grid-template-rows: minmax(0, 1fr) auto;
+            background:
+                radial-gradient(circle at 50% 32%, rgba(10, 132, 255, 0.22), transparent 34%),
+                linear-gradient(180deg, #15171d, #050505);
+        }
+
+        .public-audio-art {
+            display: grid;
+            place-items: center;
+            gap: 16px;
+            align-content: center;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .public-audio-art i {
+            width: 112px;
+            height: 112px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 28px;
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--accent);
+            font-size: 56px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.42);
+        }
+
+        .public-audio-art h3 {
+            max-width: min(720px, 82vw);
+            overflow-wrap: anywhere;
+            font-size: 20px;
+            line-height: 1.25;
+        }
+
+        .public-audio-stage .video-js {
+            height: 74px !important;
+            width: 100% !important;
+            background: rgba(0, 0, 0, 0.72);
+        }
+
+        .public-image-preview,
+        .public-pdf-preview {
+            width: 100%;
+            height: min(72vh, 720px);
+            min-height: 320px;
+            display: block;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            background: #050505;
+        }
+
+        .public-image-preview {
+            object-fit: contain;
+            padding: 10px;
+        }
+
+        .gallery-stage {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            background: linear-gradient(180deg, rgba(14, 15, 18, 0.98), rgba(0, 0, 0, 1));
+        }
+
+        .gallery-stage.is-loading .gallery-stage-image.has-image {
+            filter: saturate(0.92) brightness(0.78);
+            transform: scale(0.995);
+        }
+
+        .gallery-stage-image {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            opacity: 0;
+            transition: opacity 0.22s ease, filter 0.22s ease, transform 0.22s ease;
+            z-index: 1;
+        }
+
+        .gallery-stage-image.is-visible {
+            opacity: 1;
+        }
+
+        .gallery-loading-overlay,
+        .gallery-error-overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+            z-index: 2;
+        }
+
+        .gallery-loading-overlay.is-visible,
+        .gallery-error-overlay.is-visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .gallery-loading-overlay {
+            background: rgba(8, 9, 12, 0.42);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+        }
+
+        .gallery-error-overlay {
+            background: rgba(20, 8, 8, 0.32);
+        }
+
+        .gallery-status-card {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 18px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 16px;
+            background: rgba(24, 25, 31, 0.82);
+            color: var(--text-primary);
+            box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+        }
+
+        .gallery-status-card.gallery-status-card-error {
+            flex-direction: column;
+            gap: 10px;
+            min-width: 280px;
+            text-align: center;
+        }
+
+        .gallery-loading-spinner {
+            color: var(--accent);
+            font-size: 24px;
+            animation: spin 0.9s linear infinite;
+        }
+
+        .gallery-status-label,
+        .gallery-error-text {
+            color: var(--text-primary);
+            font-size: 14px;
+        }
+
+        .gallery-error-text {
+            color: var(--text-secondary);
+        }
+
+        .gallery-retry-button {
+            padding: 8px 14px;
+            border: 1px solid rgba(10, 132, 255, 0.35);
+            border-radius: 999px;
+            background: rgba(10, 132, 255, 0.18);
+            color: #fff;
+            font-size: 13px;
+            font-weight: 650;
+            cursor: pointer;
+        }
+
+        .gallery-retry-button:hover {
+            background: rgba(10, 132, 255, 0.28);
+        }
+
+        .gallery-nav-button {
+            position: absolute;
+            top: 50%;
+            width: 46px;
+            height: 46px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 999px;
+            background: rgba(18, 18, 22, 0.72);
+            color: #fff;
+            cursor: pointer;
+            transform: translateY(-50%);
+            transition: background 0.2s ease, opacity 0.2s ease, transform 0.2s ease;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            z-index: 3;
+        }
+
+        .gallery-nav-button:hover:not(:disabled) {
+            background: rgba(10, 132, 255, 0.4);
+            transform: translateY(-50%) scale(1.03);
+        }
+
+        .gallery-nav-button:disabled {
+            opacity: 0.35;
+            cursor: default;
+        }
+
+        .gallery-nav-button i {
+            font-size: 24px;
+        }
+
+        .gallery-nav-prev {
+            left: 18px;
+        }
+
+        .gallery-nav-next {
+            right: 18px;
+        }
+
+        .public-audio-card audio {
+            width: 100%;
+        }
+
+        .vjs-theme-fantasy {
+            --vjs-theme-fantasy--primary: var(--accent);
+            --vjs-theme-fantasy--secondary: #fff;
+        }
+
+        .vjs-theme-fantasy .vjs-big-play-button {
+            width: 72px !important;
+            height: 72px !important;
+            line-height: 72px !important;
+            margin-top: -36px !important;
+            margin-left: -36px !important;
+            border-radius: 50% !important;
+            border: 1px solid rgba(255, 255, 255, 0.15) !important;
+            background: rgba(0, 0, 0, 0.48) !important;
+            color: #fff !important;
+            backdrop-filter: blur(12px) saturate(160%);
+            -webkit-backdrop-filter: blur(12px) saturate(160%);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        }
+
+        .vjs-theme-fantasy .vjs-big-play-button:hover,
+        .vjs-theme-fantasy .vjs-big-play-button:focus {
+            background: rgba(10, 132, 255, 0.55) !important;
+            border-color: rgba(10, 132, 255, 0.4) !important;
+            transform: scale(1.08);
+            box-shadow: 0 12px 40px rgba(10, 132, 255, 0.3);
+        }
+
+        .video-js.vjs-tcloud-loading .vjs-big-play-button {
+            display: none !important;
+        }
+
+        .video-js .vjs-control-bar,
+        .video-js .vjs-progress-control {
+            display: flex !important;
+        }
+
+        .video-js .vjs-control-bar {
+            background: linear-gradient(180deg, rgba(16, 16, 18, 0.68), rgba(10, 10, 12, 0.92)) !important;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(12px) saturate(150%);
+            -webkit-backdrop-filter: blur(12px) saturate(150%);
+        }
+
+        .video-js .vjs-time-control {
+            display: flex !important;
+            align-items: center !important;
+            padding: 0 2px !important;
+            margin: 0 !important;
+            font-size: 13px !important;
+            min-width: 0 !important;
+        }
+
+        .video-js .vjs-time-divider {
+            display: flex !important;
+            align-items: center !important;
+            padding: 0 4px !important;
+            min-width: 0 !important;
+            margin: 0 !important;
+        }
+
+        .video-js .vjs-progress-control {
+            flex: 1 !important;
+            min-width: 60px !important;
+            margin: 0 12px !important;
+            pointer-events: auto !important;
+            z-index: 10 !important;
+        }
+
+        .video-js .vjs-progress-control .vjs-slider {
+            margin: 0 !important;
+        }
+
+        .video-js .vjs-playback-rate {
+            width: 4em !important;
+        }
+
+        .vjs-playback-rate .vjs-playback-rate-value {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            height: 100% !important;
+            font-size: 1.08em !important;
+            font-weight: 650 !important;
+        }
+
+        .vjs-menu-content {
+            min-width: 150px !important;
+            padding: 8px 0 !important;
+            border: 1px solid var(--border) !important;
+            border-radius: 14px !important;
+            background: var(--bg-sidebar) !important;
+            backdrop-filter: var(--glass) !important;
+            -webkit-backdrop-filter: var(--glass) !important;
+            box-shadow: 0 14px 44px rgba(0, 0, 0, 0.52) !important;
+        }
+
+        .video-js .vjs-menu-item {
+            margin: 2px 8px !important;
+            padding: 10px 14px !important;
+            border-radius: var(--radius-item) !important;
+            text-align: left !important;
+            font-size: 13px !important;
+        }
+
+        .video-js .vjs-menu-item:hover {
+            background: var(--hover) !important;
+        }
+
+        .vjs-theme-fantasy .vjs-play-progress,
+        .vjs-theme-fantasy .vjs-play-progress:before {
+            background-color: var(--accent) !important;
+        }
+
+        .tcloud-player-loading-overlay,
+        .tcloud-player-error-overlay {
+            position: absolute;
+            inset: 0;
+            z-index: 20;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+            background: rgba(0, 0, 0, 0.78);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+            text-align: center;
+        }
+
+        .tcloud-player-loading-overlay.is-visible,
+        .tcloud-player-error-overlay.is-visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .tcloud-player-loading-spinner-ring {
+            width: 46px;
+            height: 46px;
+            border: 3px solid rgba(255, 255, 255, 0.14);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .tcloud-player-loading-text,
+        .tcloud-player-error-text {
+            max-width: 360px;
+            color: rgba(255, 255, 255, 0.78);
+            font-size: 14px;
+            line-height: 1.45;
+        }
+
+        .tcloud-player-error-icon {
+            color: #FFB44C;
+            font-size: 36px;
+        }
+
+        @media (max-width: 980px) {
+            body {
+                overflow: auto;
+            }
+
+            .page {
+                align-items: stretch;
+                padding: 12px;
+            }
+
+            .public-window {
+                width: 100%;
+                height: auto;
+                min-height: calc(100vh - 24px);
+            }
+
+            .window-body {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                border-right: 0;
+                border-bottom: 1px solid var(--border);
+            }
+
+            .content-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .list-panel {
+                border-right: 0;
+                border-bottom: 1px solid var(--border);
+                max-height: 42vh;
+            }
+
+            .content-grid.hide-preview-panel .list-panel {
+                border-bottom: 0;
+                max-height: none;
+            }
+
+            .public-media-stage,
+            .public-image-preview,
+            .public-pdf-preview {
+                height: min(62vh, 620px);
+            }
+        }
+
+        /* ===== Custom Context Menu (shared_item public view) ===== */
+        .context-menu {
+            position: fixed;
+            background: rgba(28, 28, 30, 0.97);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid var(--border);
+            border-radius: 9px;
+            padding: 4px;
+            width: auto;
+            min-width: 210px;
+            max-width: min(260px, calc(100vw - 20px));
+            display: none;
+            z-index: 8000;
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.62), 0 2px 8px rgba(0,0,0,0.28);
+            user-select: none;
+            animation: ctxFadeIn 0.11s ease-out;
+        }
+
+        @keyframes ctxFadeIn {
+            from { opacity: 0; transform: scale(0.96) translateY(-4px); }
+            to   { opacity: 1; transform: scale(1)    translateY(0); }
+        }
+
+        .context-item {
+            padding: 7px 11px;
+            font-size: 13px;
+            color: var(--text-primary);
+            border-radius: 5px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            white-space: nowrap;
+            min-width: 0;
+            max-width: 100%;
+            overflow: hidden;
+            transition: background 0.1s ease;
+        }
+
+        .context-item i { flex: 0 0 auto; font-size: 15px; }
+
+        .context-item:hover {
+            background: var(--accent);
+            color: #fff;
+        }
+
+        .context-sep {
+            height: 1px;
+            background: var(--border);
+            margin: 4px 2px;
+        }
+
+        .context-item.danger:hover { background: var(--danger); }
+
+        @media (max-width: 640px) {
+            .toolbar {
+                flex-wrap: wrap;
+                align-items: stretch;
+                padding: 10px;
+            }
+
+            .preview-header {
+                grid-template-columns: 1fr;
+                align-items: stretch;
+            }
+
+            .tool-group {
+                flex-wrap: wrap;
+                justify-content: center;
+                width: 100%;
+            }
+
+            .tool-group:first-child {
+                justify-content: flex-start;
+            }
+
+            .tool-group:last-child {
+                justify-content: flex-end;
+            }
+
+            .breadcrumb {
+                flex: 1 1 100%;
+                order: 3;
+                padding-top: 4px;
+            }
+
+            .directory-item {
+                grid-template-columns: 34px minmax(0, 1fr);
+            }
+
+            .directory-actions {
+                grid-column: 1 / -1;
+                justify-content: flex-start;
+                padding-left: 44px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="page">
+        <div class="public-window is-loading">
+            <!-- Skeleton Content (FOUC Prevention) -->
+            <div class="skeleton-content">
+                <aside class="skeleton-sidebar">
+                    <div class="skeleton-sidebar-item skeleton"></div>
+                    <div class="skeleton-sidebar-item skeleton" style="width: 80%;"></div>
+                    <div class="skeleton-sidebar-item skeleton" style="width: 90%;"></div>
+                    <div class="skeleton-sidebar-item skeleton" style="width: 70%; margin-top: 20px;"></div>
+                    <div class="skeleton-sidebar-item skeleton" style="width: 85%;"></div>
+                </aside>
+                <main class="skeleton-main">
+                    <div class="skeleton-toolbar">
+                        <div class="skeleton-breadcrumb skeleton"></div>
+                    </div>
+                    <div class="skeleton-list">
+                        <div class="skeleton-list-item skeleton"></div>
+                        <div class="skeleton-list-item skeleton"></div>
+                        <div class="skeleton-list-item skeleton"></div>
+                        <div class="skeleton-list-item skeleton"></div>
+                        <div class="skeleton-list-item skeleton"></div>
+                        <div class="skeleton-list-item skeleton"></div>
+                    </div>
+                </main>
+            </div>
+
+            <!-- Real Content -->
+            <div class="window-body real-content">
+                <aside class="sidebar">
+                    <div class="sidebar-section">
+                        <div class="sidebar-label">TCloud</div>
+                        <div class="sidebar-item active">
+                            <i class="ph ph-share-network"></i>
+                            <span id="sidebar-share-name">Link público</span>
+                        </div>
+                    </div>
+                    <div class="sidebar-section enriched is-hidden" id="selected-item-section">
+                        <div class="sidebar-label">SELECIONADO</div>
+                        <div class="facts" id="selected-item-facts"></div>
+                    </div>
+                    <div class="sidebar-section enriched" id="share-content-section">
+                        <div class="sidebar-label">Conteúdo</div>
+                        <div class="sidebar-mini-grid" id="share-content-metrics"></div>
+                        <div class="facts" id="share-directory-facts"></div>
+                    </div>
+                    <div class="sidebar-section details">
+                        <div class="sidebar-label">Detalhes</div>
+                        <div class="facts" id="share-facts"></div>
+                    </div>
+                </aside>
+
+                <main class="main">
+                    <header class="toolbar public-toolbar">
+                        <div class="tool-group">
+                            <button class="btn-icon" type="button" id="path-back-button" title="Voltar um nível">
+                                <i class="ph ph-caret-left"></i>
+                                <span class="sr-only">Voltar um nível</span>
+                            </button>
+                            <button class="btn-icon" type="button" id="refresh-directory-button" title="Atualizar">
+                                <i class="ph ph-arrow-clockwise"></i>
+                                <span class="sr-only">Atualizar</span>
+                            </button>
+                            <div class="breadcrumb" id="directory-breadcrumbs"></div>
+                        </div>
+                        <div class="tool-group">
+                            <div class="toolbar-filter-wrap">
+                                <button class="btn-icon" type="button" id="directory-sort-button" title="Ordenar por">
+                                    <i class="ph ph-faders"></i>
+                                    <span class="sr-only">Ordenar: <span id="directory-sort-label">Nome</span></span>
+                                </button>
+                                <div class="toolbar-filter-menu" id="directory-sort-menu">
+                                    <button class="toolbar-filter-option active" type="button" data-sort="name"><i class="ph ph-text-aa"></i><span>Nome</span></button>
+                                    <button class="toolbar-filter-option" type="button" data-sort="type"><i class="ph ph-files"></i><span>Tipo</span></button>
+                                    <button class="toolbar-filter-option" type="button" data-sort="size"><i class="ph ph-hard-drives"></i><span>Tamanho</span></button>
+                                    <button class="toolbar-filter-option" type="button" data-sort="modified_at"><i class="ph ph-clock"></i><span>Data</span></button>
+                                </div>
+                            </div>
+                            <div class="status info visible" id="public-status">
+                                <i class="ph ph-spinner-gap ph-spin"></i>
+                                <span>Carregando link público...</span>
+                            </div>
+                            <div class="toolbar-filter-wrap">
+                                <button class="btn-icon" type="button" id="directory-filter-button" title="Filtrar itens">
+                                    <i class="ph ph-sliders-horizontal"></i>
+                                    <span class="sr-only">Filtrar: <span id="directory-filter-label">Todos</span></span>
+                                </button>
+                                <div class="toolbar-filter-menu" id="directory-filter-menu">
+                                    <button class="toolbar-filter-option active" type="button" data-filter="all"><i class="ph ph-squares-four"></i><span>Todos</span></button>
+                                    <button class="toolbar-filter-option" type="button" data-filter="folder"><i class="ph ph-folder"></i><span>Pastas</span></button>
+                                    <button class="toolbar-filter-option" type="button" data-filter="image"><i class="ph ph-image"></i><span>Imagens</span></button>
+                                    <button class="toolbar-filter-option" type="button" data-filter="video"><i class="ph ph-film-strip"></i><span>Videos</span></button>
+                                    <button class="toolbar-filter-option" type="button" data-filter="audio"><i class="ph ph-speaker-high"></i><span>Audios</span></button>
+                                    <button class="toolbar-filter-option" type="button" data-filter="pdf"><i class="ph ph-file-pdf"></i><span>PDFs</span></button>
+                                    <button class="toolbar-filter-option" type="button" data-filter="other"><i class="ph ph-file"></i><span>Outros</span></button>
+                                </div>
+                            </div>
+                            <div class="search-wrapper" data-lpignore="true" data-1p-ignore="true" data-bwignore="true">
+                                <div class="search-bar" id="directory-search-bar">
+                                    <div id="directory-search-input" class="search-editor" contenteditable="true" role="searchbox" aria-label="Buscar arquivos" aria-autocomplete="none" aria-multiline="false" data-placeholder="Buscar..." data-form-type="other" data-lpignore="true" data-1p-ignore="true" data-bwignore="true"></div>
+                                    <div class="search-close" id="directory-search-close" title="Fechar"><i class="ph ph-x"></i></div>
+                                </div>
+                                <button class="btn-icon" type="button" id="directory-search-toggle" title="Pesquisar">
+                                    <i class="ph ph-magnifying-glass"></i>
+                                    <span class="sr-only">Pesquisar</span>
+                                </button>
+                            </div>
+                            <div class="readonly-badge" title="Link público somente leitura">
+                                <i class="ph ph-share-network"></i>
+                                <span>Somente leitura</span>
+                            </div>
+                        </div>
+                    </header>
+
+                    <div class="content-grid">
+                        <section class="list-panel">
+                            <div class="panel-heading">
+                                <span>Itens</span>
+                                <span id="item-count">0</span>
+                            </div>
+                            <div id="directory-content" class="directory-list"></div>
+                            <div id="terminal-content" class="terminal" style="display:none;"></div>
+                            <div id="unlock-content" class="terminal" style="display:none;"></div>
+                        </section>
+
+                    </div>
+                </main>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Context Menu (Shared Public View) -->
+    <div class="context-menu" id="shared-context-menu" oncontextmenu="return false;" role="menu" aria-label="Opções do item">
+        <div class="context-item" id="ctx-shared-open" role="menuitem">
+            <i class="ph ph-eye"></i> Visualizar
+        </div>
+        <div class="context-item" id="ctx-shared-download" role="menuitem">
+            <i class="ph ph-download-simple"></i> Baixar
+        </div>
+        <div class="context-sep" id="ctx-shared-sep"></div>
+        <div class="context-item" id="ctx-shared-copy-direct" role="menuitem">
+            <i class="ph ph-link"></i> Copiar link direto
+        </div>
+    </div>
+
+    <div class="public-modal-overlay" id="public-content-modal" aria-hidden="true">
+        <div class="public-player-box" role="dialog" aria-modal="true" aria-labelledby="public-modal-title">
+            <div class="public-modal-titlebar">
+                <div class="window-controls" aria-hidden="true">
+                    <button class="control close" type="button" onclick="closePublicContentModal()" title="Fechar"></button>
+                    <span class="control minimize"></span>
+                    <span class="control zoom"></span>
+                </div>
+                <div class="public-modal-title">
+                    <i class="ph ph-cloud"></i>
+                    <span id="public-modal-title">Visualização</span>
+                </div>
+                <div class="public-modal-actions" id="public-modal-actions"></div>
+            </div>
+            <div class="public-modal-body" id="public-modal-body"></div>
+        </div>
+    </div>
+
+    <script src="https://vjs.zencdn.net/8.10.0/video.min.js"></script>
+    <script>
+        const PUBLIC_SHARE_ID = __PUBLIC_SHARE_ID__;
+        const SHARE_TOKEN_KEY = `tcloud_public_share_${PUBLIC_SHARE_ID}`;
+        const TRANSCODED_PLAYBACK_KINDS = new Set(['transcoded_video', 'transcoded_audio']);
+        const VIDEO_PLAYBACK_KINDS = new Set(['direct_video', 'transcoded_video']);
+        const AUDIO_PLAYBACK_KINDS = new Set(['direct_audio', 'transcoded_audio']);
+        const SEARCH_QUERY_MAX_CHARS = 24;
+        const PUBLIC_SEARCH_DEBOUNCE_MS = 180;
+        const PUBLIC_SEARCH_MAX_ITEMS = 1200;
+        const PUBLIC_SEARCH_MAX_DIRECTORIES = 240;
+        const state = {
+            summary: null,
+            shareToken: sessionStorage.getItem(SHARE_TOKEN_KEY) || '',
+            currentPath: '',
+            currentItems: [],
+            filteredItems: [],
+            currentFile: null,
+            selectedRelativePath: '',
+            player: null,
+            playbackSessionId: '',
+            modalOpen: false,
+            searchQuery: '',
+            searchResults: [],
+            searchLoading: false,
+            searchRequestId: 0,
+            searchTimer: null,
+            searchDirectoryCache: new Map(),
+            contentMetrics: null,
+            contentMetricsRequestId: 0,
+            filterKind: 'all',
+            viewMode: 'list',
+            sortKey: 'name',
+            sortDirection: 'asc',
+            publicGalleryItems: [],
+            publicGalleryIndex: -1,
+            publicGalleryStage: null,
+        };
+
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function setStatus(message, type = 'info', icon = 'ph-info') {
+            const status = document.getElementById('public-status');
+            status.className = `status ${type} visible`;
+            status.innerHTML = `<i class="ph ${icon}"></i><span>${escapeHtml(message)}</span>`;
+        }
+
+        function hideStatus() {
+            document.getElementById('public-status').classList.remove('visible');
+        }
+
+        function setShareToken(token) {
+            state.shareToken = token || '';
+            state.searchDirectoryCache.clear();
+            state.searchResults = [];
+            state.contentMetrics = null;
+            state.contentMetricsRequestId += 1;
+            if (state.shareToken) {
+                sessionStorage.setItem(SHARE_TOKEN_KEY, state.shareToken);
+            } else {
+                sessionStorage.removeItem(SHARE_TOKEN_KEY);
+            }
+        }
+
+        function formatDateTime(value) {
+            if (!value) return 'Sem data';
+            const date = new Date(value);
+            if (Number.isNaN(date.getTime())) return value;
+            return date.toLocaleString('pt-BR', { dateStyle: 'medium', timeStyle: 'short' });
+        }
+
+        function formatSize(size) {
+            const value = Number(size || 0);
+            if (!Number.isFinite(value) || value <= 0) return 'Tamanho não informado';
+            const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+            let current = value;
+            let index = 0;
+            while (current >= 1024 && index < units.length - 1) {
+                current /= 1024;
+                index += 1;
+            }
+            return `${current.toFixed(current >= 10 || index === 0 ? 0 : 1)} ${units[index]}`;
+        }
+
+        function compactName(name, maxLength = 56) {
+            const value = String(name || '').trim();
+            if (!value || value.length <= maxLength) return value || 'Compartilhamento';
+            const dotIndex = value.lastIndexOf('.');
+            const extension = dotIndex > 0 && value.length - dotIndex <= 8 ? value.slice(dotIndex) : '';
+            const stem = extension ? value.slice(0, -extension.length) : value;
+            const room = Math.max(18, maxLength - extension.length - 1);
+            const head = Math.ceil(room * 0.62);
+            const tail = Math.floor(room * 0.38);
+            return `${stem.slice(0, head)}...${stem.slice(-tail)}${extension}`;
+        }
+
+        function iconForItem(item) {
+            if (item?.is_directory) return 'ph-folder';
+            const kind = String(item?.preview_kind || '').toLowerCase();
+            if (kind === 'image') return 'ph-image';
+            if (kind === 'video') return 'ph-film-strip';
+            if (kind === 'audio') return 'ph-speaker-high';
+            if (kind === 'pdf') return 'ph-file-pdf';
+            return 'ph-file';
+        }
+
+        function actionLabelForItem(item) {
+            if (item?.is_directory) return 'Abrir';
+            if (VIDEO_PLAYBACK_KINDS.has(item?.playback_kind)) return 'Reproduzir';
+            if (AUDIO_PLAYBACK_KINDS.has(item?.playback_kind)) return 'Ouvir';
+            return 'Visualizar';
+        }
+
+        function typeLabelForItem(item) {
+            if (item?.is_directory) return 'Pasta';
+            const extension = String(item?.extension || '').trim();
+            if (extension) return extension.toUpperCase();
+            const kind = String(item?.preview_kind || '').trim();
+            return kind ? kind.toUpperCase() : 'ARQUIVO';
+        }
+
+        function matchesFilterKind(item, filterKind) {
+            if (!filterKind || filterKind === 'all') return true;
+            if (filterKind === 'folder') return !!item?.is_directory;
+            if (item?.is_directory) return false;
+            const previewKind = String(item?.preview_kind || '').toLowerCase();
+            if (filterKind === 'pdf') return previewKind === 'pdf';
+            if (filterKind === 'other') {
+                return !['image', 'video', 'audio', 'pdf'].includes(previewKind);
+            }
+            return previewKind === filterKind;
+        }
+
+        function itemTypeRank(item) {
+            if (item?.is_directory) return 0;
+            const previewKind = String(item?.preview_kind || '').toLowerCase();
+            const ranks = { image: 1, video: 2, audio: 3, pdf: 4 };
+            return ranks[previewKind] || 5;
+        }
+
+        function comparePublicItems(a, b) {
+            const direction = state.sortDirection === 'desc' ? -1 : 1;
+            if (state.sortKey !== 'type' && Boolean(a?.is_directory) !== Boolean(b?.is_directory)) {
+                return a?.is_directory ? -1 : 1;
+            }
+
+            let result = 0;
+            if (state.sortKey === 'type') {
+                result = itemTypeRank(a) - itemTypeRank(b);
+            } else if (state.sortKey === 'size') {
+                const sizeA = Number.isFinite(Number(a?.size)) ? Number(a?.size) : -1;
+                const sizeB = Number.isFinite(Number(b?.size)) ? Number(b?.size) : -1;
+                result = sizeA - sizeB;
+            } else if (state.sortKey === 'modified_at') {
+                const timeA = Date.parse(a?.modified_at || '') || 0;
+                const timeB = Date.parse(b?.modified_at || '') || 0;
+                result = timeA - timeB;
+            } else {
+                result = String(a?.name || '').localeCompare(String(b?.name || ''), 'pt-BR', {
+                    numeric: true,
+                    sensitivity: 'base',
+                });
+            }
+
+            if (result === 0) {
+                result = String(a?.name || '').localeCompare(String(b?.name || ''), 'pt-BR', {
+                    numeric: true,
+                    sensitivity: 'base',
+                });
+            }
+            return result * direction;
+        }
+
+        function getVisibleItems() {
+            const query = String(state.searchQuery || '').trim().toLowerCase();
+            const usesRecursiveSource = Boolean(query || state.filterKind !== 'all');
+            const sourceItems = usesRecursiveSource ? (state.searchResults || []) : (state.currentItems || []);
+            return sourceItems.filter((item) => {
+                if (!matchesFilterKind(item, state.filterKind)) return false;
+                if (!query) return true;
+                const haystack = [
+                    item?.name || '',
+                    item?.extension || '',
+                    item?.preview_kind || '',
+                    item?.relative_path || '',
+                    item?.search_parent_path || '',
+                    item?.is_directory ? 'pasta' : 'arquivo',
+                ].join(' ').toLowerCase();
+                return haystack.includes(query);
+            }).slice().sort(comparePublicItems);
+        }
+
+        function updateFilterButtonLabel() {
+            const labels = {
+                all: 'Todos',
+                folder: 'Pastas',
+                image: 'Imagens',
+                video: 'Videos',
+                audio: 'Audios',
+                pdf: 'PDFs',
+                other: 'Outros',
+            };
+            const filterLabel = labels[state.filterKind] || 'Todos';
+            document.getElementById('directory-filter-label').textContent = filterLabel;
+            document.getElementById('directory-filter-button').title = `Filtrar itens: ${filterLabel}`;
+            document.getElementById('directory-filter-button').classList.toggle('active', state.filterKind !== 'all');
+            document.querySelectorAll('#directory-filter-menu .toolbar-filter-option').forEach((button) => {
+                button.classList.toggle('active', button.dataset.filter === state.filterKind);
+            });
+        }
+
+        function updateSearchButtonState() {
+            const hasQuery = Boolean(String(state.searchQuery || '').trim());
+            const wrapper = document.getElementById('directory-search-bar')?.closest('.search-wrapper');
+            const searchOpen = wrapper?.classList.contains('search-open');
+            document.getElementById('directory-search-toggle')?.classList.toggle('search-active', hasQuery || searchOpen);
+            document.getElementById('directory-search-toggle')?.classList.toggle('active', hasQuery || searchOpen);
+        }
+
+        function updatePublicViewButtons() {
+            state.viewMode = 'list';
+            const list = document.getElementById('directory-content');
+            if (list) {
+                list.classList.remove('view-grid');
+                list.classList.add('view-list');
+            }
+        }
+
+        function setPublicView(view) {
+            state.viewMode = 'list';
+            updatePublicViewButtons();
+        }
+
+        function buildDirectoryNameHtml(name) {
+            const fullName = String(name || 'Sem nome');
+            return `
+                <div class="directory-name" data-full-name="${escapeHtml(fullName)}" aria-label="${escapeHtml(fullName)}">
+                    <span class="directory-name-clip">
+                        <span class="directory-name-text">${escapeHtml(fullName)}</span>
+                    </span>
+                </div>
+            `;
+        }
+
+        function syncDirectoryNameOverflow() {
+            document.querySelectorAll('.directory-name').forEach((nameEl) => {
+                const clip = nameEl.querySelector('.directory-name-clip');
+                const text = nameEl.querySelector('.directory-name-text');
+                if (!clip || !text) return;
+                const scrollDistance = Math.max(0, text.scrollWidth - clip.clientWidth + 18);
+                text.style.setProperty('--directory-name-scroll', `${scrollDistance}px`);
+                nameEl.classList.toggle('has-overflow-name', scrollDistance > 18);
+            });
+        }
+
+        function updateSortButtonLabel() {
+            const labels = {
+                name: 'Nome',
+                type: 'Tipo',
+                size: 'Tamanho',
+                modified_at: 'Data',
+            };
+            const label = labels[state.sortKey] || 'Nome';
+            const directionLabel = state.sortDirection === 'desc' ? 'decrescente' : 'crescente';
+            document.getElementById('directory-sort-label').textContent = label;
+            document.getElementById('directory-sort-button').title = `Ordenar por ${label} (${directionLabel})`;
+            document.querySelectorAll('#directory-sort-menu .toolbar-filter-option').forEach((button) => {
+                button.classList.toggle('active', button.dataset.sort === state.sortKey);
+            });
+        }
+
+        function setPublicSort(sortKey) {
+            if (state.sortKey === sortKey) {
+                state.sortDirection = state.sortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                state.sortKey = sortKey || 'name';
+                state.sortDirection = 'asc';
+            }
+            updateSortButtonLabel();
+            rerenderCurrentDirectory();
+        }
+
+        function getSearchInputValue(input = document.getElementById('directory-search-input')) {
+            if (!input) return '';
+            return String(input.textContent || '')
+                .replace(/\u00a0/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim()
+                .slice(0, SEARCH_QUERY_MAX_CHARS);
+        }
+
+        function setSearchInputValue(value, input = document.getElementById('directory-search-input')) {
+            if (!input) return '';
+            input.textContent = String(value || '').slice(0, SEARCH_QUERY_MAX_CHARS);
+            return getSearchInputValue(input);
+        }
+
+        function focusSearchInput(input = document.getElementById('directory-search-input')) {
+            if (!input) return;
+            input.focus();
+            try {
+                const selection = window.getSelection();
+                if (!selection) return;
+                const range = document.createRange();
+                range.selectNodeContents(input);
+                range.collapse(false);
+                selection.removeAllRanges();
+                selection.addRange(range);
+            } catch (error) {}
+        }
+
+        function handleSearchInputKeydown(event) {
+            if (!event) return;
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                return;
+            }
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                resetPublicSearch({ render: true });
+                return;
+            }
+            const isModifierCombo = event.metaKey || event.ctrlKey || event.altKey;
+            const isSingleChar = typeof event.key === 'string' && event.key.length === 1;
+            if (!isModifierCombo && isSingleChar && getSearchInputValue().length >= SEARCH_QUERY_MAX_CHARS) {
+                event.preventDefault();
+            }
+        }
+
+        function handleSearchInputPaste(event) {
+            if (!event) return;
+            event.preventDefault();
+            const text = event.clipboardData ? event.clipboardData.getData('text/plain') : '';
+            const input = document.getElementById('directory-search-input');
+            const currentValue = getSearchInputValue(input);
+            const availableChars = Math.max(0, SEARCH_QUERY_MAX_CHARS - currentValue.length);
+            if (availableChars <= 0) return;
+            const limitedText = String(text || '').slice(0, availableChars);
+            if (document.queryCommandSupported && document.queryCommandSupported('insertText')) {
+                document.execCommand('insertText', false, limitedText);
+                return;
+            }
+            setSearchInputValue(`${currentValue}${limitedText}`, input);
+            performPublicSearch();
+        }
+
+        function resetPublicSearch(options = {}) {
+            if (state.searchTimer) {
+                clearTimeout(state.searchTimer);
+                state.searchTimer = null;
+            }
+            state.searchQuery = '';
+            state.searchResults = [];
+            state.searchLoading = false;
+            state.searchRequestId += 1;
+            setSearchInputValue('');
+            document.getElementById('directory-search-bar')?.closest('.search-wrapper')?.classList.remove('search-open');
+            updateSearchButtonState();
+            if (options.render === true) rerenderCurrentDirectory();
+        }
+
+        function publicSearchItemMatches(item, query) {
+            const haystack = [
+                item?.name || '',
+                item?.extension || '',
+                item?.preview_kind || '',
+                item?.relative_path || '',
+                item?.search_parent_path || '',
+                item?.is_directory ? 'pasta' : 'arquivo',
+            ].join(' ').toLowerCase();
+            return haystack.includes(query);
+        }
+
+        async function fetchPublicDirectoryForSearch(relativePath = '') {
+            const normalizedPath = String(relativePath || '').trim();
+            if (state.searchDirectoryCache.has(normalizedPath)) {
+                return state.searchDirectoryCache.get(normalizedPath);
+            }
+            const data = await fetchJson(`/api/shared_item/${encodeURIComponent(PUBLIC_SHARE_ID)}/browse?path=${encodeURIComponent(normalizedPath)}`);
+            state.searchDirectoryCache.set(normalizedPath, data);
+            return data;
+        }
+
+        async function collectPublicSearchResults(query, requestId) {
+            const results = [];
+            const visited = new Set();
+            let directoryCount = 0;
+            let truncated = false;
+
+            const visit = async (relativePath = '') => {
+                if (requestId !== state.searchRequestId || truncated) return;
+                const normalizedPath = String(relativePath || '').trim();
+                if (visited.has(normalizedPath)) return;
+                visited.add(normalizedPath);
+                directoryCount += 1;
+                if (directoryCount > PUBLIC_SEARCH_MAX_DIRECTORIES) {
+                    truncated = true;
+                    return;
+                }
+
+                const data = await fetchPublicDirectoryForSearch(normalizedPath);
+                const items = Array.isArray(data?.items) ? data.items : [];
+                for (const item of items) {
+                    if (requestId !== state.searchRequestId || truncated) return;
+                    const itemRelativePath = String(item?.relative_path || '');
+                    const parentPath = itemRelativePath.includes('/') ? itemRelativePath.split('/').slice(0, -1).join('/') : '';
+                    const enrichedItem = {
+                        ...item,
+                        search_parent_path: parentPath,
+                    };
+                    if (!query || publicSearchItemMatches(enrichedItem, query)) {
+                        results.push(enrichedItem);
+                        if (results.length >= PUBLIC_SEARCH_MAX_ITEMS) {
+                            truncated = true;
+                            return;
+                        }
+                    }
+                    if (item?.is_directory && itemRelativePath) {
+                        await visit(itemRelativePath);
+                    }
+                }
+            };
+
+            await visit('');
+            return { results, truncated };
+        }
+
+        async function collectPublicContentMetrics(requestId) {
+            const visited = new Set();
+            const metrics = {
+                totalItems: 0,
+                folders: 0,
+                files: 0,
+                truncated: false,
+            };
+
+            const visit = async (relativePath = '') => {
+                if (requestId !== state.contentMetricsRequestId || metrics.truncated) return;
+                const normalizedPath = String(relativePath || '').trim();
+                if (visited.has(normalizedPath)) return;
+                visited.add(normalizedPath);
+                if (visited.size > PUBLIC_SEARCH_MAX_DIRECTORIES) {
+                    metrics.truncated = true;
+                    return;
+                }
+
+                const data = await fetchPublicDirectoryForSearch(normalizedPath);
+                const items = Array.isArray(data?.items) ? data.items : [];
+                for (const item of items) {
+                    if (requestId !== state.contentMetricsRequestId || metrics.truncated) return;
+                    metrics.totalItems += 1;
+                    if (item?.is_directory) {
+                        metrics.folders += 1;
+                        const itemRelativePath = String(item?.relative_path || '');
+                        if (itemRelativePath) await visit(itemRelativePath);
+                    } else {
+                        metrics.files += 1;
+                    }
+                    if (metrics.totalItems >= PUBLIC_SEARCH_MAX_ITEMS) {
+                        metrics.truncated = true;
+                        return;
+                    }
+                }
+            };
+
+            await visit('');
+            return metrics;
+        }
+
+        async function loadShareContentMetrics() {
+            if (!state.summary?.is_directory || !state.shareToken) return;
+            const requestId = state.contentMetricsRequestId + 1;
+            state.contentMetricsRequestId = requestId;
+            try {
+                const metrics = await collectPublicContentMetrics(requestId);
+                if (requestId !== state.contentMetricsRequestId) return;
+                state.contentMetrics = metrics;
+                updateShareDirectoryFacts();
+            } catch (error) {
+                if (requestId !== state.contentMetricsRequestId) return;
+                console.warn('[TCloud] public content metrics failed', error);
+            }
+        }
+
+        function performPublicSearch() {
+            const input = document.getElementById('directory-search-input');
+            state.searchQuery = getSearchInputValue(input);
+            if (input && String(input.textContent || '') !== state.searchQuery) {
+                setSearchInputValue(state.searchQuery, input);
+                focusSearchInput(input);
+            }
+            updateSearchButtonState();
+
+            if (state.searchTimer) clearTimeout(state.searchTimer);
+            const query = String(state.searchQuery || '').trim().toLowerCase();
+            const needsRecursiveSource = Boolean(query || state.filterKind !== 'all');
+            if (!needsRecursiveSource) {
+                state.searchResults = [];
+                state.searchLoading = false;
+                state.searchRequestId += 1;
+                rerenderCurrentDirectory();
+                return;
+            }
+
+            const requestId = state.searchRequestId + 1;
+            state.searchRequestId = requestId;
+            state.searchLoading = true;
+            state.searchTimer = setTimeout(async () => {
+                try {
+                    const statusText = query ? 'Buscando em subpastas...' : 'Filtrando em subpastas...';
+                    setStatus(statusText, 'info', 'ph-spinner-gap ph-spin');
+                    const { results, truncated } = await collectPublicSearchResults(query, requestId);
+                    if (requestId !== state.searchRequestId) return;
+                    state.searchResults = results;
+                    state.searchLoading = false;
+                    rerenderCurrentDirectory();
+                    if (truncated) {
+                        setStatus('Busca limitada para manter a página responsiva.', 'info', 'ph-info');
+                    } else {
+                        hideStatus();
+                    }
+                } catch (error) {
+                    if (requestId !== state.searchRequestId) return;
+                    state.searchResults = [];
+                    state.searchLoading = false;
+                    rerenderCurrentDirectory();
+                    setStatus(error.message || 'Falha ao buscar no compartilhamento.', 'error', 'ph-warning-circle');
+                }
+            }, PUBLIC_SEARCH_DEBOUNCE_MS);
+        }
+
+        function updatePathBackButton() {
+            const button = document.getElementById('path-back-button');
+            if (!button) return;
+            button.disabled = !state.summary?.is_directory || !state.currentPath;
+        }
+
+        function buildFilePayloadFromSummary() {
+            const summary = state.summary;
+            if (!summary || summary.is_directory || !state.shareToken) return null;
+            const token = encodeURIComponent(state.shareToken);
+            const base = `/stream/shared/${encodeURIComponent(PUBLIC_SHARE_ID)}`;
+            return {
+                name: summary.name,
+                is_directory: false,
+                preview_kind: summary.preview_kind,
+                playback_kind: summary.playback_kind,
+                extension: summary.extension,
+                stream_url: `${base}?token=${token}`,
+                download_url: `${base}?download=true&token=${token}`,
+                mime_type: summary.mime_type || '',
+                size: summary.size || 0,
+                modified_at: summary.modified_at || '',
+                relative_path: '',
+            };
+        }
+
+        async function fetchJson(url, options = {}) {
+            const config = { ...options, headers: { ...(options.headers || {}) } };
+            if (state.shareToken) {
+                config.headers.Authorization = `Bearer ${state.shareToken}`;
+            }
+            const response = await fetch(url, config);
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                const error = new Error(data.error || `Erro ${response.status}`);
+                error.status = response.status;
+                error.code = data.code || '';
+                throw error;
+            }
+            return data;
+        }
+
+        function renderShareShell(summary) {
+            const name = summary?.name || 'Compartilhamento';
+            const sidebarName = document.getElementById('sidebar-share-name');
+            sidebarName.textContent = compactName(name, 34);
+            sidebarName.title = name;
+            document.getElementById('share-content-section')?.classList.toggle('is-hidden', !summary?.is_directory);
+            document.getElementById('selected-item-section')?.classList.add('is-hidden');
+            const contentGrid = document.querySelector('.content-grid');
+            contentGrid?.classList.toggle('single-file-mode', !summary?.is_directory);
+            contentGrid?.classList.remove('hide-preview-panel');
+            updatePathBackButton();
+            const facts = [];
+            const detailFact = (icon, label, value) => `
+                <div class="fact detail-fact">
+                    <i class="ph ${icon}"></i>
+                    <span>
+                        <strong class="fact-label">${escapeHtml(label)}</strong>
+                        <span class="fact-value">${escapeHtml(value)}</span>
+                    </span>
+                </div>
+            `;
+            facts.push(detailFact(summary?.is_directory ? 'ph-folder' : 'ph-file', 'Tipo', summary?.is_directory ? 'Pasta compartilhada' : 'Arquivo compartilhado'));
+            const publicUrl = summary?.public_url || window.location.href;
+            facts.push(`
+                <div class="fact detail-fact">
+                    <i class="ph ph-link"></i>
+                    <span>
+                        <strong class="fact-label">Link</strong>
+                        <span class="fact-value sidebar-link-row">
+                            <span class="sidebar-link-value">${escapeHtml(publicUrl)}</span>
+                            <button class="sidebar-copy-button" type="button" title="Copiar link" onclick="copyPublicShareLink(event)">
+                                <i class="ph ph-copy"></i>
+                            </button>
+                        </span>
+                    </span>
+                </div>
+            `);
+            if (summary?.requires_password) facts.push(detailFact('ph-lock-key', 'Acesso', 'Protegido por senha'));
+            if (!summary?.requires_password) facts.push(detailFact('ph-lock-open', 'Acesso', 'Link liberado'));
+            if (summary?.expires_at) facts.push(detailFact('ph-clock', 'Expira em', formatDateTime(summary.expires_at)));
+            if (!summary?.expires_at) facts.push(detailFact('ph-infinity', 'Validade', 'Sem expiração configurada'));
+            if (summary?.max_access) facts.push(detailFact('ph-chart-line-up', 'Acessos', `${String(summary.access_count || 0)}/${String(summary.max_access)}`));
+            if (!summary?.max_access) facts.push(detailFact('ph-chart-line-up', 'Acessos', `${String(summary?.access_count || 0)} realizados`));
+            document.getElementById('share-facts').innerHTML = facts.join('');
+            updateShareDirectoryFacts();
+            document.querySelector('.public-window')?.classList.remove('is-loading');
+        }
+
+        function updateShareDirectoryFacts() {
+            document.getElementById('share-content-section')?.classList.toggle('is-hidden', !state.summary?.is_directory);
+            const metricsEl = document.getElementById('share-content-metrics');
+            const factsEl = document.getElementById('share-directory-facts');
+            if (!metricsEl || !factsEl) return;
+            if (!state.summary?.is_directory) {
+                metricsEl.innerHTML = '';
+                factsEl.innerHTML = '';
+                return;
+            }
+
+            const items = state.currentItems || [];
+            const folders = items.filter((item) => item?.is_directory).length;
+            const files = Math.max(0, items.length - folders);
+            const totalFolders = Number.isFinite(Number(state.contentMetrics?.folders)) ? Number(state.contentMetrics.folders) : folders;
+            const totalFiles = Number.isFinite(Number(state.contentMetrics?.files)) ? Number(state.contentMetrics.files) : files;
+            const totalItems = Number.isFinite(Number(state.contentMetrics?.totalItems)) ? Number(state.contentMetrics.totalItems) : items.length;
+            const totalLabel = state.contentMetrics ? String(totalItems) : '...';
+            const foldersLabel = state.contentMetrics ? String(totalFolders) : '...';
+            const filesLabel = state.contentMetrics ? String(totalFiles) : '...';
+            const currentPath = state.currentPath ? state.currentPath : 'Raiz compartilhada';
+            const recursiveLabel = state.filterKind !== 'all' || state.searchQuery ? 'Ativo' : 'Disponível';
+            const detailFact = (icon, label, value) => `
+                <div class="fact detail-fact">
+                    <i class="ph ${icon}"></i>
+                    <span>
+                        <strong class="fact-label">${escapeHtml(label)}</strong>
+                        <span class="fact-value">${escapeHtml(value)}</span>
+                    </span>
+                </div>
+            `;
+            metricsEl.innerHTML = `
+                <div class="sidebar-metric"><strong>${escapeHtml(totalLabel)}</strong><span>Total</span></div>
+                <div class="sidebar-metric"><strong>${escapeHtml(foldersLabel)}</strong><span>Pastas</span></div>
+                <div class="sidebar-metric"><strong>${escapeHtml(filesLabel)}</strong><span>Arquivos</span></div>
+                <div class="sidebar-metric"><strong>${String(state.filteredItems?.length || 0)}</strong><span>Exibidos</span></div>
+            `;
+            const directoryFacts = [
+                detailFact('ph-folder-open', 'Local atual', currentPath),
+                detailFact('ph-tree-structure', 'Busca e filtros', recursiveLabel),
+            ];
+            if (state.contentMetrics?.truncated) {
+                directoryFacts.push(detailFact('ph-warning-circle', 'Contagem', 'Limitada para manter a página responsiva'));
+            }
+            factsEl.innerHTML = directoryFacts.join('');
+        }
+
+        function renderSingleFileList(item) {
+            const safeItem = item || buildFilePayloadFromSummary() || {};
+            const canOpen = Boolean(safeItem.stream_url);
+            const fullName = safeItem.name || state.summary?.name || 'Arquivo compartilhado';
+            document.getElementById('terminal-content').style.display = 'none';
+            document.getElementById('item-count').textContent = canOpen ? '1' : '0';
+            document.getElementById('directory-breadcrumbs').innerHTML = `
+                <button class="crumb current" type="button" disabled title="${escapeHtml(fullName)}">
+                    <i class="ph ph-file"></i>
+                    <span>${escapeHtml(compactName(fullName, 48))}</span>
+                </button>
+            `;
+            document.getElementById('directory-content').innerHTML = canOpen ? `
+                <div class="directory-item selected" data-relative-path="">
+                    <div class="directory-icon"><i class="ph ${iconForItem(safeItem)}"></i></div>
+                    <div class="directory-meta">
+                        ${buildDirectoryNameHtml(fullName)}
+                        <div class="directory-subtitle">${escapeHtml(formatSize(safeItem.size))} - ${escapeHtml(formatDateTime(safeItem.modified_at))}</div>
+                    </div>
+                    <div class="directory-actions">
+                        <button class="mini-button primary icon-only" type="button" data-tooltip="${actionLabelForItem(safeItem)}" onclick="openPublicContentModal(state.currentFile || buildFilePayloadFromSummary())">
+                            <i class="ph ${VIDEO_PLAYBACK_KINDS.has(safeItem.playback_kind) ? 'ph-play' : 'ph-eye'}"></i>
+                        </button>
+                        <a class="mini-button icon-only" href="${escapeHtml(safeItem.download_url || '#')}" target="_blank" rel="noreferrer" data-tooltip="Baixar">
+                            <i class="ph ph-download-simple"></i>
+                        </a>
+                    </div>
+
+                </div>
+            ` : '';
+            updatePathBackButton();
+            renderSelectedItemFacts(canOpen ? safeItem : null);
+            requestAnimationFrame(syncDirectoryNameOverflow);
+        }
+
+        function renderTerminal(message, icon = 'ph-warning-circle') {
+            cleanupPublicPlayer('terminal');
+            document.getElementById('terminal-content').style.display = 'grid';
+            document.getElementById('terminal-content').innerHTML = `
+                <i class="ph ${icon}"></i>
+                <div class="viewer-caption">
+                    <h3>Compartilhamento indisponível</h3>
+                    <p>${escapeHtml(message)}</p>
+                </div>
+            `;
+            setStatus(message, 'error', icon);
+            document.querySelector('.public-window')?.classList.remove('is-loading');
+        }
+
+        function renderUnlockCard(summary) {
+            cleanupPublicPlayer('unlock');
+            document.getElementById('terminal-content').style.display = 'none';
+            document.getElementById('directory-content').innerHTML = '';
+            document.getElementById('unlock-content').style.display = 'grid';
+            document.getElementById('unlock-content').innerHTML = `
+                <div class="unlock-card visible" id="unlock-card" style="border:0; background:transparent; padding:0; width:100%;">
+                    <div class="viewer-caption">
+                        <h3>Link protegido</h3>
+                        <p>Digite a senha definida pelo dono do link para continuar.</p>
+                    </div>
+                    <div class="field" style="text-align:left; margin-top:20px;">
+                        <label for="unlock-password">Senha do compartilhamento</label>
+                        <input class="input" type="password" id="unlock-password" placeholder="Digite a senha">
+                    </div>
+                    <div class="button-row" style="margin-top:20px; justify-content:center;">
+                        <button class="button primary" id="unlock-button" type="button">
+                            <i class="ph ph-key"></i>
+                            <span>Desbloquear</span>
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.getElementById('unlock-button').addEventListener('click', () => {
+                unlockShare(document.getElementById('unlock-password').value || '');
+            });
+            document.getElementById('unlock-password').addEventListener('keydown', (event) => {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    unlockShare(document.getElementById('unlock-password').value || '');
+                }
+            });
+            hideStatus();
+            document.querySelector('.public-window')?.classList.remove('is-loading');
+        }
+
+
+        async function copyPublicShareLink(event) {
+            event?.preventDefault?.();
+            event?.stopPropagation?.();
+            const link = state.summary?.public_url || window.location.href;
+            const button = event?.currentTarget;
+            const previousHtml = button?.innerHTML || '';
+            try {
+                if (navigator.clipboard?.writeText) {
+                    await navigator.clipboard.writeText(link);
+                } else {
+                    const textarea = document.createElement('textarea');
+                    textarea.value = link;
+                    textarea.setAttribute('readonly', 'readonly');
+                    textarea.style.position = 'fixed';
+                    textarea.style.opacity = '0';
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    document.execCommand('copy');
+                    textarea.remove();
+                }
+                if (button) {
+                    button.innerHTML = '<i class="ph ph-check"></i>';
+                    button.title = 'Link copiado';
+                    setTimeout(() => {
+                        button.innerHTML = previousHtml;
+                        button.title = 'Copiar link';
+                    }, 1200);
+                }
+            } catch (error) {
+                console.warn('[TCloud] copy public link failed', error);
+                setStatus('Não foi possível copiar o link.', 'error', 'ph-warning-circle');
+            }
+        }
+
+        function findDirectoryItemByPath(relativePath) {
+            const normalizedPath = String(relativePath || '');
+            return (state.filteredItems || []).find((candidate) => String(candidate.relative_path || '') === normalizedPath)
+                || (state.currentItems || []).find((candidate) => String(candidate.relative_path || '') === normalizedPath)
+                || (state.searchResults || []).find((candidate) => String(candidate.relative_path || '') === normalizedPath)
+                || null;
+        }
+
+        function renderSelectedItemFacts(item) {
+            const section = document.getElementById('selected-item-section');
+            const factsEl = document.getElementById('selected-item-facts');
+            if (!section || !factsEl) return;
+            if (!item) {
+                section.classList.add('is-hidden');
+                factsEl.innerHTML = '';
+                return;
+            }
+            const detailFact = (icon, label, value) => `
+                <div class="fact detail-fact">
+                    <i class="ph ${icon}"></i>
+                    <span>
+                        <strong class="fact-label">${escapeHtml(label)}</strong>
+                        <span class="fact-value">${escapeHtml(value)}</span>
+                    </span>
+                </div>
+            `;
+            const facts = [
+                detailFact(iconForItem(item), 'Nome', item?.name || 'Sem nome'),
+                detailFact(item?.is_directory ? 'ph-folder' : 'ph-file', 'Tipo', typeLabelForItem(item)),
+            ];
+            if (!item?.is_directory) {
+                facts.push(detailFact('ph-hard-drives', 'Tamanho', formatSize(item?.size || 0)));
+                if (item?.extension) facts.push(detailFact('ph-file-dashed', 'Extensão', String(item.extension).toUpperCase()));
+            }
+            if (item?.modified_at) facts.push(detailFact('ph-clock', 'Modificado', formatDateTime(item.modified_at)));
+            const parentPath = item?.search_parent_path || (String(item?.relative_path || '').includes('/') ? String(item.relative_path).split('/').slice(0, -1).join('/') : '');
+            facts.push(detailFact('ph-folder-open', 'Local', parentPath || 'Raiz compartilhada'));
+            if (!item?.is_directory && item?.download_url) facts.push(detailFact('ph-download-simple', 'Download', 'Disponível'));
+            section.classList.remove('is-hidden');
+            factsEl.innerHTML = facts.join('');
+        }
+
+        function markSelectedItem(relativePath) {
+            state.selectedRelativePath = relativePath || '';
+            document.querySelectorAll('.directory-item').forEach((el) => {
+                el.classList.toggle('selected', el.dataset.relativePath === state.selectedRelativePath);
+            });
+            renderSelectedItemFacts(findDirectoryItemByPath(state.selectedRelativePath));
+        }
+
+        async function cleanupPublicPlayer(reason = 'replace') {
+            const sessionId = state.playbackSessionId;
+            state.playbackSessionId = '';
+            if (state.player) {
+                try { state.player.dispose(); } catch (error) { }
+                state.player = null;
+            }
+            if (sessionId && state.shareToken) {
+                const url = `/api/shared_item/${encodeURIComponent(PUBLIC_SHARE_ID)}/web_playback/session/${encodeURIComponent(sessionId)}?token=${encodeURIComponent(state.shareToken)}&reason=${encodeURIComponent(reason)}`;
+                try {
+                    await fetch(url, { method: 'DELETE', keepalive: true });
+                } catch (error) {
+                    console.warn('[TCloud] public playback cleanup failed', error);
+                }
+            }
+        }
+
+        function setPublicModalActions(item) {
+            const container = document.getElementById('public-modal-actions');
+            if (!container) return;
+
+            if (item?.download_url) {
+                container.innerHTML = `
+                    <a class="mini-button primary" href="${escapeHtml(item.download_url)}" target="_blank" rel="noreferrer">
+                        <i class="ph ph-download-simple"></i>
+                        <span>Baixar</span>
+                    </a>
+                `;
+
+
+            } else {
+                container.innerHTML = '';
+            }
+        }
+
+        function isPublicGalleryImageItem(item) {
+            return !!item && !item.is_directory && String(item.preview_kind || '').toLowerCase() === 'image' && !!item.stream_url;
+        }
+
+        function samePublicItem(a, b) {
+            if (!a || !b) return false;
+            const pathA = String(a.relative_path || '');
+            const pathB = String(b.relative_path || '');
+            if (pathA || pathB) return pathA === pathB;
+            return String(a.stream_url || '') === String(b.stream_url || '') && String(a.name || '') === String(b.name || '');
+        }
+
+        function getPublicGalleryItems(openedItem) {
+            const visibleImages = (state.filteredItems || []).filter(isPublicGalleryImageItem);
+            const openedInVisible = visibleImages.some((candidate) => samePublicItem(candidate, openedItem));
+            const source = openedInVisible ? visibleImages : (state.currentItems || []).filter(isPublicGalleryImageItem);
+            const items = source.length ? source : (isPublicGalleryImageItem(openedItem) ? [openedItem] : []);
+            return items.some((candidate) => samePublicItem(candidate, openedItem)) ? items : [openedItem];
+        }
+
+        function formatPublicGalleryTitle(index, statusSuffix = '') {
+            const item = state.publicGalleryItems[index];
+            if (!item) return 'Imagem';
+            const total = state.publicGalleryItems.length || 1;
+            const suffix = statusSuffix ? ` - ${statusSuffix}` : '';
+            return `${item.name || 'Imagem'} (${index + 1} de ${total})${suffix}`;
+        }
+
+        function setPublicGalleryTitle(index, statusSuffix = '') {
+            const titleEl = document.getElementById('public-modal-title');
+            if (!titleEl) return;
+            const item = state.publicGalleryItems[index];
+            titleEl.textContent = compactName(formatPublicGalleryTitle(index, statusSuffix), 96);
+            titleEl.title = item?.name || 'Imagem';
+        }
+
+        function buildPublicGalleryImageUrl(item) {
+            return item?.stream_url || '';
+        }
+
+        function ensurePublicImageGalleryStage(container) {
+            if (state.publicGalleryStage && state.publicGalleryStage.container === container) {
+                return state.publicGalleryStage;
+            }
+
+            container.innerHTML = `
+                <div class="gallery-stage">
+                    <img class="gallery-stage-image" alt="">
+                    <div class="gallery-loading-overlay">
+                        <div class="gallery-status-card">
+                            <i class="ph ph-spinner-gap gallery-loading-spinner"></i>
+                            <span class="gallery-status-label">Carregando imagem...</span>
+                        </div>
+                    </div>
+                    <div class="gallery-error-overlay">
+                        <div class="gallery-status-card gallery-status-card-error">
+                            <i class="ph ph-warning-circle" style="font-size: 28px; color: #FFB44C;"></i>
+                            <span class="gallery-error-text">Não foi possível carregar esta imagem.</span>
+                            <button type="button" class="gallery-retry-button">Tentar novamente</button>
+                        </div>
+                    </div>
+                    <button type="button" class="gallery-nav-button gallery-nav-prev" aria-label="Imagem anterior">
+                        <i class="ph ph-caret-left"></i>
+                    </button>
+                    <button type="button" class="gallery-nav-button gallery-nav-next" aria-label="Próxima imagem">
+                        <i class="ph ph-caret-right"></i>
+                    </button>
+                </div>
+            `;
+
+            const galleryState = {
+                container,
+                stage: container.querySelector('.gallery-stage'),
+                image: container.querySelector('.gallery-stage-image'),
+                loadingOverlay: container.querySelector('.gallery-loading-overlay'),
+                errorOverlay: container.querySelector('.gallery-error-overlay'),
+                errorText: container.querySelector('.gallery-error-text'),
+                retryButton: container.querySelector('.gallery-retry-button'),
+                prevButton: container.querySelector('.gallery-nav-prev'),
+                nextButton: container.querySelector('.gallery-nav-next'),
+                currentSrc: '',
+                renderedIndex: -1,
+                pendingIndex: null,
+                requestToken: 0,
+                preloadedSrcs: new Set(),
+                preloadPromises: new Map(),
+                preloadFailures: new Map(),
+                disposed: false,
+            };
+
+            galleryState.prevButton.onclick = () => {
+                if (state.publicGalleryIndex > 0) openPublicImageInGallery(state.publicGalleryIndex - 1);
+            };
+            galleryState.nextButton.onclick = () => {
+                if (state.publicGalleryIndex < state.publicGalleryItems.length - 1) openPublicImageInGallery(state.publicGalleryIndex + 1);
+            };
+            galleryState.retryButton.onclick = () => {
+                const retryIndex = typeof galleryState.pendingIndex === 'number' ? galleryState.pendingIndex : state.publicGalleryIndex;
+                if (retryIndex >= 0) openPublicImageInGallery(retryIndex);
+            };
+
+            state.publicGalleryStage = galleryState;
+            return galleryState;
+        }
+
+        function syncPublicGalleryNavigation(galleryState) {
+            const total = state.publicGalleryItems.length;
+            const hasMultiple = total > 1;
+            galleryState.prevButton.style.display = hasMultiple ? 'flex' : 'none';
+            galleryState.nextButton.style.display = hasMultiple ? 'flex' : 'none';
+            galleryState.prevButton.disabled = !hasMultiple || state.publicGalleryIndex <= 0;
+            galleryState.nextButton.disabled = !hasMultiple || state.publicGalleryIndex >= total - 1;
+        }
+
+        function setPublicGalleryLoading(galleryState, isLoading) {
+            galleryState.loadingOverlay.classList.toggle('is-visible', isLoading);
+            galleryState.stage.classList.toggle('is-loading', isLoading);
+            galleryState.image.classList.toggle('has-image', !!galleryState.currentSrc);
+        }
+
+        function setPublicGalleryError(galleryState, message = '') {
+            if (message) {
+                galleryState.errorText.textContent = message;
+                galleryState.errorOverlay.classList.add('is-visible');
+            } else {
+                galleryState.errorOverlay.classList.remove('is-visible');
+            }
+        }
+
+        function disposePublicImageGalleryStage() {
+            const galleryState = state.publicGalleryStage;
+            if (galleryState) {
+                galleryState.disposed = true;
+                galleryState.requestToken += 1;
+                galleryState.pendingIndex = null;
+                galleryState.preloadedSrcs?.clear();
+                galleryState.preloadPromises?.clear();
+                galleryState.preloadFailures?.clear();
+            }
+            state.publicGalleryStage = null;
+            state.publicGalleryItems = [];
+            state.publicGalleryIndex = -1;
+        }
+
+        function preloadPublicGalleryImageSrc(galleryState, src, reason = 'background') {
+            if (!galleryState || !src) return Promise.reject(new Error('public_gallery_invalid_src'));
+            if (galleryState.preloadedSrcs.has(src)) return Promise.resolve({ status: 'ready', src });
+            const existing = galleryState.preloadPromises.get(src);
+            if (existing) return existing;
+
+            const lastFailureAt = galleryState.preloadFailures.get(src) || 0;
+            if (reason !== 'active' && lastFailureAt && Date.now() - lastFailureAt < 5000) {
+                return Promise.resolve({ status: 'cooldown', src });
+            }
+
+            const promise = new Promise((resolve, reject) => {
+                const preload = new Image();
+                preload.decoding = 'async';
+                preload.onload = () => {
+                    if (!galleryState.disposed) {
+                        galleryState.preloadedSrcs.add(src);
+                        galleryState.preloadFailures.delete(src);
+                    }
+                    resolve({ status: 'loaded', src });
+                };
+                preload.onerror = () => {
+                    if (!galleryState.disposed) galleryState.preloadFailures.set(src, Date.now());
+                    reject(new Error(`public_gallery_preload_failed:${reason}`));
+                };
+                preload.src = src;
+                if (preload.complete && preload.naturalWidth > 0) {
+                    if (!galleryState.disposed) {
+                        galleryState.preloadedSrcs.add(src);
+                        galleryState.preloadFailures.delete(src);
+                    }
+                    resolve({ status: 'loaded', src });
+                }
+            }).finally(() => {
+                if (!galleryState.disposed) galleryState.preloadPromises.delete(src);
+            });
+
+            galleryState.preloadPromises.set(src, promise);
+            return promise;
+        }
+
+        function warmAdjacentPublicGalleryImages(galleryState, index) {
+            const candidates = [index - 1, index + 1].filter((candidate) => candidate >= 0 && candidate < state.publicGalleryItems.length);
+            candidates.forEach((candidateIndex) => {
+                const src = buildPublicGalleryImageUrl(state.publicGalleryItems[candidateIndex]);
+                if (!src || src === galleryState.currentSrc) return;
+                preloadPublicGalleryImageSrc(galleryState, src, 'adjacent').catch(() => {});
+            });
+        }
+
+        async function openPublicImageInGallery(index) {
+            const galleryItem = state.publicGalleryItems[index];
+            if (!galleryItem) return;
+            const body = document.getElementById('public-modal-body');
+            const galleryState = ensurePublicImageGalleryStage(body);
+            const imgUrl = buildPublicGalleryImageUrl(galleryItem);
+            const requestToken = galleryState.requestToken + 1;
+            state.publicGalleryIndex = index;
+            state.currentFile = galleryItem;
+            galleryState.disposed = false;
+            galleryState.pendingIndex = index;
+            galleryState.requestToken = requestToken;
+
+            syncPublicGalleryNavigation(galleryState);
+            setPublicGalleryError(galleryState);
+            setPublicModalActions(galleryItem);
+
+            if (galleryState.renderedIndex === index && galleryState.currentSrc === imgUrl) {
+                galleryState.pendingIndex = null;
+                setPublicGalleryLoading(galleryState, false);
+                setPublicGalleryTitle(index);
+                warmAdjacentPublicGalleryImages(galleryState, index);
+                return;
+            }
+
+            setPublicGalleryTitle(index, 'carregando...');
+            setPublicGalleryLoading(galleryState, true);
+
+            try {
+                await preloadPublicGalleryImageSrc(galleryState, imgUrl, 'active');
+                if (galleryState.requestToken !== requestToken) return;
+
+                galleryState.pendingIndex = null;
+                galleryState.renderedIndex = index;
+                galleryState.currentSrc = imgUrl;
+                galleryState.preloadedSrcs.add(imgUrl);
+                galleryState.image.classList.remove('is-visible');
+                galleryState.image.src = imgUrl;
+                galleryState.image.alt = galleryItem.name || 'Imagem compartilhada';
+
+                requestAnimationFrame(() => {
+                    galleryState.image.classList.add('is-visible');
+                    setPublicGalleryLoading(galleryState, false);
+                });
+
+                setPublicGalleryError(galleryState);
+                setPublicGalleryTitle(index);
+                syncPublicGalleryNavigation(galleryState);
+                warmAdjacentPublicGalleryImages(galleryState, index);
+            } catch (error) {
+                if (galleryState.requestToken !== requestToken) return;
+                galleryState.pendingIndex = null;
+                setPublicGalleryLoading(galleryState, false);
+                setPublicGalleryError(galleryState, 'Não foi possível carregar esta imagem.');
+                setPublicGalleryTitle(index, 'erro ao carregar');
+                console.info('[TCloud] public gallery image failed', {
+                    index,
+                    error: error instanceof Error ? error.message : String(error),
+                });
+            }
+        }
+
+        async function closePublicContentModal() {
+            state.modalOpen = false;
+            document.body.classList.remove('public-modal-open');
+            document.getElementById('public-content-modal').classList.remove('active');
+            document.getElementById('public-content-modal').setAttribute('aria-hidden', 'true');
+            document.getElementById('public-modal-body').innerHTML = '';
+            disposePublicImageGalleryStage();
+            await cleanupPublicPlayer('modal-close');
+        }
+
+        async function openPublicContentModal(item) {
+            const safeItem = item || buildFilePayloadFromSummary();
+            if (!safeItem) return;
+            state.currentFile = safeItem;
+            state.modalOpen = true;
+            document.body.classList.add('public-modal-open');
+            const titleEl = document.getElementById('public-modal-title');
+            titleEl.textContent = compactName(safeItem.name || 'Visualização', 96);
+            titleEl.title = safeItem.name || '';
+            setPublicModalActions(safeItem);
+
+            const modal = document.getElementById('public-content-modal');
+            const body = document.getElementById('public-modal-body');
+            modal.classList.add('active');
+            modal.setAttribute('aria-hidden', 'false');
+            body.innerHTML = `
+                <div class="viewer-placeholder">
+                    <i class="ph ph-spinner-gap ph-spin"></i>
+                    <div class="viewer-caption">
+                        <h3>Carregando visualização</h3>
+                        <p>Preparando o conteúdo compartilhado.</p>
+                    </div>
+                </div>
+            `;
+
+            const kind = String(safeItem.preview_kind || '').toLowerCase();
+            const playbackKind = String(safeItem.playback_kind || '').toLowerCase();
+            if (VIDEO_PLAYBACK_KINDS.has(playbackKind) && safeItem.stream_url) {
+                disposePublicImageGalleryStage();
+                await renderVideoJsPlayer(safeItem, { containerId: 'public-modal-body', mode: 'video' });
+            } else if (AUDIO_PLAYBACK_KINDS.has(playbackKind) && safeItem.stream_url) {
+                disposePublicImageGalleryStage();
+                await renderVideoJsPlayer(safeItem, { containerId: 'public-modal-body', mode: 'audio' });
+            } else if (kind === 'image' && safeItem.stream_url) {
+                await cleanupPublicPlayer('modal-image');
+                disposePublicImageGalleryStage();
+                state.publicGalleryItems = getPublicGalleryItems(safeItem);
+                state.publicGalleryIndex = state.publicGalleryItems.findIndex((candidate) => samePublicItem(candidate, safeItem));
+                if (state.publicGalleryIndex < 0) state.publicGalleryIndex = 0;
+                await openPublicImageInGallery(state.publicGalleryIndex);
+            } else if (kind === 'pdf' && safeItem.stream_url) {
+                disposePublicImageGalleryStage();
+                await cleanupPublicPlayer('modal-pdf');
+                body.innerHTML = `<iframe class="public-pdf-preview" src="${escapeHtml(safeItem.stream_url)}" title="${escapeHtml(safeItem.name || 'PDF compartilhado')}"></iframe>`;
+            } else {
+                disposePublicImageGalleryStage();
+                await cleanupPublicPlayer('modal-generic');
+                body.innerHTML = `
+                    <div class="viewer-placeholder">
+                        <i class="ph ${iconForItem(safeItem)}"></i>
+                        <div class="viewer-caption">
+                            <h3>${escapeHtml(safeItem.name || 'Arquivo compartilhado')}</h3>
+                            <p>Este formato pode ser aberto em uma nova aba ou baixado diretamente.</p>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        function syncStageOrientation(stage, playerInstance) {
+            const el = playerInstance?.tech?.(true)?.el?.() || stage.querySelector('video');
+            if (!el) return;
+            const apply = () => {
+                const width = Number(el.videoWidth || 0);
+                const height = Number(el.videoHeight || 0);
+                stage.classList.toggle('is-portrait', height > width && width > 0);
+                stage.classList.toggle('is-landscape', width >= height && height > 0);
+            };
+            el.addEventListener('loadedmetadata', apply, { once: true });
+            apply();
+        }
+
+        async function createPublicPlaybackSession(item, options = {}) {
+            const payload = {
+                relative_path: item?.relative_path || '',
+                audio: Number.isFinite(options.audioIndex) ? options.audioIndex : 0,
+                ss: Number.isFinite(options.startTime) ? options.startTime : 0,
+                bootstrap_reason: options.reason || 'public-share-open',
+            };
+            if (options.replaceSessionId) payload.replace_session_id = options.replaceSessionId;
+            return fetchJson(`/api/shared_item/${encodeURIComponent(PUBLIC_SHARE_ID)}/web_playback/session`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+        }
+
+        async function renderVideoJsPlayer(item, options = {}) {
+            await cleanupPublicPlayer('replace');
+            const isTranscoded = TRANSCODED_PLAYBACK_KINDS.has(item?.playback_kind);
+            const mode = options.mode || 'video';
+            const isAudio = mode === 'audio' || AUDIO_PLAYBACK_KINDS.has(item?.playback_kind);
+            const containerId = options.containerId || 'public-modal-body';
+            const stageId = `public-media-stage-${Date.now()}`;
+            const playerId = `public-player-${Date.now()}`;
+            const mediaTag = isAudio ? 'audio' : 'video';
+            const mediaClass = `video-js vjs-default-skin vjs-big-play-centered vjs-theme-fantasy${isAudio ? ' vjs-audio-mode' : ''}${isTranscoded ? ' vjs-tcloud-loading' : ''}`;
+            document.getElementById(containerId).innerHTML = isAudio ? `
+                <div class="public-audio-stage" id="${stageId}">
+                    <div class="public-audio-art">
+                        <i class="ph ph-speaker-high"></i>
+                        <h3>${escapeHtml(item?.name || 'Áudio compartilhado')}</h3>
+                    </div>
+                    <${mediaTag} id="${playerId}" class="${mediaClass}" controls preload="auto"></${mediaTag}>
+                    <div class="tcloud-player-loading-overlay${isTranscoded ? ' is-visible' : ''}" id="tcloud-player-loading">
+                        <div class="tcloud-player-loading-spinner-ring"></div>
+                        <div class="tcloud-player-loading-text">Preparando stream...</div>
+                    </div>
+                    <div class="tcloud-player-error-overlay" id="tcloud-player-error">
+                        <div class="tcloud-player-error-icon"><i class="ph ph-warning-circle"></i></div>
+                        <div class="tcloud-player-error-text" id="tcloud-player-error-text">Não foi possível preparar a reprodução.</div>
+                        <button class="button primary" id="tcloud-player-retry" type="button"><i class="ph ph-arrow-clockwise"></i><span>Tentar novamente</span></button>
+                    </div>
+                </div>
+            ` : `
+                <div class="public-media-stage" id="${stageId}">
+                    <${mediaTag} id="${playerId}" class="${mediaClass}" controls preload="auto" playsinline></${mediaTag}>
+                    <div class="tcloud-player-loading-overlay${isTranscoded ? ' is-visible' : ''}" id="tcloud-player-loading">
+                        <div class="tcloud-player-loading-spinner-ring"></div>
+                        <div class="tcloud-player-loading-text">Preparando stream...</div>
+                    </div>
+                    <div class="tcloud-player-error-overlay" id="tcloud-player-error">
+                        <div class="tcloud-player-error-icon"><i class="ph ph-warning-circle"></i></div>
+                        <div class="tcloud-player-error-text" id="tcloud-player-error-text">Não foi possível preparar a reprodução.</div>
+                        <button class="button primary" id="tcloud-player-retry" type="button"><i class="ph ph-arrow-clockwise"></i><span>Tentar novamente</span></button>
+                    </div>
+                </div>
+            `;
+            const stage = document.getElementById(stageId);
+            const loadingEl = document.getElementById('tcloud-player-loading');
+            const errorEl = document.getElementById('tcloud-player-error');
+            const errorText = document.getElementById('tcloud-player-error-text');
+            const showError = (message) => {
+                if (loadingEl) loadingEl.classList.remove('is-visible');
+                if (errorText) errorText.textContent = message || 'Não foi possível preparar a reprodução.';
+                if (errorEl) errorEl.classList.add('is-visible');
+                state.player?.el()?.classList?.remove('vjs-tcloud-loading');
+            };
+            const start = async () => {
+                if (errorEl) errorEl.classList.remove('is-visible');
+                if (isTranscoded && loadingEl) loadingEl.classList.add('is-visible');
+                if (!window.videojs) {
+                    renderNativeVideoFallback(item, 'Video.js não carregou. Use baixar para salvar o arquivo.');
+                    return;
+                }
+                let playerInstance = state.player;
+                if (!playerInstance) {
+                    playerInstance = videojs(playerId, {
+                        controls: true,
+                        fill: true,
+                        controlBar: { volumePanel: { inline: false } },
+                        preload: 'auto',
+                        playbackRates: [0.5, 1, 1.25, 1.5, 2],
+                        html5: { vhs: { overrideNative: true } },
+                    });
+                    state.player = playerInstance;
+                    if (!isAudio) playerInstance.on('loadedmetadata', () => syncStageOrientation(stage, playerInstance));
+                    playerInstance.on('playing', () => {
+                        if (loadingEl) loadingEl.classList.remove('is-visible');
+                        playerInstance.el()?.classList?.remove('vjs-tcloud-loading');
+                    });
+                    playerInstance.on('error', () => {
+                        const err = playerInstance.error();
+                        showError(err?.message || 'Falha ao reproduzir este arquivo.');
+                    });
+                }
+
+                try {
+                    if (isTranscoded) {
+                        const session = await createPublicPlaybackSession(item, { reason: 'public-share-open', replaceSessionId: state.playbackSessionId });
+                        state.playbackSessionId = session.session_id || '';
+                        playerInstance.src({ src: session.playlist_url || session.master_playlist_url, type: session.mime || 'application/x-mpegURL' });
+                    } else {
+                        playerInstance.src({
+                            src: item.stream_url,
+                            type: item.mime_type || (isAudio ? 'audio/mpeg' : (item.extension === 'webm' ? 'video/webm' : 'video/mp4')),
+                        });
+                    }
+                    const playPromise = playerInstance.play();
+                    if (playPromise && typeof playPromise.catch === 'function') {
+                        playPromise.catch(() => {
+                            if (loadingEl) loadingEl.classList.remove('is-visible');
+                            playerInstance.el()?.classList?.remove('vjs-tcloud-loading');
+                        });
+                    }
+                } catch (error) {
+                    console.error('[TCloud] public player failed', error);
+                    showError(error.message || 'Falha ao preparar o player TCloud.');
+                }
+            };
+            document.getElementById('tcloud-player-retry').onclick = start;
+            await start();
+        }
+
+        function renderNativeVideoFallback(item, message = '') {
+            document.getElementById('public-modal-body').innerHTML = `
+                <div class="public-media-stage">
+                    <video src="${escapeHtml(item.stream_url)}" controls playsinline></video>
+                    ${message ? `<div class="tcloud-player-error-overlay is-visible"><div class="tcloud-player-error-text">${escapeHtml(message)}</div></div>` : ''}
+                </div>
+            `;
+            const video = document.querySelector('.public-media-stage video');
+            const stage = document.querySelector('.public-media-stage');
+            if (video && stage) {
+                video.addEventListener('loadedmetadata', () => {
+                    stage.classList.toggle('is-portrait', video.videoHeight > video.videoWidth);
+                }, { once: true });
+            }
+        }
+
+        async function renderFileViewer(item) {
+            state.currentFile = item;
+            if (!state.summary?.is_directory) {
+                renderSingleFileList(item);
+            }
+            markSelectedItem(item?.relative_path || '');
+            hideStatus();
+        }
+
+        function renderDirectory(directoryData) {
+            if (state.modalOpen) closePublicContentModal();
+            cleanupPublicPlayer('directory');
+            document.getElementById('terminal-content').style.display = 'none';
+            state.currentPath = directoryData.path || '';
+            state.currentItems = directoryData.items || [];
+            state.filteredItems = getVisibleItems();
+            state.selectedRelativePath = '';
+            renderSelectedItemFacts(null);
+            updatePathBackButton();
+            updatePublicViewButtons();
+            const usesRecursiveSource = Boolean(state.searchQuery || state.filterKind !== 'all');
+            const totalVisibleSource = usesRecursiveSource
+                ? (state.searchResults || []).filter((item) => matchesFilterKind(item, state.filterKind)).length
+                : state.currentItems.length;
+            document.getElementById('item-count').textContent = state.filteredItems.length === totalVisibleSource
+                ? String(state.filteredItems.length)
+                : `${state.filteredItems.length}/${totalVisibleSource}`;
+            updateShareDirectoryFacts();
+
+            const MAX_VISIBLE_SEGMENTS = 2;
+            const crumbs = [];
+
+            // Raiz sempre visível
+            crumbs.push(`<button class="crumb${!state.currentPath ? ' current' : ''}" type="button" onclick="browsePath('')"><i class="ph ph-folder"></i><span>${escapeHtml(directoryData.root_name || state.summary?.name || 'Raiz compartilhada')}</span></button>`);
+
+            if (state.currentPath) {
+                const parts = state.currentPath.split('/').filter(Boolean);
+                let acc = '';
+
+                if (parts.length > MAX_VISIBLE_SEGMENTS) {
+                    // Acumular path até o ponto de colapso
+                    for (let i = 0; i < parts.length - MAX_VISIBLE_SEGMENTS; i++) {
+                        acc += (acc ? '/' : '') + parts[i];
+                    }
+                    // Ellipsis não clicável
+                    crumbs.push(`<span class="crumb-ellipsis" title="${escapeHtml(acc.replace(/\//g, ' › '))}">…</span>`);
+                    // Últimos MAX_VISIBLE_SEGMENTS segmentos
+                    const visibleParts = parts.slice(-MAX_VISIBLE_SEGMENTS);
+                    visibleParts.forEach((part, vIdx) => {
+                        acc += (acc ? '/' : '') + part;
+                        const encoded = encodeURIComponent(acc);
+                        const isLast = vIdx === visibleParts.length - 1;
+                        crumbs.push(`<button class="crumb${isLast ? ' current' : ''}" type="button" ${isLast ? 'disabled' : `onclick="browsePath('${encoded}', true)"`}><i class="ph ph-caret-right"></i><span>${escapeHtml(part)}</span></button>`);
+                    });
+                } else {
+                    parts.forEach((part, index) => {
+                        acc += (acc ? '/' : '') + part;
+                        const encoded = encodeURIComponent(acc);
+                        crumbs.push(`<button class="crumb${index === parts.length - 1 ? ' current' : ''}" type="button" ${index === parts.length - 1 ? 'disabled' : `onclick="browsePath('${encoded}', true)"`}><i class="ph ph-caret-right"></i><span>${escapeHtml(part)}</span></button>`);
+                    });
+                }
+            }
+            document.getElementById('directory-breadcrumbs').innerHTML = crumbs.join('');
+            document.getElementById('directory-content').classList.toggle('is-empty', !state.filteredItems.length);
+
+            if (!state.filteredItems.length) {
+                const hasActiveSearchOrFilter = Boolean(state.searchQuery || state.filterKind !== 'all');
+                const emptyTitle = hasActiveSearchOrFilter ? 'Nenhum resultado' : 'Pasta vazia';
+                const emptyText = hasActiveSearchOrFilter
+                    ? 'Nenhum item deste compartilhamento combina com a busca ou filtro atual.'
+                    : 'Não existem itens visíveis neste nível do compartilhamento.';
+                document.getElementById('directory-content').innerHTML = `
+                    <div class="empty-state">
+                        <i class="ph ${hasActiveSearchOrFilter ? 'ph-magnifying-glass' : 'ph-folder-open'}"></i>
+                        <div class="viewer-caption">
+                            <h3>${emptyTitle}</h3>
+                            <p>${emptyText}</p>
+                        </div>
+                    </div>
+                `;
+            } else {
+                document.getElementById('directory-content').innerHTML = state.filteredItems.map((item) => {
+                    const itemPath = encodeURIComponent(item.relative_path || '');
+                    const openAction = item.is_directory ? `browsePath('${itemPath}', true)` : `openDirectoryFile('${itemPath}')`;
+                    const secondaryAction = item.is_directory
+                        ? ''
+                        : `<a class="mini-button icon-only" href="${escapeHtml(item.download_url)}" target="_blank" rel="noreferrer" data-tooltip="Baixar" onclick="event.stopPropagation()"><i class="ph ph-download-simple"></i></a>`;
+
+                    const parentPath = item.search_parent_path || '';
+                    const searchLocation = (state.searchQuery || state.filterKind !== 'all') && parentPath
+                        ? `<div class="directory-path" aria-label="${escapeHtml(parentPath)}">em ${escapeHtml(parentPath)}</div>`
+                        : '';
+                    return `
+                        <div class="directory-item" data-relative-path="${escapeHtml(item.relative_path || '')}" onclick="markSelectedItem(decodeURIComponent('${itemPath}'))" ondblclick="openDirectoryEntry('${itemPath}')">
+                            <div class="directory-icon"><i class="ph ${iconForItem(item)}"></i></div>
+                            <div class="directory-meta">
+                                ${buildDirectoryNameHtml(item.name || 'Sem nome')}
+                                ${searchLocation}
+                                <div class="directory-subtitle">${item.is_directory ? 'Pasta compartilhada' : `${escapeHtml(formatSize(item.size))} - ${escapeHtml(formatDateTime(item.modified_at))}`}</div>
+                            </div>
+                            <div class="directory-actions">
+                                <button class="mini-button primary icon-only" type="button" data-tooltip="${actionLabelForItem(item)}" onclick="event.stopPropagation(); ${openAction}">
+                                    <i class="ph ${item.is_directory ? 'ph-folder-open' : (VIDEO_PLAYBACK_KINDS.has(item.playback_kind) ? 'ph-play' : 'ph-eye')}"></i>
+                                </button>
+                                ${secondaryAction}
+                            </div>
+                        </div>
+                    `;
+
+                }).join('');
+            }
+
+            requestAnimationFrame(syncDirectoryNameOverflow);
+            hideStatus();
+        }
+
+        async function browsePath(path = '', encoded = false) {
+            if (!state.shareToken) {
+                if (state.summary?.requires_password) {
+                    renderUnlockCard(state.summary);
+                    return;
+                }
+                await unlockShare('');
+                return;
+            }
+            const relativePath = encoded ? decodeURIComponent(path) : path;
+            if (state.searchQuery) {
+                resetPublicSearch({ render: false });
+            }
+            setStatus('Carregando pasta...', 'info', 'ph-spinner-gap ph-spin');
+            try {
+                const data = await fetchJson(`/api/shared_item/${encodeURIComponent(PUBLIC_SHARE_ID)}/browse?path=${encodeURIComponent(relativePath)}`);
+                renderDirectory(data);
+                if (!state.contentMetrics) loadShareContentMetrics();
+            } catch (error) {
+                if (error.status === 401 || error.status === 403) {
+                    setShareToken('');
+                    if (state.summary?.requires_password) {
+                        renderUnlockCard(state.summary);
+                        return;
+                    }
+                    await unlockShare('');
+                    return;
+                }
+                if (error.status === 410 || error.status === 404) {
+                    renderTerminal(error.message || 'Este compartilhamento não está mais disponível.');
+                    return;
+                }
+                setStatus(error.message || 'Falha ao navegar pela pasta.', 'error', 'ph-warning-circle');
+            }
+        }
+
+        function browseParentPath() {
+            if (!state.summary?.is_directory) return;
+            const parts = String(state.currentPath || '').split('/').filter(Boolean);
+            parts.pop();
+            browsePath(parts.join('/'));
+        }
+
+        function openDirectoryFile(encodedPath) {
+            const relativePath = decodeURIComponent(encodedPath || '');
+            const item = state.filteredItems.find((candidate) => String(candidate.relative_path || '') === relativePath)
+                || state.currentItems.find((candidate) => String(candidate.relative_path || '') === relativePath);
+            if (!item) return;
+            state.currentFile = item;
+            markSelectedItem(item?.relative_path || '');
+            document.querySelector('.content-grid')?.classList.add('hide-preview-panel');
+            openPublicContentModal(item);
+        }
+
+        function openDirectoryEntry(encodedPath) {
+            const relativePath = decodeURIComponent(encodedPath || '');
+            const item = state.filteredItems.find((candidate) => String(candidate.relative_path || '') === relativePath)
+                || state.currentItems.find((candidate) => String(candidate.relative_path || '') === relativePath);
+            if (!item) return;
+            if (item.is_directory) {
+                resetPublicSearch({ render: false });
+                browsePath(encodeURIComponent(item.relative_path || ''), true);
+                return;
+            }
+            openDirectoryFile(encodedPath);
+        }
+
+        function rerenderCurrentDirectory() {
+            if (!state.summary?.is_directory) return;
+            renderDirectory({
+                path: state.currentPath || '',
+                items: state.currentItems || [],
+                root_name: state.summary?.name || 'Raiz compartilhada',
+            });
+        }
+
+        async function unlockShare(password = '') {
+            setStatus('Validando acesso...', 'info', 'ph-spinner-gap ph-spin');
+            const button = document.getElementById('unlock-button');
+            const passwordInput = document.getElementById('unlock-password');
+            const previousHtml = button?.innerHTML || '';
+            if (button) {
+                button.disabled = true;
+                button.innerHTML = '<i class="ph ph-spinner-gap ph-spin"></i><span>Validando...</span>';
+            }
+            try {
+                const data = await fetchJson(`/api/shared_item/${encodeURIComponent(PUBLIC_SHARE_ID)}/access`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(password ? { password } : {}),
+                });
+                setShareToken(data.share_token || '');
+                if (passwordInput) passwordInput.value = '';
+                if (data.item?.is_directory) {
+                    await browsePath('');
+                } else {
+                    await renderFileViewer(data.item || buildFilePayloadFromSummary());
+                }
+                setStatus('Compartilhamento desbloqueado.', 'success', 'ph-check-circle');
+                setTimeout(() => hideStatus(), 1200);
+            } catch (error) {
+                if (error.status === 403) {
+                    setStatus(error.message || 'Senha incorreta.', 'error', 'ph-warning-circle');
+                    return;
+                }
+                if (error.status === 404 || error.status === 410) {
+                    renderTerminal(error.message || 'Este compartilhamento não está mais disponível.');
+                    return;
+                }
+                setStatus(error.message || 'Falha ao liberar o acesso.', 'error', 'ph-warning-circle');
+            } finally {
+                if (button) {
+                    button.disabled = false;
+                    button.innerHTML = previousHtml;
+                }
+            }
+        }
+
+        async function bootstrapShare() {
+            setStatus('Carregando link público...', 'info', 'ph-spinner-gap ph-spin');
+            try {
+                const summary = await fetchJson(`/api/shared_item/${encodeURIComponent(PUBLIC_SHARE_ID)}`);
+                state.summary = summary;
+                renderShareShell(summary);
+
+                if (state.shareToken) {
+                    if (summary.is_directory) {
+                        await browsePath(state.currentPath || '');
+                    } else {
+                        const payload = buildFilePayloadFromSummary();
+                        if (payload) {
+                            await renderFileViewer(payload);
+                            hideStatus();
+                        }
+                    }
+                    return;
+                }
+
+                if (summary.requires_password) {
+                    renderUnlockCard(summary);
+                    return;
+                }
+
+                await unlockShare('');
+            } catch (error) {
+                renderTerminal(error.message || 'Não foi possível carregar este compartilhamento.', 'ph-link-break');
+            }
+        }
+
+        document.getElementById('refresh-directory-button').addEventListener('click', () => {
+            if (state.summary?.is_directory) {
+                browsePath(state.currentPath || '');
+                return;
+            }
+            const payload = state.currentFile || buildFilePayloadFromSummary();
+            if (payload) renderFileViewer(payload);
+        });
+
+        document.getElementById('path-back-button').addEventListener('click', () => {
+            browseParentPath();
+        });
+
+        document.getElementById('directory-search-toggle').addEventListener('click', () => {
+            const wrapper = document.getElementById('directory-search-bar').closest('.search-wrapper');
+            wrapper.classList.toggle('search-open');
+            updateSearchButtonState();
+            if (wrapper.classList.contains('search-open')) {
+                requestAnimationFrame(() => focusSearchInput());
+            }
+        });
+
+        document.getElementById('directory-search-input').addEventListener('keydown', handleSearchInputKeydown);
+        document.getElementById('directory-search-input').addEventListener('paste', handleSearchInputPaste);
+        document.getElementById('directory-search-input').addEventListener('input', () => {
+            performPublicSearch();
+        });
+
+        document.getElementById('directory-search-close').addEventListener('click', () => {
+            resetPublicSearch({ render: true });
+        });
+
+        document.getElementById('directory-filter-button').addEventListener('click', () => {
+            document.getElementById('directory-filter-menu').classList.toggle('visible');
+        });
+
+        document.getElementById('directory-sort-button').addEventListener('click', () => {
+            document.getElementById('directory-sort-menu').classList.toggle('visible');
+        });
+
+        document.querySelectorAll('.toolbar-filter-option').forEach((button) => {
+            button.addEventListener('click', () => {
+                if (button.dataset.sort) {
+                    setPublicSort(button.dataset.sort);
+                    document.getElementById('directory-sort-menu').classList.remove('visible');
+                    return;
+                }
+                if (button.dataset.filter) {
+                    state.filterKind = button.dataset.filter || 'all';
+                    updateFilterButtonLabel();
+                    document.getElementById('directory-filter-menu').classList.remove('visible');
+                    performPublicSearch();
+                }
+            });
+        });
+
+        document.addEventListener('click', (event) => {
+            const filterWrap = document.getElementById('directory-filter-button')?.closest('.toolbar-filter-wrap');
+            if (filterWrap && !filterWrap.contains(event.target)) {
+                document.getElementById('directory-filter-menu').classList.remove('visible');
+            }
+            const sortWrap = document.getElementById('directory-sort-button')?.closest('.toolbar-filter-wrap');
+            if (sortWrap && !sortWrap.contains(event.target)) {
+                document.getElementById('directory-sort-menu').classList.remove('visible');
+            }
+            const searchWrapper = document.getElementById('directory-search-bar')?.closest('.search-wrapper');
+            if (searchWrapper && !searchWrapper.contains(event.target) && !state.searchQuery) {
+                searchWrapper.classList.remove('search-open');
+                updateSearchButtonState();
+            }
+        });
+
+        document.getElementById('public-content-modal').addEventListener('click', (event) => {
+            if (event.target && event.target.id === 'public-content-modal') {
+                closePublicContentModal();
+            }
+        });
+
+        document.addEventListener('keydown', (event) => {
+            const activeElement = document.activeElement;
+            const isTyping = activeElement && (
+                activeElement.tagName === 'INPUT'
+                || activeElement.tagName === 'TEXTAREA'
+                || activeElement.isContentEditable
+            );
+            if (!isTyping && state.modalOpen && state.publicGalleryItems.length) {
+                if (event.key === 'ArrowLeft') {
+                    event.preventDefault();
+                    openPublicImageInGallery(state.publicGalleryIndex - 1);
+                    return;
+                }
+                if (event.key === 'ArrowRight') {
+                    event.preventDefault();
+                    openPublicImageInGallery(state.publicGalleryIndex + 1);
+                    return;
+                }
+            }
+            if (event.key === 'Escape' && state.modalOpen) {
+                event.preventDefault();
+                closePublicContentModal();
+                return;
+            }
+            const searchWrapper = document.getElementById('directory-search-bar')?.closest('.search-wrapper');
+            if (event.key === 'Escape' && searchWrapper?.classList.contains('search-open')) {
+                event.preventDefault();
+                resetPublicSearch({ render: true });
+            }
+        });
+
+        window.addEventListener('beforeunload', () => {
+            if (state.playbackSessionId && state.shareToken) {
+                const url = `/api/shared_item/${encodeURIComponent(PUBLIC_SHARE_ID)}/web_playback/session/${encodeURIComponent(state.playbackSessionId)}?token=${encodeURIComponent(state.shareToken)}&reason=unload`;
+                try { fetch(url, { method: 'DELETE', keepalive: true }); } catch (error) { }
+            }
+        });
+
+        window.addEventListener('resize', () => {
+            requestAnimationFrame(syncDirectoryNameOverflow);
+            hideSharedContextMenu();
+        });
+
+        updateFilterButtonLabel();
+        updateSortButtonLabel();
+        updatePublicViewButtons();
+        updateSearchButtonState();
+        bootstrapShare();
+
+        /* ===== Shared Context Menu — Logic ===== */
+        let _sharedCtxItem = null;
+
+        function showSharedContextMenu(e, item) {
+            e.preventDefault();
+            e.stopPropagation();
+            _sharedCtxItem = item;
+
+            const isDir      = Boolean(item?.is_directory);
+            const hasDownload = Boolean(item?.download_url);
+
+            const openBtn  = document.getElementById('ctx-shared-open');
+            const dlBtn    = document.getElementById('ctx-shared-download');
+            const copyBtn  = document.getElementById('ctx-shared-copy-direct');
+            const sep      = document.getElementById('ctx-shared-sep');
+
+            // Ajustar label e ícone do botão "abrir"
+            const openIcon = isDir
+                ? 'ph-folder-open'
+                : (VIDEO_PLAYBACK_KINDS.has(item?.playback_kind) ? 'ph-play' : 'ph-eye');
+            const openLabel = isDir ? 'Abrir pasta' : 'Visualizar';
+            openBtn.innerHTML = `<i class="ph ${openIcon}"></i> ${openLabel}`;
+
+            // Mostrar / ocultar opções de arquivo
+            dlBtn.style.display   = hasDownload ? '' : 'none';
+            copyBtn.style.display = hasDownload ? '' : 'none';
+            sep.style.display     = hasDownload ? '' : 'none';
+
+            // Bind de ações
+            openBtn.onclick = () => {
+                hideSharedContextMenu();
+                const encoded = encodeURIComponent(item.relative_path || '');
+                if (isDir) browsePath(encoded, true);
+                else openDirectoryFile(encoded);
+            };
+
+            if (hasDownload) {
+                dlBtn.onclick = () => {
+                    hideSharedContextMenu();
+                    const a = document.createElement('a');
+                    a.href = item.download_url;
+                    a.target = '_blank';
+                    a.rel = 'noreferrer noopener';
+                    document.body.appendChild(a);
+                    a.click();
+                    setTimeout(() => a.remove(), 200);
+                };
+
+                copyBtn.onclick = async () => {
+                    hideSharedContextMenu();
+                    const link = item.download_url;
+                    try {
+                        if (navigator.clipboard?.writeText) {
+                            await navigator.clipboard.writeText(link);
+                        } else {
+                            const ta = document.createElement('textarea');
+                            ta.value = link;
+                            ta.style.cssText = 'position:fixed;opacity:0;pointer-events:none;';
+                            document.body.appendChild(ta);
+                            ta.select();
+                            document.execCommand('copy');
+                            ta.remove();
+                        }
+                        setStatus('Link direto copiado!', 'success', 'ph-check-circle');
+                        setTimeout(() => hideStatus(), 2400);
+                    } catch (err) {
+                        console.warn('[TCloud] copy direct link failed', err);
+                        setStatus('Não foi possível copiar.', 'error', 'ph-warning-circle');
+                    }
+                };
+            }
+
+            // Posicionamento
+            const menu = document.getElementById('shared-context-menu');
+            menu.style.display = 'block';
+            menu.style.visibility = 'hidden';
+            menu.style.left = e.clientX + 'px';
+            menu.style.top  = e.clientY + 'px';
+
+            requestAnimationFrame(() => {
+                const rect = menu.getBoundingClientRect();
+                let x = e.clientX;
+                let y = e.clientY;
+                if (x + rect.width  > window.innerWidth  - 8) x = window.innerWidth  - rect.width  - 8;
+                if (y + rect.height > window.innerHeight - 8) y = window.innerHeight - rect.height - 8;
+                if (x < 4) x = 4;
+                if (y < 4) y = 4;
+                menu.style.left = x + 'px';
+                menu.style.top  = y + 'px';
+                menu.style.visibility = 'visible';
+            });
+        }
+
+        function hideSharedContextMenu() {
+            const menu = document.getElementById('shared-context-menu');
+            if (menu) menu.style.display = 'none';
+            _sharedCtxItem = null;
+        }
+
+        // Event delegation — captura botão direito sobre qualquer .directory-item
+        (function initSharedContextMenu() {
+            const dirContent = document.getElementById('directory-content');
+            if (dirContent) {
+                dirContent.addEventListener('contextmenu', (e) => {
+                    const itemEl = e.target.closest('.directory-item');
+                    if (!itemEl) return;
+                    const relPath = itemEl.dataset.relativePath || '';
+                    // Procurar item nos dados atuais (inclui filteredItems e single file)
+                    const found =
+                        state.filteredItems.find(i => (i.relative_path || '') === relPath) ||
+                        (state.currentFile && (state.currentFile.relative_path || '') === relPath ? state.currentFile : null);
+                    if (found) {
+                        showSharedContextMenu(e, found);
+                    } else {
+                        // fallback: impede menu nativo mesmo sem item encontrado
+                        e.preventDefault();
+                    }
+                });
+            }
+
+            // Fechar ao clicar em qualquer lugar fora do menu
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('#shared-context-menu')) {
+                    hideSharedContextMenu();
+                }
+            });
+
+            // Fechar com Esc
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') hideSharedContextMenu();
+            });
+
+            // Bloquear menu nativo em todo o body (exceto campos de input/select/textarea)
+            document.addEventListener('contextmenu', (e) => {
+                const tag = e.target.tagName;
+                const isEditable = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.target.isContentEditable;
+                if (!isEditable) e.preventDefault();
+            }, true);  // capture phase para garantir precedência
+        })();
+
+    </script>
+</body>
+
+</html>

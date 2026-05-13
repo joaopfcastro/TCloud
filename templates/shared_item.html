@@ -2115,6 +2115,16 @@
             pointer-events: auto;
         }
 
+        .video-js.vjs-tcloud-loading .vjs-big-play-button {
+            display: none !important;
+        }
+
+        .video-js.vjs-tcloud-loading .vjs-tech {
+            opacity: 0 !important;
+            visibility: hidden !important;
+            transition: opacity 0.12s ease;
+        }
+
         .tcloud-player-loading-spinner-ring {
             width: 46px;
             height: 46px;
@@ -2668,6 +2678,7 @@
     <script>
         const PUBLIC_SHARE_ID = __PUBLIC_SHARE_ID__;
         const SHARE_TOKEN_KEY = `tcloud_public_share_${PUBLIC_SHARE_ID}`;
+        const SHARE_TOKEN_EXPIRES_KEY = `tcloud_public_share_expires_${PUBLIC_SHARE_ID}`;
         const TRANSCODED_PLAYBACK_KINDS = new Set(['transcoded_video', 'transcoded_audio']);
         const VIDEO_PLAYBACK_KINDS = new Set(['direct_video', 'transcoded_video']);
         const AUDIO_PLAYBACK_KINDS = new Set(['direct_audio', 'transcoded_audio']);
@@ -2676,6 +2687,9 @@
         const PUBLIC_RESUME_COMPLETE_PERCENT = 0.95;
         const PUBLIC_RESUME_HEARTBEAT_MS = 15000;
         const PUBLIC_BOOTSTRAP_SEEK_IGNORE_SECONDS = 2;
+        const PUBLIC_MANAGED_SEEK_TIMEOUT_MS = 90000;
+        const PUBLIC_SAFARI_MUTED_AUTOPLAY_ENABLED = true;
+        const PUBLIC_SUBTITLE_ACTIVATION_TIMEOUT_MS = 2500;
         const SEARCH_QUERY_MAX_CHARS = 24;
         const PUBLIC_SEARCH_DEBOUNCE_MS = 180;
         const PUBLIC_SEARCH_MAX_ITEMS = 1200;
@@ -2725,6 +2739,7 @@
         const state = {
             summary: null,
             shareToken: sessionStorage.getItem(SHARE_TOKEN_KEY) || '',
+            shareTokenExpiresAt: sessionStorage.getItem(SHARE_TOKEN_EXPIRES_KEY) || '',
             currentPath: '',
             currentItems: [],
             filteredItems: [],
@@ -2769,6 +2784,8 @@
             unlockActive: false,
             publicPlayerTracksRequestId: 0,
             publicPlayerTracksRetryKeys: new Set(),
+            publicSubtitleCandidateCache: new Map(),
+            publicShareTokenRefreshPromise: null,
         };
 
         function normalizeSubtitleValue(value) {
@@ -2886,8 +2903,11 @@
             document.getElementById('public-status').classList.remove('visible');
         }
 
-        function setShareToken(token) {
+        function setShareToken(token, meta = {}) {
             state.shareToken = token || '';
+            state.shareTokenExpiresAt = state.shareToken
+                ? String(meta.session_expires_at || meta.share_expires_at || state.shareTokenExpiresAt || '')
+                : '';
             state.searchDirectoryCache.clear();
             state.searchResults = [];
             resetSelectionSummaryState();
@@ -2916,8 +2936,14 @@
             }
             if (state.shareToken) {
                 sessionStorage.setItem(SHARE_TOKEN_KEY, state.shareToken);
+                if (state.shareTokenExpiresAt) {
+                    sessionStorage.setItem(SHARE_TOKEN_EXPIRES_KEY, state.shareTokenExpiresAt);
+                } else {
+                    sessionStorage.removeItem(SHARE_TOKEN_EXPIRES_KEY);
+                }
             } else {
                 sessionStorage.removeItem(SHARE_TOKEN_KEY);
+                sessionStorage.removeItem(SHARE_TOKEN_EXPIRES_KEY);
             }
             updateCurrentDirectoryDownloadButton();
         }
@@ -3648,8 +3674,71 @@
             };
         }
 
+        function isPublicTokenError(error) {
+            if (!error) return false;
+            const status = Number(error.status || 0);
+            const code = String(error.code || '').trim();
+            if (['SHARE_TOKEN_REQUIRED', 'SHARE_TOKEN_INVALID', 'SHARE_TOKEN_SCOPE'].includes(code)) return true;
+            return status === 401 && !['SHARE_EXPIRED', 'SHARE_ACCESS_EXHAUSTED', 'share_file_not_found'].includes(code);
+        }
+
+        async function refreshPublicShareToken(options = {}) {
+            if (state.publicShareTokenRefreshPromise) {
+                return state.publicShareTokenRefreshPromise;
+            }
+
+            if (state.summary?.requires_password) {
+                setShareToken('');
+                setStatus('Sessão expirada. Desbloqueie o compartilhamento novamente.', 'error', 'ph-lock');
+                renderUnlockCard(state.summary);
+                const error = new Error('Sessão pública expirada. Desbloqueie o link novamente.');
+                error.status = 401;
+                error.code = 'SHARE_TOKEN_REAUTH_REQUIRED';
+                throw error;
+            }
+
+            state.publicShareTokenRefreshPromise = (async () => {
+                console.info('[TCloud] public.share_token.refresh', {
+                    reason: options.reason || 'session-retry',
+                    publicId: PUBLIC_SHARE_ID,
+                });
+                const response = await fetch(`/api/shared_item/${encodeURIComponent(PUBLIC_SHARE_ID)}/access`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(state.shareToken ? { Authorization: `Bearer ${state.shareToken}` } : {}),
+                    },
+                    body: JSON.stringify({}),
+                });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    const error = new Error(data.error || `Erro ${response.status}`);
+                    error.status = response.status;
+                    error.code = data.code || '';
+                    error.stage = data.stage || '';
+                    throw error;
+                }
+                setShareToken(data.share_token || '', data);
+                if (data.item && !state.summary?.is_directory) {
+                    state.currentFile = data.item;
+                }
+                return data;
+            })();
+
+            try {
+                return await state.publicShareTokenRefreshPromise;
+            } finally {
+                state.publicShareTokenRefreshPromise = null;
+            }
+        }
+
         async function fetchJson(url, options = {}) {
-            const config = { ...options, headers: { ...(options.headers || {}) } };
+            const {
+                publicSessionRetry = false,
+                publicSessionRetryReason = '',
+                ...fetchOptions
+            } = options || {};
+            const config = { ...fetchOptions, headers: { ...(fetchOptions.headers || {}) } };
             if (state.shareToken) {
                 config.headers.Authorization = `Bearer ${state.shareToken}`;
             }
@@ -3659,13 +3748,18 @@
                 const error = new Error(data.error || `Erro ${response.status}`);
                 error.status = response.status;
                 error.code = data.code || '';
+                error.stage = data.stage || '';
+                if (publicSessionRetry && isPublicTokenError(error)) {
+                    await refreshPublicShareToken({ reason: publicSessionRetryReason || 'fetch-retry' });
+                    return fetchJson(url, fetchOptions);
+                }
                 throw error;
             }
             return data;
         }
 
         function isPublicSessionExpiredError(error) {
-            return !!error && (error.status === 401 || error.status === 403);
+            return isPublicTokenError(error);
         }
 
         async function validatePublicFileStreamAccess(item) {
@@ -4266,6 +4360,11 @@
                     }
                 } catch (error) { }
                 try { destroyPublicAuxAudioFallback(state.player, { resetCurrentIndex: false }); } catch (error) { }
+                try { releasePublicPlaybackHold(state.player, 'cleanup'); } catch (error) { }
+                try {
+                    const activeSeek = getActivePublicSeekTransaction(state.player);
+                    if (activeSeek) finishPublicSeekTransaction(state.player, activeSeek.token, 'cleanup');
+                } catch (error) { }
                 try { state.player.dispose(); } catch (error) { }
                 state.player = null;
             }
@@ -4657,7 +4756,88 @@
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload),
+                publicSessionRetry: true,
+                publicSessionRetryReason: options.reason || 'public-playback-session',
             });
+        }
+
+        function isDefinitivePublicPlaybackSessionError(error) {
+            const code = String(error?.code || '').trim();
+            return [
+                'SHARE_EXPIRED',
+                'SHARE_ACCESS_EXHAUSTED',
+                'share_expired',
+                'share_access_exhausted',
+                'ambiguous_filename_match',
+                'path_outside_share_scope',
+                'share_invalid_path',
+            ].includes(code);
+        }
+
+        function shouldRecoverPublicPlaybackSessionError(error, options = {}) {
+            if (!error || options.recovered || options.recoveryAttempted || options.disableRecovery) return false;
+            if (isDefinitivePublicPlaybackSessionError(error)) return false;
+            if (isPublicTokenError(error)) return true;
+            const code = String(error.code || '').trim();
+            const stage = String(error.stage || '').trim();
+            return ['share_file_not_found', 'hls_source_file_not_found', 'public_session_not_found'].includes(code)
+                && ['hls_source_resolution', 'public_share_file_resolution', 'public_hls_session'].includes(stage);
+        }
+
+        function recoverPublicPlaybackItem(item = {}) {
+            const fallback = state.currentFile || (!state.summary?.is_directory ? buildFilePayloadFromSummary() : null) || {};
+            const recovered = { ...fallback, ...(item || {}) };
+            const fallbackName = recovered.name || recovered.filename || state.summary?.name || '';
+            if (fallbackName) {
+                recovered.name = recovered.name || fallbackName;
+                recovered.filename = recovered.filename || fallbackName;
+            }
+            if (!state.summary?.is_directory) {
+                recovered.relative_path = '';
+            } else {
+                recovered.relative_path = String(recovered.relative_path || item?.relative_path || '').trim();
+            }
+            return recovered;
+        }
+
+        async function createPublicPlaybackSessionWithRecovery(item, options = {}) {
+            try {
+                return await createPublicPlaybackSession(item, options);
+            } catch (error) {
+                if (!shouldRecoverPublicPlaybackSessionError(error, options)) throw error;
+                console.info('[TCloud] public.playback.session_recovery', {
+                    reason: options.reason || 'public-playback-session',
+                    code: error?.code || '',
+                    stage: error?.stage || '',
+                    publicId: PUBLIC_SHARE_ID,
+                });
+                await refreshPublicShareToken({ reason: options.reason || 'playback-session-recovery' });
+                state.playbackSessionId = '';
+                return createPublicPlaybackSession(recoverPublicPlaybackItem(item), {
+                    ...options,
+                    recovered: true,
+                    recoveryAttempted: true,
+                    replaceSessionId: '',
+                });
+            }
+        }
+
+        function normalizePublicPlaybackSession(session = {}) {
+            const normalized = session && typeof session === 'object' ? { ...session } : {};
+            const sessionId = normalized.session_id || normalized.id || '';
+            const sessionOffset = Number(normalized.start_seconds || 0);
+            if (Array.isArray(normalized.subtitle_tracks)) {
+                normalized.subtitle_tracks = normalized.subtitle_tracks.map((track) => ({
+                    ...(track || {}),
+                    session_id: track?.session_id || sessionId,
+                    subtitle_timebase: track?.subtitle_timebase || track?.subtitleTimebase || 'session',
+                    subtitleTimebase: track?.subtitleTimebase || track?.subtitle_timebase || 'session',
+                    timeline_offset_seconds: Number.isFinite(Number(track?.timeline_offset_seconds))
+                        ? Number(track.timeline_offset_seconds)
+                        : (Number.isFinite(sessionOffset) ? sessionOffset : 0),
+                }));
+            }
+            return normalized;
         }
 
         function isPublicSafariLikeBrowser() {
@@ -4681,6 +4861,36 @@
         function isPublicSubtitleItem(item) {
             const ext = String(item?.extension || (item?.name || '').split('.').pop() || '').toLowerCase();
             return !item?.is_directory && PUBLIC_SUBTITLE_EXTENSIONS.has(ext);
+        }
+
+        function inferPublicSubtitleMetaFromFilename(filename = '') {
+            const name = String(filename || '').trim();
+            if (!name) return { srclang: '', forced: false, default: false, hearing_impaired: false, captions: false, comment: false };
+            const stem = name.replace(/\.[^.]+$/, '');
+            const tokens = stem.split(/[\s._-]+/).filter(Boolean);
+            const FLAG_TOKENS = new Set(['forced', 'forcada', 'forcado', 'sdh', 'hi', 'cc', 'captions', 'caption', 'commentary', 'comentario', 'comentários', 'comentarios', 'default', 'padrao', 'padrão']);
+            let srclang = '';
+            let forced = false;
+            let isDefault = false;
+            let hearing_impaired = false;
+            let captions = false;
+            let comment = false;
+            for (let i = tokens.length - 1; i >= 0; i--) {
+                const token = _stripAccents(tokens[i]).toLowerCase();
+                if (!token) continue;
+                if (['forced', 'forcada', 'forcado'].includes(token)) { forced = true; continue; }
+                if (['sdh', 'hi'].includes(token)) { hearing_impaired = true; continue; }
+                if (['cc', 'captions', 'caption'].includes(token)) { captions = true; continue; }
+                if (['commentary', 'comentario', 'comentarios'].includes(token)) { comment = true; continue; }
+                if (['default', 'padrao'].includes(token)) { isDefault = true; continue; }
+                if (FLAG_TOKENS.has(token)) continue;
+                if (!srclang) {
+                    const lang = normalizeLanguageCode(token);
+                    if (lang) { srclang = lang; continue; }
+                }
+                break;
+            }
+            return { srclang, forced, default: isDefault, hearing_impaired, captions, comment };
         }
 
         function findPublicSidecarSubtitleItems(videoItem) {
@@ -4712,6 +4922,27 @@
             return `/api/shared_item/${encodeURIComponent(PUBLIC_SHARE_ID)}/subtitle?${query.toString()}`;
         }
 
+        async function loadPublicSubtitleCandidates(item) {
+            const relativePath = item?.relative_path || '';
+            const cacheKey = `${PUBLIC_SHARE_ID}:${relativePath}:${state.shareToken || ''}`;
+            if (state.publicSubtitleCandidateCache.has(cacheKey)) {
+                return state.publicSubtitleCandidateCache.get(cacheKey);
+            }
+            const query = new URLSearchParams();
+            query.set('relative_path', relativePath);
+            if (state.shareToken) query.set('token', state.shareToken);
+            try {
+                const data = await fetchJson(`/api/shared_item/${encodeURIComponent(PUBLIC_SHARE_ID)}/subtitle_candidates?${query.toString()}`);
+                const items = Array.isArray(data?.items) ? data.items : [];
+                state.publicSubtitleCandidateCache.set(cacheKey, items);
+                return items;
+            } catch (error) {
+                console.warn('[TCloud] public subtitle candidates load failed', error);
+                state.publicSubtitleCandidateCache.set(cacheKey, []);
+                return [];
+            }
+        }
+
         async function loadPublicMediaTracks(item) {
             const query = new URLSearchParams();
             query.set('relative_path', item?.relative_path || '');
@@ -4725,6 +4956,7 @@
             }
             const audio = Array.isArray(data?.audio) ? data.audio : [];
             const subtitle = Array.isArray(data?.subtitle) ? data.subtitle : [];
+            const subtitleCandidates = await loadPublicSubtitleCandidates(item);
             const audioCount = Math.max(audio.length, Number.isFinite(Number(data?.audio_count)) ? Number(data.audio_count) : 0);
             const fallbackAudio = audioCount > 0 ? buildPublicFallbackAudioTracksFromName(item, audioCount) : [];
             const shouldHydrateAudio = fallbackAudio.length > audio.length || audio.some((track) => {
@@ -4748,8 +4980,12 @@
             return {
                 audio: hydratedAudio,
                 subtitle,
+                public_subtitle_candidates: subtitleCandidates,
                 audio_count: audioCount,
-                subtitle_count: Math.max(subtitle.length, Number.isFinite(Number(data?.subtitle_count)) ? Number(data.subtitle_count) : 0),
+                subtitle_count: Math.max(
+                    subtitle.length + subtitleCandidates.length,
+                    Number.isFinite(Number(data?.subtitle_count)) ? Number(data.subtitle_count) : 0
+                ),
                 has_multiple_audio: data?.has_multiple_audio === true || audioCount > 1,
                 probe_status: String(data?.probe_status || 'unknown'),
                 probe_source: String(data?.probe_source || ''),
@@ -5404,6 +5640,7 @@
             const shifted = [];
             let pendingIdentifier = null;
             let skippingCuePayload = false;
+            let injectedTimestampMap = false;
             const flushIdentifier = () => {
                 if (pendingIdentifier !== null) {
                     shifted.push(pendingIdentifier);
@@ -5416,7 +5653,19 @@
                     continue;
                 }
                 if (!line.includes('-->')) {
-                    if (pendingIdentifier === null && line.trim() && !line.startsWith('WEBVTT') && !line.startsWith('NOTE') && !line.startsWith('STYLE') && !line.startsWith('REGION')) {
+                    const trimmedLine = line.trim();
+                    if (trimmedLine.startsWith('WEBVTT')) {
+                        flushIdentifier();
+                        shifted.push(line);
+                        shifted.push('X-TIMESTAMP-MAP=LOCAL:00:00:00.000,MPEGTS:0');
+                        injectedTimestampMap = true;
+                    } else if (trimmedLine.startsWith('X-TIMESTAMP-MAP')) {
+                        flushIdentifier();
+                        if (!injectedTimestampMap) {
+                            shifted.push('X-TIMESTAMP-MAP=LOCAL:00:00:00.000,MPEGTS:0');
+                            injectedTimestampMap = true;
+                        }
+                    } else if (pendingIdentifier === null && trimmedLine && !line.startsWith('NOTE') && !line.startsWith('STYLE') && !line.startsWith('REGION')) {
                         pendingIdentifier = line;
                     } else {
                         flushIdentifier();
@@ -5454,23 +5703,141 @@
                 const safeEnd = Math.max(safeStart, nextEnd);
                 shifted.push(`${formatPublicWebVttTimestamp(safeStart)} --> ${formatPublicWebVttTimestamp(safeEnd)}${cueSettings ? ` ${cueSettings}` : ''}`);
             }
+            if (!injectedTimestampMap) {
+                shifted.unshift('WEBVTT', 'X-TIMESTAMP-MAP=LOCAL:00:00:00.000,MPEGTS:0', '');
+            }
             return shifted.join('\n');
         }
 
         function normalizePublicSubtitleText(text, entry = {}) {
             const rawText = String(text || '').replace(/^\uFEFF/, '');
             const sourceName = String(entry.filename || entry.label || entry.src || '').toLowerCase();
-            if (rawText.trimStart().startsWith('WEBVTT')) return rawText;
-            if (sourceName.endsWith('.srt') || /^\s*\d+\s*\r?\n\d{2}:\d{2}:\d{2},\d{3}\s+-->/m.test(rawText)) {
-                return 'WEBVTT\n\n' + rawText
-                    .replace(/^\s*\d+\s*$/gm, '')
-                    .replace(/(\d{2}:\d{2}:\d{2}),(\d{3})/g, '$1.$2');
+            let vttText = rawText;
+            if (!rawText.trimStart().startsWith('WEBVTT')) {
+                if (sourceName.endsWith('.srt') || /^\s*\d+\s*\r?\n\d{2}:\d{2}:\d{2},\d{3}\s+-->/m.test(rawText)) {
+                    vttText = 'WEBVTT\n\n' + rawText
+                        .replace(/^\s*\d+\s*$/gm, '')
+                        .replace(/(\d{2}:\d{2}:\d{2}),(\d{3})/g, '$1.$2');
+                }
             }
-            return rawText;
+            if (/^\s*WEBVTT\b/i.test(vttText) && !vttText.includes('X-TIMESTAMP-MAP')) {
+                vttText = vttText.replace(/^(\s*WEBVTT[^\n]*)/, '$1\nX-TIMESTAMP-MAP=LOCAL:00:00:00.000,MPEGTS:0');
+            }
+            return vttText;
         }
 
-        function buildPublicSubtitleEntries(item, embeddedTracks = [], sessionSubtitleTracks = []) {
+        function isGenericPublicSubtitleLabel(value) {
+            const normalized = _stripAccents(normalizeSubtitleValue(value)).toLowerCase().replace(/[\s._-]+/g, ' ').trim();
+            return !normalized || /^(legenda|subtitle|subtitles?|caption|captions?)(\s+\d+)?$/.test(normalized);
+        }
+
+        function getPublicSubtitleFlags(entry = {}) {
+            const flags = [];
+            if (entry.forced) flags.push('Forçada');
+            if (entry.default) flags.push('Padrão');
+            if (entry.hearing_impaired || entry.hearingImpaired) flags.push('SDH');
+            if (entry.comment) flags.push('Comentário');
+            if (entry.captions) flags.push('CC');
+            return flags;
+        }
+
+        function resolvePublicSubtitleLabel(entry = {}, index = 0) {
+            const language = normalizeLanguageCode(entry.srclang || entry.language || '');
+            const languageLabel = language ? getLanguageDisplayName(language) : '';
+            const rawLabel = normalizeSubtitleValue(entry.label || '');
+            const title = normalizeSubtitleValue(entry.title || '');
+            let label = '';
+            if (rawLabel && !isGenericPublicSubtitleLabel(rawLabel) && !looksTechnicalTrackLabel(rawLabel)) {
+                label = rawLabel;
+            } else if (title && !isGenericPublicSubtitleLabel(title) && !looksTechnicalTrackLabel(title)) {
+                label = title;
+            } else if (languageLabel) {
+                label = languageLabel;
+            } else {
+                const filename = normalizeSubtitleValue(entry.filename || entry.name || '');
+                label = filename && !looksTechnicalTrackLabel(filename) ? filename : `Legenda ${index + 1}`;
+            }
+            const flags = getPublicSubtitleFlags(entry);
+            if (/\[[^\]]+\]\s*$/.test(label)) return label;
+            return label && flags.length ? `${label} [${flags.join(', ')}]` : label;
+        }
+
+        function getPublicSubtitleCanonicalKey(entry = {}) {
+            const explicitKey = String(entry.canonicalKey || entry.canonical_key || '').trim();
+            if (explicitKey) return explicitKey;
+            const language = normalizeLanguageCode(entry.srclang || entry.language || '') || 'und';
+            const sourceTrackIndex = entry.sourceTrackIndex ?? entry.source_track_index ?? entry.trackIndex ?? entry.track_index;
+            if (sourceTrackIndex !== undefined && sourceTrackIndex !== null && String(sourceTrackIndex).trim() !== '') {
+                return [
+                    String(entry.source || '').toLowerCase() === 'sidecar' ? 'generated' : (String(entry.source || 'subtitle').toLowerCase()),
+                    String(sourceTrackIndex).trim(),
+                    language,
+                    entry.forced ? 'forced' : 'normal',
+                    entry.default ? 'default' : 'nodefault',
+                ].join(':');
+            }
+            const filename = String(entry.filename || entry.name || entry.sidecarRelativePath || entry.sidecar_relative_path || '').trim();
+            const generatedMatch = filename.match(/\.tcloud\.embedded\.(\d+)(?:\.|$)/i);
+            if (generatedMatch) {
+                return ['generated', generatedMatch[1], language, entry.forced ? 'forced' : 'normal', entry.default ? 'default' : 'nodefault'].join(':');
+            }
+            const sidecarPath = String(entry.sidecarRelativePath || entry.sidecar_relative_path || '').trim();
+            if (sidecarPath) return `sidecar:${sidecarPath}`;
+            const trackId = String(entry.trackId || entry.track_id || '').trim();
+            if (trackId) return `track:${trackId}`;
+            return String(entry.id || entry.src || '').trim();
+        }
+
+        function getPublicSubtitleEntryPriority(entry = {}) {
+            const mode = String(entry.subtitleSourceMode || entry.delivery || '').toLowerCase();
+            const source = String(entry.source || '').toLowerCase();
+            if (mode === 'hls_session') return 0;
+            if (source === 'sidecar') return 1;
+            if (source === 'embedded') return 2;
+            return 3;
+        }
+
+        function normalizePublicSubtitleEntry(entry = {}, index = 0) {
+            const srclang = normalizeLanguageCode(entry.srclang || entry.language || '');
+            const normalized = {
+                ...entry,
+                srclang,
+                language: srclang,
+                canonicalKey: getPublicSubtitleCanonicalKey({ ...entry, srclang }),
+            };
+            normalized.label = resolvePublicSubtitleLabel(normalized, index);
+            return normalized;
+        }
+
+        function addPublicSubtitleEntry(entries, seenKeys, entry) {
+            if (!entry || !entry.src) return;
+            const normalizedEntry = normalizePublicSubtitleEntry(entry, entries.length);
+            const candidateKeys = [
+                normalizedEntry.canonicalKey ? `canonical:${normalizedEntry.canonicalKey}` : '',
+                normalizedEntry.id ? `id:${normalizedEntry.id}` : '',
+                (normalizedEntry.sidecarRelativePath || normalizedEntry.sidecar_relative_path) ? `sidecar:${normalizedEntry.sidecarRelativePath || normalizedEntry.sidecar_relative_path}` : '',
+                (normalizedEntry.trackId || normalizedEntry.track_id) ? `track:${normalizedEntry.trackId || normalizedEntry.track_id}` : '',
+                normalizedEntry.src ? `src:${normalizedEntry.src}` : '',
+            ].filter(Boolean);
+            const existingIndex = candidateKeys
+                .map((key) => seenKeys.get(key))
+                .find((index) => Number.isInteger(index));
+            if (Number.isInteger(existingIndex)) {
+                const existing = entries[existingIndex];
+                if (getPublicSubtitleEntryPriority(normalizedEntry) < getPublicSubtitleEntryPriority(existing)) {
+                    entries[existingIndex] = normalizedEntry;
+                    candidateKeys.forEach((key) => seenKeys.set(key, existingIndex));
+                }
+                return;
+            }
+            const nextIndex = entries.length;
+            candidateKeys.forEach((key) => seenKeys.set(key, nextIndex));
+            entries.push(normalizedEntry);
+        }
+
+        function buildPublicSubtitleEntries(item, embeddedTracks = [], sessionSubtitleTracks = [], publicSubtitleCandidates = []) {
             const entries = [];
+            const seenKeys = new Map();
             const currentSession = state.player?._tcloudPublicSession || null;
             const currentSessionId = String(currentSession?.session_id || currentSession?.id || state.playbackSessionId || '');
             const currentOffset = getPublicTimelineOffsetSeconds(state.player);
@@ -5479,48 +5846,257 @@
                 if (!trackId) return;
                 const sourceUrl = track.hls_playlist_url || track.playlist_url || track.src || track.url || '';
                 if (!sourceUrl) return;
-                entries.push({
+                addPublicSubtitleEntry(entries, seenKeys, {
                     id: `session:${trackId}`,
                     source: track.source || 'embedded',
                     label: track.label || track.title || track.name || `Legenda ${index + 1}`,
                     src: sourceUrl,
-                    srclang: track.language || '',
+                    srclang: track.srclang || track.language || '',
                     trackId,
+                    track_id: trackId,
+                    canonicalKey: track.canonicalKey || track.canonical_key || '',
+                    sourceTrackIndex: track.sourceTrackIndex ?? track.source_track_index,
+                    source_track_index: track.source_track_index ?? track.sourceTrackIndex,
+                    forced: !!track.forced,
+                    default: !!track.default,
+                    hearing_impaired: !!track.hearing_impaired,
+                    captions: !!track.captions,
                     subtitleSourceMode: 'hls_session',
-                    subtitleTimebase: 'session',
+                    subtitleTimebase: track.subtitleTimebase || track.subtitle_timebase || 'session',
+                    subtitle_timebase: track.subtitle_timebase || track.subtitleTimebase || 'session',
                     timelineAligned: true,
                     sessionId: currentSessionId,
-                    timelineOffset: currentOffset,
+                    timelineOffset: Number.isFinite(Number(track.timeline_offset_seconds))
+                        ? Number(track.timeline_offset_seconds)
+                        : currentOffset,
                 });
             });
             embeddedTracks.forEach((track, index) => {
-                entries.push({
+                addPublicSubtitleEntry(entries, seenKeys, {
                     id: `embedded:${track.index ?? index}`,
                     source: 'embedded',
                     label: track.label || track.title || `Legenda ${index + 1}`,
                     src: track.src || publicSubtitleUrl({ relativePath: item?.relative_path || '', index: Number(track.index ?? index) }),
-                    srclang: track.language || '',
+                    srclang: track.srclang || track.language || '',
+                    canonicalKey: track.canonicalKey || track.canonical_key || '',
+                    trackId: track.track_id || track.trackId || '',
+                    track_id: track.track_id || track.trackId || '',
+                    sourceTrackIndex: track.sourceTrackIndex ?? track.source_track_index ?? track.index,
+                    source_track_index: track.source_track_index ?? track.sourceTrackIndex ?? track.index,
+                    forced: !!track.forced,
+                    default: !!track.default,
+                    hearing_impaired: !!track.hearing_impaired,
+                    captions: !!track.captions,
                     subtitleSourceMode: 'legacy_vtt',
                     subtitleTimebase: 'media_zero',
+                    sessionId: currentSessionId,
+                    timelineOffset: currentOffset,
+                });
+            });
+            (Array.isArray(publicSubtitleCandidates) ? publicSubtitleCandidates : []).forEach((candidate, index) => {
+                const source = String(candidate?.source || '').toLowerCase();
+                if (source && source !== 'sidecar') return;
+                const sidecarRelativePath = String(candidate?.sidecar_relative_path || candidate?.sidecarRelativePath || '').trim();
+                const sourceUrl = candidate?.url || candidate?.src || (sidecarRelativePath ? publicSubtitleUrl({ sidecarRelativePath }) : '');
+                if (!sourceUrl) return;
+                const language = normalizeLanguageCode(candidate?.language || candidate?.srclang || '');
+                addPublicSubtitleEntry(entries, seenKeys, {
+                    id: `sidecar:${sidecarRelativePath || candidate?.track_id || candidate?.name || index}`,
+                    source: 'sidecar',
+                    label: candidate?.label || candidate?.title || candidate?.name || candidate?.filename || '',
+                    src: sourceUrl,
+                    srclang: language,
+                    filename: candidate?.name || candidate?.filename || '',
+                    trackId: candidate?.track_id || '',
+                    track_id: candidate?.track_id || '',
+                    canonicalKey: candidate?.canonicalKey || candidate?.canonical_key || '',
+                    sourceTrackIndex: candidate?.sourceTrackIndex ?? candidate?.source_track_index,
+                    source_track_index: candidate?.source_track_index ?? candidate?.sourceTrackIndex,
+                    sidecarRelativePath,
+                    sidecar_relative_path: sidecarRelativePath,
+                    subtitleSourceMode: candidate?.subtitleSourceMode || candidate?.subtitle_source_mode || 'legacy_vtt',
+                    subtitleTimebase: candidate?.subtitleTimebase || candidate?.subtitle_timebase || 'media_zero',
+                    subtitle_timebase: candidate?.subtitle_timebase || candidate?.subtitleTimebase || 'media_zero',
+                    forced: !!candidate?.forced,
+                    default: !!candidate?.default,
+                    timelineAligned: candidate?.timelineAligned === true || candidate?.timeline_aligned === true,
                     sessionId: currentSessionId,
                     timelineOffset: currentOffset,
                 });
             });
             findPublicSidecarSubtitleItems(item).forEach((sidecar, index) => {
-                entries.push({
+                const inferredMeta = inferPublicSubtitleMetaFromFilename(sidecar.name || '');
+                addPublicSubtitleEntry(entries, seenKeys, {
                     id: `sidecar:${sidecar.relative_path || sidecar.name || index}`,
                     source: 'sidecar',
                     label: sidecar.name || `Legenda externa ${index + 1}`,
                     src: publicSubtitleUrl({ sidecarRelativePath: sidecar.relative_path || '' }),
-                    srclang: '',
+                    srclang: inferredMeta.srclang,
                     filename: sidecar.name || '',
+                    forced: inferredMeta.forced,
+                    default: inferredMeta.default,
+                    hearing_impaired: inferredMeta.hearing_impaired,
+                    captions: inferredMeta.captions,
+                    comment: inferredMeta.comment,
                     subtitleSourceMode: 'legacy_vtt',
                     subtitleTimebase: 'media_zero',
                     sessionId: currentSessionId,
                     timelineOffset: currentOffset,
                 });
             });
+            console.info('[TCloud] public.subtitle.entries.built', {
+                total: (
+                    (Array.isArray(sessionSubtitleTracks) ? sessionSubtitleTracks.length : 0)
+                    + (Array.isArray(embeddedTracks) ? embeddedTracks.length : 0)
+                    + (Array.isArray(publicSubtitleCandidates) ? publicSubtitleCandidates.length : 0)
+                ),
+                kept: entries.length,
+                labels: entries.map((entry) => entry.label),
+                sources: entries.map((entry) => `${entry.source || ''}:${entry.subtitleSourceMode || ''}`),
+                canonicalKeys: entries.map((entry) => entry.canonicalKey || ''),
+            });
             return entries;
+        }
+
+        function markPublicBootstrapInitialTime(playerInstance, targetTime = 0) {
+            if (!playerInstance) return;
+            const safeTarget = Math.max(0, Number(targetTime) || 0);
+            const lifecycle = getPublicPlaybackLifecycleState(playerInstance);
+            if (lifecycle) lifecycle.bootstrapClockLocked = true;
+            playerInstance._tcloudPublicBootstrapCanonicalTime = safeTarget;
+            playerInstance._tcloudPublicBootstrapCanonicalUntil = Date.now() + 30000;
+            playerInstance._tcloudPublicFirstRealTimeupdateAt = 0;
+            playerInstance._tcloudPublicLastNativeTimeSample = Number.NaN;
+            playerInstance._tcloudPublicSuppressServerSeekUntil = Date.now() + 2500;
+        }
+
+        function releasePublicBootstrapClockLock(playerInstance, reason = '') {
+            const lifecycle = getPublicPlaybackLifecycleState(playerInstance);
+            if (!lifecycle?.bootstrapClockLocked) return false;
+            const nativeTime = readPublicNativeCurrentTime(playerInstance);
+            const offset = Number.isFinite(Number(playerInstance?._tcloudPublicTimelineOffset))
+                ? Math.max(0, Number(playerInstance._tcloudPublicTimelineOffset))
+                : 0;
+            const canonicalTime = Number.isFinite(Number(playerInstance?._tcloudPublicBootstrapCanonicalTime))
+                ? Math.max(0, Number(playerInstance._tcloudPublicBootstrapCanonicalTime))
+                : offset;
+            const nativeRelativeTarget = Math.max(0, canonicalTime - offset);
+            if (Number.isFinite(nativeTime)) {
+                let safeNativeBase = Math.max(0, nativeTime - nativeRelativeTarget);
+                if (canonicalTime === 0 && safeNativeBase > 5) {
+                    console.warn(`[TCloud] public.bootstrap.native_base_anomaly: discarding aggressive base ${safeNativeBase} for canonical=0`);
+                    safeNativeBase = 0;
+                }
+                playerInstance._tcloudPublicNativeTimeBase = safeNativeBase;
+                playerInstance._tcloudPublicLastTimelineBaseReason = `${reason || 'bootstrap-unlock'}:unlock-align`;
+                playerInstance._tcloudPublicSuppressServerSeekUntil = Date.now() + 1800;
+            }
+            lifecycle.bootstrapClockLocked = false;
+            playerInstance._tcloudPublicFirstRealTimeupdateAt = Date.now();
+            console.info('[TCloud] public.bootstrap.clock_unlocked', {
+                reason: reason || '',
+                nativeTime,
+                nativeBase: Number(playerInstance?._tcloudPublicNativeTimeBase || 0),
+                canonicalTime,
+                publicTime: Number(playerInstance?.currentTime?.() || 0),
+                sessionId: lifecycle.currentSessionId || state.playbackSessionId || '',
+            });
+            return true;
+        }
+
+        function readPublicNativeCurrentTime(playerInstance) {
+            try {
+                const fn = playerInstance?._tcloudPublicOriginalCurrentTimeFn;
+                const nativeTime = typeof fn === 'function' ? Number(fn()) : Number.NaN;
+                return Number.isFinite(nativeTime) ? nativeTime : Number.NaN;
+            } catch (error) {
+                return Number.NaN;
+            }
+        }
+
+        function alignPublicManagedTimelineBase(playerInstance, targetTime = null, reason = '') {
+            if (!playerInstance) return false;
+            const nativeTime = readPublicNativeCurrentTime(playerInstance);
+            if (!Number.isFinite(nativeTime)) return false;
+            const offset = Number.isFinite(Number(playerInstance._tcloudPublicTimelineOffset))
+                ? Math.max(0, Number(playerInstance._tcloudPublicTimelineOffset))
+                : 0;
+            const target = Number.isFinite(Number(targetTime)) ? Math.max(0, Number(targetTime)) : offset;
+            const nativeRelativeTarget = Math.max(0, target - offset);
+            const nativeBase = Math.max(0, nativeTime - nativeRelativeTarget);
+            if (String(reason || '').startsWith('public-share-open')) {
+                console.info('[TCloud] public.bootstrap.native_time_observed', {
+                    reason: reason || '',
+                    targetTime: target,
+                    nativeTime,
+                    nativeBase,
+                    timelineOffset: offset,
+                    clockLocked: !!getPublicPlaybackLifecycleState(playerInstance)?.bootstrapClockLocked,
+                    sessionId: playerInstance._tcloudPublicSession?.session_id || state.playbackSessionId || '',
+                });
+            }
+            playerInstance._tcloudPublicNativeTimeBase = nativeBase;
+            playerInstance._tcloudPublicLastTimelineBaseReason = reason || '';
+            playerInstance._tcloudPublicSuppressServerSeekUntil = Date.now() + 1800;
+            try { playerInstance.trigger?.('timeupdate'); } catch (error) { }
+            console.info('[TCloud] public.timeline.base_aligned', {
+                reason: reason || '',
+                targetTime: target,
+                nativeTime,
+                nativeBase,
+                timelineOffset: offset,
+                sessionId: playerInstance._tcloudPublicSession?.session_id || state.playbackSessionId || '',
+            });
+            return true;
+        }
+
+        function markPublicCompletedServerSeek(playerInstance, session, targetTime, wasPlayingBeforeSeek, reason = '') {
+            if (!playerInstance) return;
+            const safeTarget = Math.max(0, Number(targetTime) || 0);
+            const sessionId = String(session?.session_id || session?.id || state.playbackSessionId || '');
+            playerInstance._tcloudPublicLastCompletedSeek = {
+                sessionId,
+                targetTime: safeTarget,
+                completedAt: Date.now(),
+                wasPlayingBeforeSeek: !!wasPlayingBeforeSeek,
+                reason: reason || '',
+            };
+            playerInstance._tcloudPublicSuppressServerSeekUntil = Date.now() + 2500;
+            playerInstance._tcloudPublicReadyPausedAtTarget = !wasPlayingBeforeSeek;
+        }
+
+        function consumePublicReadyPausedAtTarget(playerInstance, reason = '') {
+            if (!playerInstance?._tcloudPublicReadyPausedAtTarget) return false;
+            playerInstance._tcloudPublicReadyPausedAtTarget = false;
+            playerInstance._tcloudPublicSuppressServerSeekUntil = Date.now() + 1800;
+            console.info('[TCloud] public.seek.ready_paused_play', {
+                reason: reason || '',
+                targetTime: playerInstance._tcloudPublicLastCompletedSeek?.targetTime,
+                sessionId: playerInstance._tcloudPublicLastCompletedSeek?.sessionId || state.playbackSessionId || '',
+            });
+            return true;
+        }
+
+        function shouldIgnorePublicSyntheticSeek(playerInstance, currentTime, reason = 'public-server-seek') {
+            if (!playerInstance || reason !== 'public-server-seek') return false;
+            const now = Date.now();
+            const lifecycle = getPublicPlaybackLifecycleState(playerInstance);
+            const lastSeek = playerInstance._tcloudPublicLastCompletedSeek || null;
+            const safeCurrent = Number(currentTime);
+            if (playerInstance._tcloudPublicPlaybackHold) return true;
+            if (getActivePublicSeekTransaction(playerInstance)) return true;
+            if (lifecycle?.technicalSeek || lifecycle?.serverSeekPending) return true;
+            if (Number(playerInstance._tcloudPublicSuppressServerSeekUntil || 0) > now) return true;
+            if (playerInstance._tcloudPublicReadyPausedAtTarget) return true;
+            if (
+                lastSeek
+                && now - Number(lastSeek.completedAt || 0) <= 4000
+                && Number.isFinite(safeCurrent)
+                && Math.abs(safeCurrent - Number(lastSeek.targetTime || 0)) <= 3
+            ) {
+                return true;
+            }
+            return false;
         }
 
         function installPublicManagedTimeline(playerInstance, sessionInfo = {}, options = {}) {
@@ -5545,10 +6121,15 @@
             const offsetSeconds = Number.isFinite(Number(sessionInfo.start_seconds))
                 ? Math.max(0, Number(sessionInfo.start_seconds))
                 : 0;
+            const previousSessionId = String(playerInstance._tcloudPublicSession?.session_id || playerInstance._tcloudPublicSession?.id || '');
+            const nextSessionId = String(sessionInfo?.session_id || sessionInfo?.id || '');
 
             playerInstance._tcloudPublicKnownDuration = knownDuration;
             playerInstance._tcloudPublicTimelineOffset = offsetSeconds;
             playerInstance._tcloudPublicSession = sessionInfo || null;
+            if (previousSessionId !== nextSessionId) {
+                playerInstance._tcloudPublicNativeTimeBase = 0;
+            }
 
             playerInstance.duration = function (value) {
                 if (arguments.length) return playerInstance._tcloudPublicOriginalDurationFn(value);
@@ -5573,20 +6154,48 @@
                         delete playerInstance._tcloudPublicPendingSeekTime;
                         playerInstance._tcloudPublicPendingSeekTimer = null;
                     }, 1500);
-                    return playerInstance._tcloudPublicOriginalCurrentTimeFn(Math.max(0, absoluteValue - offset));
+                    const nativeBase = Number.isFinite(Number(playerInstance._tcloudPublicNativeTimeBase))
+                        ? Math.max(0, Number(playerInstance._tcloudPublicNativeTimeBase))
+                        : 0;
+                    return playerInstance._tcloudPublicOriginalCurrentTimeFn(Math.max(0, absoluteValue - offset + nativeBase));
                 }
                 const nativeTime = playerInstance._tcloudPublicOriginalCurrentTimeFn();
-                return Number.isFinite(nativeTime) ? nativeTime + offset : nativeTime;
+                if (!Number.isFinite(nativeTime)) return nativeTime;
+                const lifecycle = getPublicPlaybackLifecycleState(playerInstance);
+                const canonicalUntil = Number(playerInstance._tcloudPublicBootstrapCanonicalUntil || 0);
+                const canonicalTime = Number(playerInstance._tcloudPublicBootstrapCanonicalTime);
+                if (
+                    Number.isFinite(canonicalTime)
+                    && (
+                        lifecycle?.bootstrapClockLocked
+                        || (
+                            Date.now() <= canonicalUntil
+                            && !['playing', 'failed'].includes(lifecycle?.bootstrapPhase || '')
+                        )
+                    )
+                    && !lifecycle?.resume?.resumeSeekInProgress
+                    && !lifecycle?.serverSeekPending
+                    && !getActivePublicSeekTransaction(playerInstance)
+                ) {
+                    return Math.max(0, canonicalTime);
+                }
+                const nativeBase = Number.isFinite(Number(playerInstance._tcloudPublicNativeTimeBase))
+                    ? Math.max(0, Number(playerInstance._tcloudPublicNativeTimeBase))
+                    : 0;
+                return Math.max(0, nativeTime - nativeBase + offset);
             };
 
             playerInstance.buffered = function () {
                 const nativeRanges = playerInstance._tcloudPublicOriginalBufferedFn();
                 const offset = Number.isFinite(playerInstance._tcloudPublicTimelineOffset) ? playerInstance._tcloudPublicTimelineOffset : 0;
-                if (!nativeRanges || !Number.isFinite(offset) || offset <= 0) return nativeRanges;
+                const nativeBase = Number.isFinite(Number(playerInstance._tcloudPublicNativeTimeBase))
+                    ? Math.max(0, Number(playerInstance._tcloudPublicNativeTimeBase))
+                    : 0;
+                if (!nativeRanges || (!Number.isFinite(offset) && nativeBase <= 0)) return nativeRanges;
                 return {
                     length: nativeRanges.length,
-                    start(index) { return nativeRanges.start(index) + offset; },
-                    end(index) { return nativeRanges.end(index) + offset; },
+                    start(index) { return Math.max(0, nativeRanges.start(index) - nativeBase + offset); },
+                    end(index) { return Math.max(0, nativeRanges.end(index) - nativeBase + offset); },
                 };
             };
 
@@ -5633,13 +6242,24 @@
                 ? playerInstance._tcloudPublicSubtitleEntries
                 : [];
             const entry = entries.find((candidate) => candidate.id === activeId);
-            return entry ? { ...entry } : { id: activeId };
+            return entry ? {
+                ...entry,
+                id: activeId,
+                canonicalKey: entry.canonicalKey || getPublicSubtitleCanonicalKey(entry),
+                trackId: entry.trackId || entry.track_id || '',
+                sourceTrackIndex: entry.sourceTrackIndex ?? entry.source_track_index,
+                language: entry.language || entry.srclang || '',
+                label: entry.label || '',
+            } : { id: activeId };
         }
 
         function waitForPublicPlayerEvent(playerInstance, eventName, timeoutMs = 8000) {
             return new Promise((resolve) => {
                 try {
-                    const readyState = typeof playerInstance?.readyState === 'function' ? Number(playerInstance.readyState()) : 0;
+                    const mediaEl = getPublicPlayerMediaEl(playerInstance);
+                    const readyState = mediaEl && Number.isFinite(Number(mediaEl.readyState))
+                        ? Number(mediaEl.readyState)
+                        : 0;
                     if (eventName === 'loadedmetadata' && readyState >= 1) {
                         resolve(true);
                         return;
@@ -5664,6 +6284,135 @@
             });
         }
 
+        function isPublicAutoplayPolicyError(error) {
+            const name = String(error?.name || '').toLowerCase();
+            const message = String(error?.message || error || '').toLowerCase();
+            return name === 'notallowederror'
+                || name === 'securityerror'
+                || message.includes('not allowed')
+                || message.includes('user gesture')
+                || message.includes('gesture')
+                || message.includes('autoplay');
+        }
+
+        function setPublicAutoplayBlockedUi(playerInstance, reason = '', options = {}) {
+            const loadingEl = options.loadingEl || document.getElementById('tcloud-player-loading');
+            if (loadingEl) loadingEl.classList.remove('is-visible');
+            playerInstance?.el?.()?.classList?.remove('vjs-tcloud-loading');
+            if (playerInstance?._tcloudPublicPlaybackHold) {
+                releasePublicPlaybackHold(playerInstance, 'public-autoplay-blocked');
+            }
+            const lifecycle = getPublicPlaybackLifecycleState(playerInstance);
+            if (lifecycle) lifecycle.autoplayBlocked = true;
+            setPublicPlaybackIntent(playerInstance, false, reason || 'autoplay-blocked');
+            console.warn('[TCloud] public.autoplay.blocked', {
+                reason: reason || 'autoplay-blocked',
+                browser: isPublicSafariLikeBrowser() ? 'safari-like' : 'other',
+                muted: !!(typeof playerInstance?.muted === 'function' && playerInstance.muted()),
+                hlsReady: !!lifecycle?.hlsReady,
+                sessionId: lifecycle?.currentSessionId || state.playbackSessionId || '',
+            });
+        }
+
+        async function attemptPublicAutoplay(playerInstance, item, options = {}) {
+            if (!playerInstance) return { ok: false, status: 'missing-player' };
+            const loadingEl = options.loadingEl || document.getElementById('tcloud-player-loading');
+            const isTranscoded = !!options.isTranscoded;
+            const isAudio = !!options.isAudio;
+            const reason = options.reason || 'initial-play';
+            const lifecycle = getPublicPlaybackLifecycleState(playerInstance);
+            if (lifecycle) lifecycle.autoplayBlocked = false;
+            console.info('[TCloud] public.autoplay.attempt', {
+                reason,
+                safariLike: isPublicSafariLikeBrowser(),
+                muted: !!(typeof playerInstance.muted === 'function' && playerInstance.muted()),
+                hlsReady: !!lifecycle?.hlsReady,
+                sessionId: lifecycle?.currentSessionId || state.playbackSessionId || '',
+            });
+
+            const doPlay = async () => {
+                const playPromise = playerInstance.play();
+                if (playPromise && typeof playPromise.then === 'function') await playPromise;
+            };
+
+            try {
+                await doPlay();
+                releasePublicPlaybackHold(playerInstance, options.successReason || 'public-open-resumed');
+                return { ok: true, status: 'playing' };
+            } catch (error) {
+                const policyBlocked = isPublicAutoplayPolicyError(error);
+                if (
+                    policyBlocked
+                    && PUBLIC_SAFARI_MUTED_AUTOPLAY_ENABLED
+                    && isPublicSafariLikeBrowser()
+                    && isTranscoded
+                    && !isAudio
+                    && !(typeof playerInstance.muted === 'function' && playerInstance.muted())
+                ) {
+                    try {
+                        const mediaEl = getPublicPlayerMediaEl(playerInstance);
+                        if (typeof playerInstance.muted === 'function') playerInstance.muted(true);
+                        if (mediaEl) {
+                            mediaEl.muted = true;
+                            mediaEl.setAttribute('muted', '');
+                            mediaEl.setAttribute('playsinline', '');
+                        }
+                        console.info('[TCloud] public.autoplay.muted_start', {
+                            reason,
+                            sessionId: lifecycle?.currentSessionId || state.playbackSessionId || '',
+                        });
+                        await doPlay();
+                        releasePublicPlaybackHold(playerInstance, options.successReason || 'public-open-muted-resumed');
+                        return { ok: true, status: 'muted-playing' };
+                    } catch (mutedError) {
+                        setPublicAutoplayBlockedUi(playerInstance, 'muted-autoplay-blocked', { loadingEl });
+                        return {
+                            ok: false,
+                            status: 'blocked',
+                            error: mutedError && mutedError.message ? mutedError.message : String(mutedError || ''),
+                        };
+                    }
+                }
+                if (policyBlocked) {
+                    setPublicAutoplayBlockedUi(playerInstance, 'autoplay-blocked', { loadingEl });
+                    return {
+                        ok: false,
+                        status: 'blocked',
+                        error: error && error.message ? error.message : String(error || ''),
+                    };
+                }
+
+                if (playerInstance._tcloudPublicPlaybackHold) {
+                    playerInstance._tcloudPublicPlaybackHold.allowResume = false;
+                }
+                if (isTranscoded && loadingEl) loadingEl.classList.add('is-visible');
+                if (isTranscoded) playerInstance.el()?.classList?.add('vjs-tcloud-loading');
+                console.warn('[TCloud] public.playback_intent.retry_waiting_canplay', {
+                    reason,
+                    error: error && error.message ? error.message : String(error || ''),
+                    sessionId: state.playbackSessionId || '',
+                });
+                playerInstance.one('canplay', () => {
+                    if (!getPublicPlaybackLifecycleState(playerInstance)?.playbackIntent) return;
+                    if (playerInstance._tcloudPublicPlaybackHold) {
+                        playerInstance._tcloudPublicPlaybackHold.allowResume = true;
+                    }
+                    if (loadingEl) loadingEl.classList.remove('is-visible');
+                    playerInstance.el()?.classList?.remove('vjs-tcloud-loading');
+                    attemptPublicAutoplay(playerInstance, item, {
+                        ...options,
+                        reason: `${reason}:canplay-retry`,
+                        successReason: 'public-open-canplay-retry',
+                    }).catch(() => {});
+                });
+                return {
+                    ok: false,
+                    status: 'retry-waiting-canplay',
+                    error: error && error.message ? error.message : String(error || ''),
+                };
+            }
+        }
+
         function getPublicPlaybackLifecycleState(playerInstance) {
             if (!playerInstance) return null;
             if (!playerInstance._tcloudPublicLifecycle || typeof playerInstance._tcloudPublicLifecycle !== 'object') {
@@ -5672,6 +6421,8 @@
                     bootstrapReason: '',
                     hlsReady: false,
                     playbackIntent: false,
+                    autoplayBlocked: false,
+                    bootstrapClockLocked: false,
                     technicalSeek: false,
                     serverSeekPending: false,
                     currentSessionId: '',
@@ -5760,6 +6511,152 @@
             playerInstance._tcloudPublicSuspendServerSeekReload = false;
         }
 
+        function forcePausePublicManagedMedia(playerInstance, reason = '') {
+            if (!playerInstance) return;
+            try { playerInstance.pause?.(); } catch (error) { }
+            try { getPublicPlayerMediaEl(playerInstance)?.pause?.(); } catch (error) { }
+            const auxState = playerInstance._tcloudPublicAuxAudioState;
+            if (auxState?.audioEl) {
+                try { auxState.audioEl.pause(); } catch (error) { }
+                try { auxState.stopSyncTimer?.(); } catch (error) { }
+            }
+            console.info('[TCloud] public.seek.force_pause', {
+                reason,
+                sessionId: playerInstance._tcloudPublicSession?.session_id || state.playbackSessionId || '',
+            });
+        }
+
+        function armPublicPlaybackHold(playerInstance, options = {}) {
+            if (!playerInstance) return null;
+            const existingHold = playerInstance._tcloudPublicPlaybackHold;
+            if (existingHold && Array.isArray(existingHold.cleanupFns)) {
+                existingHold.cleanupFns.forEach((cleanupFn) => {
+                    try { cleanupFn(); } catch (error) { }
+                });
+            }
+            const holdState = {
+                blockedUntilSessionId: String(options.blockedUntilSessionId || '').trim(),
+                targetTime: Number.isFinite(options.targetTime) ? options.targetTime : null,
+                startedAt: Date.now(),
+                wasPlayingBeforeSeek: !!options.wasPlayingBeforeSeek,
+                allowResume: false,
+                cleanupFns: [],
+            };
+            const enforcePause = () => {
+                const activeHold = playerInstance._tcloudPublicPlaybackHold;
+                if (!activeHold || activeHold.allowResume) return;
+                try { playerInstance.pause?.(); } catch (error) { }
+                try { getPublicPlayerMediaEl(playerInstance)?.pause?.(); } catch (error) { }
+                const auxState = playerInstance._tcloudPublicAuxAudioState;
+                if (auxState?.audioEl) {
+                    try { auxState.audioEl.pause(); } catch (error) { }
+                    try { auxState.stopSyncTimer?.(); } catch (error) { }
+                }
+            };
+            ['play', 'playing', 'timeupdate', 'canplay'].forEach((eventName) => {
+                playerInstance.on(eventName, enforcePause);
+                holdState.cleanupFns.push(() => playerInstance.off(eventName, enforcePause));
+            });
+            playerInstance._tcloudPublicPlaybackHold = holdState;
+            enforcePause();
+            return holdState;
+        }
+
+        function releasePublicPlaybackHold(playerInstance, reason = '') {
+            const holdState = playerInstance?._tcloudPublicPlaybackHold;
+            if (!holdState) return false;
+            if (Array.isArray(holdState.cleanupFns)) {
+                holdState.cleanupFns.forEach((cleanupFn) => {
+                    try { cleanupFn(); } catch (error) { }
+                });
+            }
+            delete playerInstance._tcloudPublicPlaybackHold;
+            console.info('[TCloud] public.play_hold.released', {
+                reason,
+                blockedUntilSessionId: holdState.blockedUntilSessionId || '',
+                targetTime: holdState.targetTime,
+            });
+            return true;
+        }
+
+        function getActivePublicSeekTransaction(playerInstance) {
+            const transaction = playerInstance?._tcloudPublicSeekTransaction;
+            if (!transaction || transaction.finishedAt) return null;
+            return transaction;
+        }
+
+        function finishPublicSeekTransaction(playerInstance, token, status = 'finished', extra = {}) {
+            const transaction = getActivePublicSeekTransaction(playerInstance);
+            if (!transaction || Number(transaction.token) !== Number(token)) return false;
+            if (transaction.timeoutId) {
+                clearTimeout(transaction.timeoutId);
+                transaction.timeoutId = null;
+            }
+            transaction.status = status;
+            transaction.finishedAt = Date.now();
+            delete playerInstance._tcloudPublicSeekTransaction;
+            console.info('[TCloud] public.seek.transaction.finish', {
+                token,
+                status,
+                targetTime: transaction.targetTime,
+                previousSessionId: transaction.previousSessionId || '',
+                nextSessionId: transaction.nextSessionId || '',
+                elapsedMs: Math.max(0, transaction.finishedAt - Number(transaction.startedAt || transaction.finishedAt)),
+                ...extra,
+            });
+            return true;
+        }
+
+        function beginPublicSeekTransaction(playerInstance, options = {}) {
+            if (!playerInstance) return null;
+            const previous = getActivePublicSeekTransaction(playerInstance);
+            if (previous) {
+                finishPublicSeekTransaction(playerInstance, previous.token, 'superseded', {
+                    replacementTargetTime: options.targetTime,
+                    replacementReason: options.reason || '',
+                });
+            }
+            const token = Number(playerInstance._tcloudPublicSeekToken || 0) + 1;
+            playerInstance._tcloudPublicSeekToken = token;
+            const transaction = {
+                token,
+                reason: options.reason || 'public-server-seek',
+                targetTime: Number.isFinite(options.targetTime) ? options.targetTime : null,
+                previousSessionId: playerInstance._tcloudPublicSession?.session_id || state.playbackSessionId || '',
+                nextSessionId: '',
+                startedAt: Date.now(),
+                finishedAt: null,
+                timeoutId: null,
+            };
+            transaction.timeoutId = setTimeout(() => {
+                const active = getActivePublicSeekTransaction(playerInstance);
+                if (!active || Number(active.token) !== Number(token)) return;
+                active.timeoutId = null;
+                forcePausePublicManagedMedia(playerInstance, 'public-managed-seek-timeout');
+                playerInstance._tcloudPublicServerSeekInFlight = false;
+                playerInstance._tcloudPublicSuspendServerSeekReload = false;
+                const loadingEl = document.getElementById('tcloud-player-loading');
+                const loadingText = loadingEl?.querySelector('.tcloud-player-loading-text');
+                if (loadingText) loadingText.textContent = 'Preparando stream...';
+                if (loadingEl) loadingEl.classList.add('is-visible');
+                playerInstance.el()?.classList?.add('vjs-tcloud-loading');
+                console.warn('[TCloud] public.seek.transaction.soft_timeout', {
+                    token,
+                    targetTime: active.targetTime,
+                    previousSessionId: active.previousSessionId || '',
+                    nextSessionId: active.nextSessionId || '',
+                });
+            }, PUBLIC_MANAGED_SEEK_TIMEOUT_MS);
+            playerInstance._tcloudPublicSeekTransaction = transaction;
+            forcePausePublicManagedMedia(playerInstance, transaction.reason);
+            armPublicPlaybackHold(playerInstance, {
+                reason: transaction.reason,
+                targetTime: transaction.targetTime,
+                wasPlayingBeforeSeek: options.wasPlayingBeforeSeek !== false,
+            });
+            return transaction;
+        }
+
         async function requestPublicManagedServerSeek(playerInstance, item, targetTime, reason = 'public-server-seek') {
             if (!playerInstance || !item || !TRANSCODED_PLAYBACK_KINDS.has(item?.playback_kind)) return false;
             if (playerInstance._tcloudPublicIsSwitchingAudio) {
@@ -5774,6 +6671,17 @@
             const lifecycle = getPublicPlaybackLifecycleState(playerInstance);
             const explicitUserSeek = reason === 'public-progress-control' || reason === 'resume-click';
             const bootstrapPending = isPublicBootstrapPending(playerInstance);
+            if (reason === 'public-server-seek' && !explicitUserSeek && lifecycle?.bootstrapClockLocked) {
+                console.info('[TCloud] public.server_seek.ignored', {
+                    reason,
+                    targetTime: safeTargetTime,
+                    bootstrapPhase: lifecycle?.bootstrapPhase || '',
+                    hlsReady: !!lifecycle?.hlsReady,
+                    playbackIntent: !!lifecycle?.playbackIntent,
+                    ignoreReason: 'bootstrap-native-time-leak',
+                });
+                return false;
+            }
             if (reason === 'public-server-seek' && !explicitUserSeek && safeTargetTime <= PUBLIC_BOOTSTRAP_SEEK_IGNORE_SECONDS) {
                 console.info('[TCloud] public.server_seek.ignored', {
                     reason,
@@ -5817,6 +6725,15 @@
             const volume = typeof playerInstance.volume === 'function' ? playerInstance.volume() : 1;
             const audioIndex = Number.isFinite(playerInstance._tcloudPublicAudioIndex) ? playerInstance._tcloudPublicAudioIndex : 0;
             const activeSubtitleState = capturePublicSubtitleState(playerInstance);
+            if (getActivePublicSeekTransaction(playerInstance)) {
+                releasePublicServerSeek(playerInstance);
+            }
+            const seekTransaction = beginPublicSeekTransaction(playerInstance, {
+                reason,
+                targetTime: safeTargetTime,
+                wasPlayingBeforeSeek: wasPlaying,
+            });
+            if (!seekTransaction) return false;
             const loadingEl = document.getElementById('tcloud-player-loading');
             const loadingText = loadingEl?.querySelector('.tcloud-player-loading-text');
             const seekSeq = Number(playerInstance._tcloudPublicServerSeekSeq || 0) + 1;
@@ -5850,6 +6767,7 @@
             if (loadingText) loadingText.textContent = 'Reposicionando stream...';
             if (loadingEl) loadingEl.classList.add('is-visible');
             playerInstance.el()?.classList?.add('vjs-tcloud-loading');
+            forcePausePublicManagedMedia(playerInstance, reason);
             installPublicManagedTimeline(playerInstance, optimisticSession, { fallbackDuration: item?.duration });
             try { playerInstance.currentTime(safeTargetTime); } catch (error) { }
             try { playerInstance.trigger('seeking'); } catch (error) { }
@@ -5872,12 +6790,12 @@
             });
 
             try {
-                const session = await createPublicPlaybackSession(item, {
+                const session = normalizePublicPlaybackSession(await createPublicPlaybackSessionWithRecovery(item, {
                     reason,
                     audioIndex,
                     startTime: safeTargetTime,
                     replaceSessionId: state.playbackSessionId,
-                });
+                }));
                 if (playerInstance._tcloudPublicServerSeekSeq !== seekSeq) {
                     console.info('[TCloud] public.server_seek.stale', {
                         reason,
@@ -5890,12 +6808,22 @@
                     return false;
                 }
                 state.playbackSessionId = session.session_id || '';
+                seekTransaction.nextSessionId = session.session_id || '';
+                setPublicBootstrapPhase(playerInstance, lifecycle?.bootstrapPhase || 'playing', {
+                    reason,
+                    sessionId: session.session_id || '',
+                    hlsReady: false,
+                });
+                if (playerInstance._tcloudPublicPlaybackHold) {
+                    playerInstance._tcloudPublicPlaybackHold.blockedUntilSessionId = session.session_id || '';
+                }
                 playerInstance._tcloudPublicAudioIndex = Number(session.audio_index ?? audioIndex);
                 playerInstance._tcloudPublicSessionSubtitleTracks = Array.isArray(session.subtitle_tracks) ? session.subtitle_tracks : [];
                 installPublicManagedTimeline(playerInstance, session, { fallbackDuration: item?.duration });
                 removePublicSubtitleTrackRefs(playerInstance);
                 playerInstance.src({ src: session.master_playlist_url || session.playlist_url, type: session.mime || 'application/x-mpegURL' });
                 await waitForPublicPlayerEvent(playerInstance, 'loadedmetadata', 8000);
+                alignPublicManagedTimelineBase(playerInstance, safeTargetTime, reason);
                 if (playerInstance._tcloudPublicServerSeekSeq !== seekSeq) {
                     cleanupStalePublicPlaybackSession(session.session_id || '', 'stale-public-seek');
                     return false;
@@ -5920,14 +6848,43 @@
                     return false;
                 }
                 await waitForPublicPlayerEvent(playerInstance, 'canplay', 8000);
+                alignPublicManagedTimelineBase(playerInstance, safeTargetTime, `${reason}:canplay`);
                 if (playerInstance._tcloudPublicServerSeekSeq !== seekSeq) {
                     cleanupStalePublicPlaybackSession(session.session_id || '', 'stale-public-seek');
                     return false;
                 }
+                markPublicCompletedServerSeek(playerInstance, session, safeTargetTime, wasPlaying, reason);
                 if (wasPlaying) {
+                    if (playerInstance._tcloudPublicPlaybackHold) {
+                        playerInstance._tcloudPublicPlaybackHold.allowResume = true;
+                    }
+                    if (loadingEl) loadingEl.classList.remove('is-visible');
+                    playerInstance.el()?.classList?.remove('vjs-tcloud-loading');
                     const playPromise = playerInstance.play();
-                    if (playPromise && typeof playPromise.catch === 'function') playPromise.catch(() => {});
+                    if (playPromise && typeof playPromise.then === 'function') {
+                        await playPromise.catch((error) => {
+                            if (playerInstance._tcloudPublicPlaybackHold) {
+                                playerInstance._tcloudPublicPlaybackHold.allowResume = false;
+                            }
+                            if (loadingText) loadingText.textContent = 'Preparando stream...';
+                            if (loadingEl) loadingEl.classList.add('is-visible');
+                            playerInstance.el()?.classList?.add('vjs-tcloud-loading');
+                            throw error;
+                        });
+                    }
+                    releasePublicPlaybackHold(playerInstance, 'public-seek-resumed');
+                } else {
+                    releasePublicPlaybackHold(playerInstance, 'public-seek-ready-paused');
                 }
+                setPublicBootstrapPhase(playerInstance, wasPlaying ? 'playing' : 'ready_to_play', {
+                    reason,
+                    sessionId: session.session_id || '',
+                    hlsReady: true,
+                });
+                finishPublicSeekTransaction(playerInstance, seekTransaction.token, 'resumed', {
+                    sessionId: session.session_id || '',
+                    reason,
+                });
                 console.info('[TCloud] public.server_seek.completed', {
                     reason,
                     targetTime: safeTargetTime,
@@ -5943,6 +6900,9 @@
                     error: error && error.message ? error.message : String(error),
                     seekSeq,
                 });
+                finishPublicSeekTransaction(playerInstance, seekTransaction.token, 'failed', {
+                    reason: error && error.message ? error.message : String(error),
+                });
                 return false;
             } finally {
                 releasePublicServerSeek(playerInstance, seekSeq);
@@ -5952,8 +6912,10 @@
                         currentLifecycle.serverSeekPending = false;
                         currentLifecycle.technicalSeek = false;
                     }
-                    if (loadingEl) loadingEl.classList.remove('is-visible');
-                    playerInstance.el()?.classList?.remove('vjs-tcloud-loading');
+                    if (!getActivePublicSeekTransaction(playerInstance) && !playerInstance._tcloudPublicPlaybackHold) {
+                        if (loadingEl) loadingEl.classList.remove('is-visible');
+                        playerInstance.el()?.classList?.remove('vjs-tcloud-loading');
+                    }
                 }
             }
         }
@@ -6013,6 +6975,17 @@
                     if (playerInstance._tcloudPublicPendingSeekTimer) clearTimeout(playerInstance._tcloudPublicPendingSeekTimer);
                     playerInstance._tcloudPublicPendingSeekTimer = null;
                 }
+                if (shouldIgnorePublicSyntheticSeek(playerInstance, currentTime, 'public-server-seek')) {
+                    console.info('[TCloud] public.server_seek.ignored', {
+                        reason: 'public-server-seek',
+                        targetTime: currentTime,
+                        bootstrapPhase: getPublicPlaybackLifecycleState(playerInstance)?.bootstrapPhase || '',
+                        hlsReady: !!getPublicPlaybackLifecycleState(playerInstance)?.hlsReady,
+                        playbackIntent: !!getPublicPlaybackLifecycleState(playerInstance)?.playbackIntent,
+                        ignoreReason: 'synthetic-or-recent-seek',
+                    });
+                    return;
+                }
                 if (!isPublicBufferedAtTime(playerInstance, currentTime)) {
                     requestPublicManagedServerSeek(playerInstance, item, currentTime, 'public-server-seek');
                 }
@@ -6064,11 +7037,32 @@
             const subtitleEntries = buildPublicSubtitleEntries(
                 item,
                 tracks.subtitle || [],
-                playerInstance._tcloudPublicSessionSubtitleTracks || []
+                playerInstance._tcloudPublicSessionSubtitleTracks || [],
+                tracks.public_subtitle_candidates || []
             );
             installPublicSubtitleButton(playerInstance, subtitleEntries);
-            if (options.restoreSubtitleState?.id) {
-                const restored = subtitleEntries.find((entry) => entry.id === options.restoreSubtitleState.id);
+            if (options.restoreSubtitleState?.id || options.restoreSubtitleState?.canonicalKey) {
+                const restoreState = options.restoreSubtitleState || {};
+                const restoreCanonicalKey = restoreState.canonicalKey || getPublicSubtitleCanonicalKey(restoreState);
+                const restoreSourceTrackIndex = restoreState.sourceTrackIndex ?? restoreState.source_track_index;
+                const restoreLanguage = normalizeLanguageCode(restoreState.language || restoreState.srclang || '');
+                const restoreTrackId = String(restoreState.trackId || restoreState.track_id || '').trim();
+                const restored = subtitleEntries.find((entry) => {
+                    if (restoreCanonicalKey && entry.canonicalKey === restoreCanonicalKey) return true;
+                    const entrySourceTrackIndex = entry.sourceTrackIndex ?? entry.source_track_index;
+                    if (
+                        restoreSourceTrackIndex !== undefined
+                        && restoreSourceTrackIndex !== null
+                        && entrySourceTrackIndex !== undefined
+                        && entrySourceTrackIndex !== null
+                        && String(entrySourceTrackIndex) === String(restoreSourceTrackIndex)
+                        && normalizeLanguageCode(entry.language || entry.srclang || '') === restoreLanguage
+                        && !!entry.forced === !!restoreState.forced
+                        && !!entry.default === !!restoreState.default
+                    ) return true;
+                    if (restoreTrackId && String(entry.trackId || entry.track_id || '').trim() === restoreTrackId) return true;
+                    return entry.id === restoreState.id;
+                });
                 if (restored) await activatePublicSubtitleEntry(playerInstance, restored);
                 else disablePublicTextTracks(playerInstance);
             }
@@ -6077,6 +7071,7 @@
                 audioCount: tracks.audio_count,
                 audioItems: (tracks.audio || []).length,
                 subtitleCount: (tracks.subtitle || []).length,
+                publicSubtitleCandidateCount: (tracks.public_subtitle_candidates || []).length,
                 hasMultipleAudio: !!tracks.has_multiple_audio,
                 probeStatus: tracks.probe_status || '',
                 retry: !!options.isRetry,
@@ -6086,24 +7081,147 @@
 
         function disablePublicTextTracks(playerInstance) {
             const tracks = playerInstance?.textTracks?.();
-            if (!tracks) return;
-            for (let i = 0; i < tracks.length; i += 1) {
-                if (tracks[i]) tracks[i].mode = 'disabled';
+            if (tracks) {
+                for (let i = 0; i < tracks.length; i += 1) {
+                    if (tracks[i]) tracks[i].mode = 'disabled';
+                }
             }
             removePublicSubtitleTrackRefs(playerInstance);
             playerInstance._tcloudPublicActiveSubtitleId = '';
+            playerInstance._tcloudPublicActiveSubtitleCanonicalKey = '';
+        }
+
+        function cleanupPublicSubtitleActivationRef(playerInstance, entryId) {
+            const ref = playerInstance?._tcloudPublicSubtitleTrackRefs?.[entryId];
+            if (!ref) return;
+            try {
+                if (typeof playerInstance.removeRemoteTextTrack === 'function') {
+                    playerInstance.removeRemoteTextTrack(ref.remote || ref.track || ref);
+                }
+            } catch (error) { }
+            if (ref.objectUrl && typeof ref.objectUrl === 'string' && ref.objectUrl.startsWith('blob:')) {
+                try { URL.revokeObjectURL(ref.objectUrl); } catch (error) { }
+            }
+            try {
+                if (ref.track) ref.track.mode = 'disabled';
+            } catch (error) { }
+            delete playerInstance._tcloudPublicSubtitleTrackRefs[entryId];
+        }
+
+        function refreshPublicSubtitleButtonSelection(playerInstance) {
+            const buttonName = playerInstance?._tcloudPublicSubtitleButtonName;
+            const button = buttonName ? playerInstance?.controlBar?.getChild(buttonName) : null;
+            if (button && typeof button.update === 'function') {
+                try { button.update(); } catch (error) { }
+            }
+        }
+
+        function removePublicNativeSubtitleControls(playerInstance) {
+            const controlBar = playerInstance?.controlBar;
+            if (!controlBar) return;
+            const ownButtonName = playerInstance?._tcloudPublicSubtitleButtonName || '';
+            const nativeChildNames = ['SubsCapsButton', 'SubtitlesButton', 'CaptionsButton', 'TextTrackButton'];
+            nativeChildNames.forEach((childName) => {
+                if (childName === ownButtonName) return;
+                const child = typeof controlBar.getChild === 'function' ? controlBar.getChild(childName) : null;
+                if (!child) return;
+                try { controlBar.removeChild(child); } catch (error) { }
+                try { child.dispose?.(); } catch (error) { }
+            });
+            const controlBarEl = typeof controlBar.el === 'function' ? controlBar.el() : null;
+            if (!controlBarEl) return;
+            controlBarEl
+                .querySelectorAll('.vjs-subs-caps-button, .vjs-subtitles-button, .vjs-captions-button, .vjs-subtitle-track-button')
+                .forEach((el) => {
+                    if (el.classList?.contains('vjs-public-subtitle-button')) return;
+                    el.style.display = 'none';
+                    el.setAttribute('aria-hidden', 'true');
+                });
+        }
+
+        function waitForPublicSubtitleTrackActivation(playerInstance, entry, remote, trackRef, sourceMode) {
+            return new Promise((resolve) => {
+                const startedAt = Date.now();
+                let settled = false;
+                let timeoutId = null;
+                const done = (ok, status, error = '') => {
+                    if (settled) return;
+                    settled = true;
+                    if (timeoutId) clearTimeout(timeoutId);
+                    try { remote?.removeEventListener?.('load', onLoad); } catch (cleanupError) { }
+                    try { remote?.removeEventListener?.('error', onError); } catch (cleanupError) { }
+                    try { trackRef?.removeEventListener?.('cuechange', onCueChange); } catch (cleanupError) { }
+                    resolve({
+                        ok,
+                        status,
+                        entryId: entry?.id || '',
+                        elapsedMs: Math.max(0, Date.now() - startedAt),
+                        error,
+                    });
+                };
+                const hasUsableCueList = () => {
+                    try {
+                        const cues = trackRef?.cues || trackRef?.activeCues;
+                        return !!cues && typeof cues.length === 'number' && cues.length > 0;
+                    } catch (error) {
+                        return false;
+                    }
+                };
+                const confirmShowing = (status = 'loaded') => {
+                    if (trackRef?.mode === 'showing') {
+                        done(true, hasUsableCueList() ? status : `${status}-showing`);
+                        return true;
+                    }
+                    return false;
+                };
+                const onLoad = () => {
+                    if (!confirmShowing('loaded')) done(false, 'load-not-showing');
+                };
+                const onError = () => done(false, 'error', 'track-error');
+                const onCueChange = () => {
+                    if (trackRef?.mode === 'showing') done(true, 'cuechange');
+                };
+                try { remote?.addEventListener?.('load', onLoad, { once: true }); } catch (error) { }
+                try { remote?.addEventListener?.('error', onError, { once: true }); } catch (error) { }
+                try { trackRef?.addEventListener?.('cuechange', onCueChange); } catch (error) { }
+                requestAnimationFrame(() => {
+                    if (confirmShowing(sourceMode === 'hls_session' ? 'showing-unconfirmed' : 'showing')) return;
+                    setTimeout(() => confirmShowing(sourceMode === 'hls_session' ? 'showing-unconfirmed' : 'showing'), 150);
+                });
+                timeoutId = setTimeout(() => {
+                    if (trackRef?.mode === 'showing') {
+                        done(true, sourceMode === 'hls_session' ? 'showing-unconfirmed' : 'showing-timeout');
+                    } else {
+                        done(false, 'timeout', 'track-not-showing');
+                    }
+                }, PUBLIC_SUBTITLE_ACTIVATION_TIMEOUT_MS);
+            });
         }
 
         async function activatePublicSubtitleEntry(playerInstance, entry) {
-            if (!playerInstance || !entry) return;
+            if (!playerInstance || !entry) return { ok: false, status: 'missing-entry', entryId: '' };
+            if (!entry.id) return { ok: false, status: 'missing-id', entryId: '' };
+            if (!entry.src) return { ok: false, status: 'missing-src', entryId: entry.id || '' };
             disablePublicTextTracks(playerInstance);
             if (!playerInstance._tcloudPublicSubtitleTrackRefs) playerInstance._tcloudPublicSubtitleTrackRefs = {};
             const timelineOffset = Number.isFinite(Number(entry.timelineOffset))
                 ? Math.max(0, Number(entry.timelineOffset))
                 : getPublicTimelineOffsetSeconds(playerInstance);
             const sourceMode = String(entry.subtitleSourceMode || entry.delivery || '').toLowerCase();
+            const subtitleTimebase = String(entry.subtitleTimebase || entry.subtitle_timebase || 'media_zero').trim().toLowerCase() || 'media_zero';
+            const renderLabel = resolvePublicSubtitleLabel(entry, 0) || entry.label || 'Legenda';
+            const renderLanguage = normalizeLanguageCode(entry.srclang || entry.language || '') || 'und';
             let trackSrc = entry.src;
             let objectUrl = '';
+            console.info('[TCloud] public.subtitle.activation.start', {
+                entryId: entry.id || '',
+                label: renderLabel,
+                srclang: renderLanguage,
+                source: entry.source || '',
+                sourceMode: sourceMode || 'legacy_vtt',
+                subtitleTimebase,
+                sessionId: entry.sessionId || state.playbackSessionId || '',
+            });
             if (trackSrc && sourceMode !== 'hls_session') {
                 try {
                     let subtitleText = await fetch(trackSrc, { credentials: 'same-origin' }).then((response) => {
@@ -6111,48 +7229,109 @@
                         return response.text();
                     });
                     subtitleText = normalizePublicSubtitleText(subtitleText, entry);
-                    if (timelineOffset > 0 && entry.timelineAligned !== true && entry.applyTimelineShift !== false) {
+                    if (!/^\s*WEBVTT\b/i.test(subtitleText) || !subtitleText.includes('-->')) {
+                        throw new Error('Subtitle WebVTT has no cues');
+                    }
+                    if (timelineOffset > 0 && entry.timelineAligned !== true && entry.applyTimelineShift !== false && subtitleTimebase !== 'session') {
                         subtitleText = shiftPublicWebVttText(subtitleText, -timelineOffset);
                         console.info('[TCloud] public.subtitle.align.applied', {
                             entryId: entry.id || '',
                             label: entry.label || '',
                             timelineOffset,
                             sessionId: entry.sessionId || state.playbackSessionId || '',
-                            subtitleTimebase: entry.subtitleTimebase || 'media_zero',
+                            subtitleTimebase,
                         });
                     }
                     const blob = new Blob([subtitleText], { type: 'text/vtt;charset=utf-8' });
                     objectUrl = URL.createObjectURL(blob);
                     trackSrc = objectUrl;
                 } catch (error) {
-                    console.warn('[TCloud] public subtitle alignment failed, falling back to direct track', {
+                    console.warn('[TCloud] public.subtitle.activation.failed', {
                         entryId: entry.id || '',
+                        status: 'fetch-or-normalize-failed',
                         error: error && error.message ? error.message : String(error),
                     });
-                    trackSrc = entry.src;
+                    return {
+                        ok: false,
+                        status: 'fetch-or-normalize-failed',
+                        entryId: entry.id || '',
+                        error: error && error.message ? error.message : String(error),
+                    };
                 }
             }
-            const remote = playerInstance.addRemoteTextTrack({
-                kind: 'subtitles',
-                src: trackSrc,
-                label: entry.label,
-                srclang: entry.srclang || 'und',
-            }, false);
-            const trackRef = remote?.track || null;
-            playerInstance._tcloudPublicSubtitleTrackRefs[entry.id] = { remote, track: trackRef, objectUrl };
-            if (trackRef) {
-                trackRef._tcloudPublicMeta = {
-                    id: entry.id || '',
-                    source: entry.source || '',
-                    sessionId: entry.sessionId || state.playbackSessionId || '',
-                    timelineOffset,
-                    subtitleSourceMode: sourceMode || 'legacy_vtt',
-                    subtitleTimebase: entry.subtitleTimebase || (sourceMode === 'hls_session' ? 'session' : 'media_zero'),
+            let remote = null;
+            try {
+                removePublicNativeSubtitleControls(playerInstance);
+                remote = playerInstance.addRemoteTextTrack({
+                    kind: 'subtitles',
+                    src: trackSrc,
+                    label: renderLabel,
+                    srclang: renderLanguage,
+                }, false);
+            } catch (error) {
+                if (objectUrl && objectUrl.startsWith('blob:')) {
+                    try { URL.revokeObjectURL(objectUrl); } catch (cleanupError) { }
+                }
+                console.warn('[TCloud] public.subtitle.activation.failed', {
+                    entryId: entry.id || '',
+                    status: 'add-remote-track-failed',
+                    error: error && error.message ? error.message : String(error),
+                });
+                return {
+                    ok: false,
+                    status: 'add-remote-track-failed',
+                    entryId: entry.id || '',
+                    error: error && error.message ? error.message : String(error),
                 };
-                if (objectUrl) trackRef._tcloudPublicObjectUrl = objectUrl;
-                trackRef.mode = 'showing';
-                playerInstance._tcloudPublicActiveSubtitleId = entry.id;
             }
+            const trackRef = remote?.track || null;
+            playerInstance._tcloudPublicSubtitleTrackRefs[entry.id] = { remote, track: trackRef, objectUrl, originalSrc: entry.src };
+            if (!trackRef) {
+                cleanupPublicSubtitleActivationRef(playerInstance, entry.id);
+                console.warn('[TCloud] public.subtitle.activation.failed', {
+                    entryId: entry.id || '',
+                    status: 'missing-track-ref',
+                });
+                return { ok: false, status: 'missing-track-ref', entryId: entry.id || '' };
+            }
+            trackRef._tcloudPublicMeta = {
+                id: entry.id || '',
+                source: entry.source || '',
+                sessionId: entry.sessionId || state.playbackSessionId || '',
+                timelineOffset,
+                subtitleSourceMode: sourceMode || 'legacy_vtt',
+                subtitleTimebase,
+                canonicalKey: entry.canonicalKey || getPublicSubtitleCanonicalKey(entry),
+            };
+            if (objectUrl) trackRef._tcloudPublicObjectUrl = objectUrl;
+            trackRef.mode = 'showing';
+            removePublicNativeSubtitleControls(playerInstance);
+            const activation = await waitForPublicSubtitleTrackActivation(playerInstance, entry, remote, trackRef, sourceMode || 'legacy_vtt');
+            if (!activation.ok) {
+                cleanupPublicSubtitleActivationRef(playerInstance, entry.id);
+                playerInstance._tcloudPublicActiveSubtitleId = '';
+                playerInstance._tcloudPublicActiveSubtitleCanonicalKey = '';
+                refreshPublicSubtitleButtonSelection(playerInstance);
+                console.warn('[TCloud] public.subtitle.activation.failed', {
+                    ...activation,
+                    source: entry.source || '',
+                    sourceMode: sourceMode || 'legacy_vtt',
+                    subtitleTimebase,
+                    sessionId: entry.sessionId || state.playbackSessionId || '',
+                });
+                return activation;
+            }
+            playerInstance._tcloudPublicActiveSubtitleId = entry.id;
+            playerInstance._tcloudPublicActiveSubtitleCanonicalKey = entry.canonicalKey || getPublicSubtitleCanonicalKey(entry);
+            refreshPublicSubtitleButtonSelection(playerInstance);
+            console.info('[TCloud] public.subtitle.activation.loaded', {
+                ...activation,
+                source: entry.source || '',
+                sourceMode: sourceMode || 'legacy_vtt',
+                subtitleTimebase,
+                sessionId: entry.sessionId || state.playbackSessionId || '',
+            });
+            return activation;
         }
 
         function installPublicSubtitleButton(playerInstance, subtitleEntries = []) {
@@ -6166,12 +7345,19 @@
                 }
             }
             playerInstance._tcloudPublicSubtitleEntries = subtitleEntries;
+            removePublicNativeSubtitleControls(playerInstance);
             if (!subtitleEntries.length) return;
             const MenuButton = videojs.getComponent('MenuButton');
             const MenuItem = videojs.getComponent('MenuItem');
             const offItemName = `PublicSubtitleOff_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
             const itemName = `PublicSubtitleItem_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
             const buttonName = `PublicSubtitleButton_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
+            const isEntrySelected = (player, entry) => {
+                const activeId = String(player?._tcloudPublicActiveSubtitleId || '');
+                const activeKey = String(player?._tcloudPublicActiveSubtitleCanonicalKey || '');
+                return (!!activeId && activeId === entry?.id)
+                    || (!!activeKey && activeKey === (entry?.canonicalKey || getPublicSubtitleCanonicalKey(entry)));
+            };
             class PublicSubtitleOffItem extends MenuItem {
                 constructor(player, options) {
                     super(player, { ...options, label: 'Desativadas', selectable: true, selected: !player._tcloudPublicActiveSubtitleId });
@@ -6187,17 +7373,27 @@
             }
             class PublicSubtitleItem extends MenuItem {
                 constructor(player, options) {
-                    super(player, { ...options, label: options.entry.label, selectable: true, selected: player._tcloudPublicActiveSubtitleId === options.entry.id });
+                    super(player, { ...options, label: options.entry.label, selectable: true, selected: isEntrySelected(player, options.entry) });
                     this.entry = options.entry;
                 }
                 createEl(type, props, attrs) {
                     const el = super.createEl(type, props, attrs);
-                    return renderPublicSubtitleMenuItemEl(el, this.entry?.label || 'Legenda', 'ph ph-subtitles');
+                    const entry = this.entry || this.options_?.entry;
+                    return renderPublicSubtitleMenuItemEl(el, entry?.label || 'Legenda', 'ph ph-subtitles');
                 }
                 handleClick(event) {
-                    super.handleClick(event);
-                    activatePublicSubtitleEntry(this.player(), this.entry).catch((error) => {
-                        console.warn('[TCloud] public subtitle activation failed', error);
+                    if (event && typeof event.preventDefault === 'function') event.preventDefault();
+                    activatePublicSubtitleEntry(this.player(), this.entry).then((result) => {
+                        this.selected(!!result?.ok);
+                        refreshPublicSubtitleButtonSelection(this.player());
+                    }).catch((error) => {
+                        this.selected(false);
+                        refreshPublicSubtitleButtonSelection(this.player());
+                        console.warn('[TCloud] public.subtitle.activation.failed', {
+                            entryId: this.entry?.id || '',
+                            status: 'exception',
+                            error: error && error.message ? error.message : String(error),
+                        });
                     });
                 }
             }
@@ -6205,7 +7401,8 @@
                 constructor(player, options) {
                     super(player, options);
                     this.controlText('Legendas');
-                    this.addClass('vjs-subtitle-track-button');
+                    this.addClass('vjs-public-subtitle-button');
+                    this.addClass('vjs-tcloud-subtitle-button');
                 }
                 createItems() {
                     return [
@@ -6219,6 +7416,7 @@
             videojs.registerComponent(buttonName, PublicSubtitleButton);
             playerInstance._tcloudPublicSubtitleButtonName = buttonName;
             controlBar.addChild(buttonName, {}, Math.max(0, controlBar.children().length - 2));
+            removePublicNativeSubtitleControls(playerInstance);
         }
 
         async function switchPublicAudioTrack(playerInstance, item, audioIndex, trackMeta = {}) {
@@ -6271,7 +7469,7 @@
                 }
 
                 playerInstance.el()?.classList?.add('vjs-tcloud-loading');
-                const session = await createPublicPlaybackSession(item, {
+                const session = await createPublicPlaybackSessionWithRecovery(item, {
                     reason: 'public-audio-switch',
                     audioIndex,
                     startTime: currentTime,
@@ -6697,12 +7895,20 @@
             });
             playerInstance.on('play', () => {
                 if (lifecycle.technicalSeek) return;
+                consumePublicReadyPausedAtTarget(playerInstance, 'resume-controller-play');
                 setPublicPlaybackIntent(playerInstance, true, 'play-event');
                 dismissPublicResumeChip(playerInstance, 'playback-started');
                 flush('playback-started');
             });
             playerInstance.on('playing', () => {
-                setPublicBootstrapPhase(playerInstance, 'playing', { hlsReady: true });
+                if (playerInstance._tcloudPublicPlaybackHold || isPublicBootstrapPending(playerInstance)) {
+                    return;
+                }
+                setPublicBootstrapPhase(playerInstance, 'playing', {
+                    hlsReady: true,
+                    sessionId: state.playbackSessionId || playerInstance._tcloudPublicSession?.session_id || '',
+                });
+                releasePublicBootstrapClockLock(playerInstance, 'resume-controller-playing');
                 setPublicPlaybackIntent(playerInstance, true, 'playing-event');
                 dismissPublicResumeChip(playerInstance, 'playing');
                 flush('playing');
@@ -6775,6 +7981,41 @@
                 if (errorEl) errorEl.classList.add('is-visible');
                 state.player?.el()?.classList?.remove('vjs-tcloud-loading');
             };
+            const recoverPublicPlaylistError = (playerInstance, err) => {
+                if (!isTranscoded || !playerInstance) return false;
+                if (playerInstance._tcloudPublicPlaylistRetryAttempted) return false;
+                if (playerInstance._tcloudPublicServerSeekInFlight || getActivePublicSeekTransaction(playerInstance)) return false;
+
+                const errorCode = String(err?.code || err?.statusCode || err?.message || '').toLowerCase();
+                if (errorCode && !['2', '4'].includes(errorCode) && !/404|not.?found|src_not_supported|network|media_err/.test(errorCode)) return false;
+                playerInstance._tcloudPublicPlaylistRetryAttempted = true;
+                const previousSessionId = state.playbackSessionId || '';
+                const recoverStartTime = Number(playerInstance.currentTime?.());
+                playerInstance._tcloudPublicRecoverStartTime = Number.isFinite(recoverStartTime)
+                    ? Math.max(0, recoverStartTime)
+                    : 0;
+                state.playbackSessionId = '';
+                if (errorEl) errorEl.classList.remove('is-visible');
+                if (loadingEl) loadingEl.classList.add('is-visible');
+                playerInstance.el()?.classList?.add('vjs-tcloud-loading');
+                setPublicBootstrapPhase(playerInstance, 'session_creating', {
+                    reason: 'playlist-404-retry',
+                    hlsReady: false,
+                    previousSessionId,
+                });
+                console.warn('[TCloud] public.playlist.error.retry', {
+                    reason: 'playlist-404-retry',
+                    sessionId: previousSessionId,
+                    startTime: playerInstance._tcloudPublicRecoverStartTime,
+                    error: err?.message || err?.code || String(err || ''),
+                });
+                setTimeout(() => {
+                    start().catch((retryError) => {
+                        console.warn('[TCloud] public.playlist.error.retry_failed', retryError);
+                    });
+                }, 0);
+                return true;
+            };
             const start = async () => {
                 if (errorEl) errorEl.classList.remove('is-visible');
                 if (isTranscoded && loadingEl) loadingEl.classList.add('is-visible');
@@ -6789,6 +8030,8 @@
                         fill: true,
                         preload: 'auto',
                         playbackRates: [0.5, 1, 1.25, 1.5, 2],
+                        liveui: false,
+                        liveTracker: false,
                         controlBar: {
                             subsCapsButton: false,
                             subtitlesButton: false,
@@ -6815,6 +8058,7 @@
                     if (!isAudio) playerInstance.on('loadedmetadata', () => syncStageOrientation(stage, playerInstance));
                     playerInstance.on('play', () => {
                         const lifecycle = getPublicPlaybackLifecycleState(playerInstance);
+                        consumePublicReadyPausedAtTarget(playerInstance, 'player-play');
                         if (!lifecycle?.technicalSeek) setPublicPlaybackIntent(playerInstance, true, 'play-event');
                     });
                     playerInstance.on('pause', () => {
@@ -6848,20 +8092,43 @@
                         });
                     }
                     attachPublicResumeController(playerInstance, item);
-                    if (!isAudio) {
+                    if (!isAudio && !isTranscoded) {
                         reloadPublicPlayerTracks(playerInstance, item).catch((error) => {
                             console.warn('[TCloud] public tracks load failed', error);
                             installPublicSubtitleButton(playerInstance, buildPublicSubtitleEntries(item, []));
                         });
                     }
                     playerInstance.on('playing', () => {
-                        setPublicBootstrapPhase(playerInstance, 'playing', { hlsReady: true });
+                        const holdState = playerInstance._tcloudPublicPlaybackHold;
+                        if (holdState && holdState.allowResume) {
+                            releasePublicPlaybackHold(playerInstance, 'public-playing-hold-allowed');
+                        } else if (holdState || isPublicBootstrapPending(playerInstance)) {
+                            forcePausePublicManagedMedia(playerInstance, 'public-playing-while-blocked');
+                            return;
+                        }
+                        setPublicBootstrapPhase(playerInstance, 'playing', {
+                            hlsReady: true,
+                            sessionId: state.playbackSessionId || playerInstance._tcloudPublicSession?.session_id || '',
+                        });
+                        releasePublicBootstrapClockLock(playerInstance, 'player-playing');
                         setPublicPlaybackIntent(playerInstance, true, 'playing-event');
                         if (loadingEl) loadingEl.classList.remove('is-visible');
                         playerInstance.el()?.classList?.remove('vjs-tcloud-loading');
                     });
+                    playerInstance.on('timeupdate', () => {
+                        const lifecycle = getPublicPlaybackLifecycleState(playerInstance);
+                        if (
+                            lifecycle?.bootstrapClockLocked
+                            && lifecycle.bootstrapPhase === 'playing'
+                            && !playerInstance._tcloudPublicPlaybackHold
+                            && !lifecycle.serverSeekPending
+                        ) {
+                            releasePublicBootstrapClockLock(playerInstance, 'first-real-timeupdate');
+                        }
+                    });
                     playerInstance.on('error', () => {
                         const err = playerInstance.error();
+                        if (recoverPublicPlaylistError(playerInstance, err)) return;
                         setPublicBootstrapPhase(playerInstance, 'failed', { reason: 'player-error' });
                         showError(err?.message || 'Falha ao reproduzir este arquivo.');
                     });
@@ -6869,34 +8136,64 @@
 
                 try {
                     if (isTranscoded) {
+                        const pendingRecoverStartTime = Number(playerInstance._tcloudPublicRecoverStartTime);
+                        const requestedStartTime = Number.isFinite(pendingRecoverStartTime)
+                            ? Math.max(0, pendingRecoverStartTime)
+                            : 0;
+                        delete playerInstance._tcloudPublicRecoverStartTime;
+                        const startupReason = requestedStartTime > 0 ? 'playlist-404-retry' : 'public-share-open';
+                        markPublicBootstrapInitialTime(playerInstance, requestedStartTime);
+                        armPublicPlaybackHold(playerInstance, {
+                            reason: startupReason,
+                            blockedUntilSessionId: state.playbackSessionId || '',
+                            targetTime: requestedStartTime,
+                            wasPlayingBeforeSeek: true,
+                        });
+                        forcePausePublicManagedMedia(playerInstance, startupReason);
                         setPublicBootstrapPhase(playerInstance, 'session_creating', {
-                            reason: 'public-share-open',
+                            reason: startupReason,
                             hlsReady: false,
                             previousSessionId: state.playbackSessionId || '',
                         });
-                        const session = await createPublicPlaybackSession(item, { reason: 'public-share-open', replaceSessionId: state.playbackSessionId });
+                        const session = normalizePublicPlaybackSession(await createPublicPlaybackSessionWithRecovery(item, {
+                            reason: startupReason,
+                            startTime: requestedStartTime,
+                            replaceSessionId: state.playbackSessionId,
+                        }));
                         state.playbackSessionId = session.session_id || '';
                         setPublicBootstrapPhase(playerInstance, 'session_created', {
-                            reason: session.bootstrap_reason || 'public-share-open',
+                            reason: session.bootstrap_reason || startupReason,
                             sessionId: session.session_id || '',
                             hlsReady: false,
                         });
                         playerInstance._tcloudPublicAudioIndex = Number(session.audio_index || 0);
                         playerInstance._tcloudPublicSessionSubtitleTracks = Array.isArray(session.subtitle_tracks) ? session.subtitle_tracks : [];
                         installPublicManagedTimeline(playerInstance, session, { fallbackDuration: item?.duration });
+                        if (playerInstance._tcloudPublicPlaybackHold) {
+                            playerInstance._tcloudPublicPlaybackHold.blockedUntilSessionId = session.session_id || '';
+                        }
                         playerInstance.src({ src: session.master_playlist_url || session.playlist_url, type: session.mime || 'application/x-mpegURL' });
                         playerInstance.ready(() => bindPublicManagedProgressSeek(playerInstance, item));
                         playerInstance.on('loadedmetadata', () => bindPublicManagedProgressSeek(playerInstance, item));
                         setPublicPlaybackIntent(playerInstance, true, 'initial-play');
                         await waitForPublicPlayerEvent(playerInstance, 'loadedmetadata', 8000);
+                        alignPublicManagedTimelineBase(playerInstance, requestedStartTime, `${startupReason}:loadedmetadata`);
+                        try { playerInstance.currentTime(requestedStartTime); } catch (error) { }
                         setPublicBootstrapPhase(playerInstance, 'metadata_loaded', {
-                            reason: session.bootstrap_reason || 'public-share-open',
+                            reason: session.bootstrap_reason || startupReason,
                             sessionId: session.session_id || '',
                             hlsReady: false,
                         });
+                        await reloadPublicPlayerTracks(playerInstance, item, {
+                            reason: session.bootstrap_reason || startupReason,
+                        }).catch((error) => {
+                            console.warn('[TCloud] public tracks load failed', error);
+                            installPublicSubtitleButton(playerInstance, buildPublicSubtitleEntries(item, []));
+                        });
                         const canPlayReady = await waitForPublicPlayerEvent(playerInstance, 'canplay', 8000);
+                        alignPublicManagedTimelineBase(playerInstance, requestedStartTime, `${startupReason}:canplay`);
                         setPublicBootstrapPhase(playerInstance, canPlayReady ? 'ready_to_play' : 'metadata_loaded', {
-                            reason: session.bootstrap_reason || 'public-share-open',
+                            reason: session.bootstrap_reason || startupReason,
                             sessionId: session.session_id || '',
                             hlsReady: canPlayReady,
                         });
@@ -6907,35 +8204,33 @@
                         });
                         setPublicPlaybackIntent(playerInstance, true, 'initial-play');
                     }
-                    const playPromise = playerInstance.play();
-                    if (playPromise && typeof playPromise.catch === 'function') {
-                        playPromise.catch((error) => {
-                            console.warn('[TCloud] public.playback_intent.retry_waiting_canplay', {
-                                reason: 'initial-play',
-                                error: error && error.message ? error.message : String(error || ''),
-                                sessionId: state.playbackSessionId || '',
-                            });
-                            if (getPublicPlaybackLifecycleState(playerInstance)?.hlsReady) {
-                                if (loadingEl) loadingEl.classList.remove('is-visible');
-                                playerInstance.el()?.classList.remove('vjs-tcloud-loading');
-                            }
-                            playerInstance.one('canplay', () => {
-                                if (!getPublicPlaybackLifecycleState(playerInstance)?.playbackIntent) return;
-                                const retryPromise = playerInstance.play();
-                                if (retryPromise && typeof retryPromise.catch === 'function') {
-                                    retryPromise.catch(() => {
-                                        if (loadingEl) loadingEl.classList.remove('is-visible');
-                                        playerInstance.el()?.classList?.remove('vjs-tcloud-loading');
-                                    });
-                                }
-                            });
-                        });
+                    if (playerInstance._tcloudPublicPlaybackHold) {
+                        playerInstance._tcloudPublicPlaybackHold.allowResume = true;
                     }
+                    if (loadingEl) loadingEl.classList.remove('is-visible');
+                    playerInstance.el()?.classList?.remove('vjs-tcloud-loading');
+                    await attemptPublicAutoplay(playerInstance, item, {
+                        isTranscoded,
+                        isAudio,
+                        loadingEl,
+                        reason: 'initial-play',
+                        successReason: 'public-open-resumed',
+                    });
                 } catch (error) {
                     console.error('[TCloud] public player failed', error);
-                    showError(error?.code === 'share_file_not_found'
-                        ? 'Arquivo compartilhado não encontrado neste link.'
-                        : (error.message || 'Falha ao preparar o player TCloud.'));
+                    if (isPublicTokenError(error) || error?.code === 'SHARE_TOKEN_REAUTH_REQUIRED') {
+                        showError('Sessão pública expirada. Desbloqueie o compartilhamento novamente.');
+                    } else if (['share_file_not_found', 'hls_source_file_not_found'].includes(error?.code)) {
+                        if (['hls_source_resolution', 'public_share_file_resolution'].includes(String(error?.stage || ''))) {
+                            showError('Não foi possível recriar o stream deste vídeo. Tente recarregar a página.');
+                        } else {
+                            showError('Arquivo compartilhado não encontrado neste link.');
+                        }
+                    } else if (error?.code === 'HLS_STARTUP_TIMEOUT') {
+                        showError('Falha ao preparar stream. Tente novamente.');
+                    } else {
+                        showError(error.message || 'Falha ao preparar o player TCloud.');
+                    }
                 }
             };
             document.getElementById('tcloud-player-retry').onclick = start;
@@ -7194,7 +8489,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(password ? { password } : {}),
                 });
-                setShareToken(data.share_token || '');
+                setShareToken(data.share_token || '', data);
                 if (passwordInput) passwordInput.value = '';
                 if (data.item?.is_directory) {
                     await browsePath('');

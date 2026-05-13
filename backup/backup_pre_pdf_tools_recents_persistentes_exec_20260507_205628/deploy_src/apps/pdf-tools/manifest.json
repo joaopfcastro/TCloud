@@ -1,0 +1,39 @@
+{
+  "id": "pdf-tools",
+  "name": "PDF Tools",
+  "icon": "ph-file-pdf",
+  "description": "Visualizador de PDF com abas, miniaturas e retomada cloud",
+  "version": "1.0.0",
+  "author": "TCloud Team",
+  "order": 20,
+  "featured": true,
+  "category": "utility",
+  "system": true,
+  "protected": true,
+  "trust_level": "system",
+  "runtime_only": true,
+  "requested_permissions": [
+    "files.list",
+    "files.read",
+    "metadata.read",
+    "search.read",
+    "recents.read",
+    "stream.read",
+    "pdf.state.read",
+    "pdf.state.write",
+    "shell.notifications.show"
+  ],
+  "functions": [
+    "files.listDirectory",
+    "files.getInfo",
+    "files.getStreamUrl",
+    "search.query",
+    "recents.list",
+    "pdf.getState",
+    "pdf.saveState",
+    "pdf.getTabs",
+    "pdf.saveTabs",
+    "shell.showToast"
+  ],
+  "accent_color": "#E53935"
+}

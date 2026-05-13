@@ -155,6 +155,18 @@ PERMISSION_CATALOG = {
         "dangerous": False,
         "description": "Permite obter URLs de streaming e playback.",
     },
+    "pdf.state.read": {
+        "label": "Ler estado de PDFs",
+        "group": "documents",
+        "dangerous": False,
+        "description": "Permite restaurar abas e progresso de leitura de PDFs.",
+    },
+    "pdf.state.write": {
+        "label": "Salvar estado de PDFs",
+        "group": "documents",
+        "dangerous": False,
+        "description": "Permite salvar abas e progresso de leitura de PDFs na nuvem.",
+    },
     "settings.read": {
         "label": "Ler configuracoes",
         "group": "settings",
@@ -325,6 +337,13 @@ FUNCTION_CATALOG = {
         "implemented": True,
         "dangerous": False,
     },
+    "files.getStreamUrl": {
+        "label": "Obter URL de stream",
+        "permission": "stream.read",
+        "transport": "backend",
+        "implemented": True,
+        "dangerous": False,
+    },
     "files.rename": {
         "label": "Renomear item",
         "permission": "files.rename",
@@ -398,6 +417,48 @@ FUNCTION_CATALOG = {
     "recents.list": {
         "label": "Listar recentes",
         "permission": "recents.read",
+        "transport": "backend",
+        "implemented": True,
+        "dangerous": False,
+    },
+    "pdf.getState": {
+        "label": "Ler progresso de PDF",
+        "permission": "pdf.state.read",
+        "transport": "backend",
+        "implemented": True,
+        "dangerous": False,
+    },
+    "pdf.saveState": {
+        "label": "Salvar progresso de PDF",
+        "permission": "pdf.state.write",
+        "transport": "backend",
+        "implemented": True,
+        "dangerous": False,
+    },
+    "pdf.getTabs": {
+        "label": "Ler abas do PDF Tools",
+        "permission": "pdf.state.read",
+        "transport": "backend",
+        "implemented": True,
+        "dangerous": False,
+    },
+    "pdf.getRecentPdfs": {
+        "label": "Ler PDFs recentes do PDF Tools",
+        "permission": "pdf.state.read",
+        "transport": "backend",
+        "implemented": True,
+        "dangerous": False,
+    },
+    "pdf.recordRecentPdf": {
+        "label": "Registrar PDF recente do PDF Tools",
+        "permission": "pdf.state.write",
+        "transport": "backend",
+        "implemented": True,
+        "dangerous": False,
+    },
+    "pdf.saveTabs": {
+        "label": "Salvar abas do PDF Tools",
+        "permission": "pdf.state.write",
         "transport": "backend",
         "implemented": True,
         "dangerous": False,
@@ -649,4 +710,3 @@ def is_file_type_allowed(policy: dict | None, path: str | None) -> bool:
         return True
     path_lower = str(path).lower()
     return any(path_lower.endswith(extension) for extension in allow_file_types)
-

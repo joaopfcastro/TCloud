@@ -115,6 +115,14 @@ O runtime entrega ao app apenas:
 - `granted_permissions`
 - `allowed_functions`
 
+### Streams e estado cloud para documentos
+
+Apps que precisam ler bytes de arquivos sem receber o JWT bruto devem pedir `stream.read` e usar `files.getStreamUrl`. O retorno inclui uma URL runtime e headers escopados, com suporte a `Range` quando o backend puder servir o arquivo progressivamente.
+
+O app bundled `PDF Tools` usa esse contrato para abrir PDFs com `pdf.js` local em `apps/pdf-tools/vendor/pdfjs/`. Ele tambem usa as funcoes `pdf.getState`, `pdf.saveState`, `pdf.getTabs` e `pdf.saveTabs` para manter pagina atual, zoom e abas no MongoDB. `localStorage` nao deve ser usado como fonte de verdade para progresso ou abas, porque o requisito e sincronizar entre dispositivos.
+
+Dependencias de apps bundled podem usar licencas permissivas como MIT, BSD, ISC e Apache-2.0. Quando uma biblioteca for vendorizada, mantenha a versao fixa e preserve o arquivo de licenca no bundle. CDN, pacote sem licenca clara, licenca comercial nao aprovada e copyleft forte como GPL/AGPL continuam bloqueados para apps padrao.
+
 ### ⚠️ Autenticação
 
 O bridge `tcloud-auth` abaixo continua existindo para apps `system` durante a migracao. Evite usar esse fluxo em apps instalados por usuario.

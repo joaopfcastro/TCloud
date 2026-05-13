@@ -3094,6 +3094,139 @@ class FileManager:
             "is_shared": bool(share_context.get("is_shared")),
         }
 
+    def _owner_share_status(self, sharing_state: dict) -> str:
+        if not sharing_state.get("is_shared"):
+            return "inactive"
+        if sharing_state.get("active") is False:
+            expires_at = str(sharing_state.get("expires_at") or "").strip()
+            if expires_at:
+                try:
+                    parsed = datetime.fromisoformat(expires_at)
+                    if parsed.tzinfo is None:
+                        parsed = parsed.replace(tzinfo=timezone.utc)
+                    if parsed <= datetime.now(timezone.utc):
+                        return "expired"
+                except ValueError:
+                    pass
+            max_access = sharing_state.get("max_access")
+            if max_access not in (None, "", False):
+                try:
+                    if self._normalize_share_access_count(sharing_state.get("access_count")) >= int(max_access):
+                        return "exhausted"
+                except (TypeError, ValueError):
+                    return "exhausted"
+            return "inactive"
+        return "active"
+
+    async def list_shared_items(
+        self,
+        *,
+        status: str = "all",
+        kind: str = "all",
+        query: str = "",
+        limit: int = 500,
+    ) -> dict:
+        safe_limit = max(1, min(int(limit or 500), 1000))
+        normalized_status = str(status or "all").strip().lower()
+        if normalized_status not in {"all", "active", "expired", "exhausted", "inactive", "password"}:
+            normalized_status = "all"
+        normalized_kind = str(kind or "all").strip().lower()
+        if normalized_kind not in {"all", "file", "directory"}:
+            normalized_kind = "all"
+        normalized_query = str(query or "").strip().lower()
+
+        if hasattr(self._db, "list_shared_entries"):
+            raw_entries = await self._db.list_shared_entries(safe_limit + 1)
+        else:
+            raw_entries = []
+
+        items: list[dict] = []
+        summary = {
+            "total": 0,
+            "active": 0,
+            "expired": 0,
+            "exhausted": 0,
+            "inactive": 0,
+            "password": 0,
+            "files": 0,
+            "directories": 0,
+            "truncated": False,
+        }
+
+        for entry_kind, doc in raw_entries:
+            if len(items) >= safe_limit:
+                summary["truncated"] = True
+                break
+            if entry_kind not in {"file", "directory"}:
+                continue
+            is_directory = entry_kind == "directory"
+            if normalized_kind != "all" and normalized_kind != entry_kind:
+                continue
+
+            path = str(doc.get("path") or "").strip()
+            if not path or path == "/":
+                continue
+            name = (
+                str(doc.get("filename") or "").strip()
+                if not is_directory
+                else str(path.rstrip("/").rsplit("/", 1)[-1] or "").strip()
+            ) or path.rstrip("/").rsplit("/", 1)[-1] or "Compartilhado"
+
+            if normalized_query:
+                haystack = f"{name}\n{path}".lower()
+                if normalized_query not in haystack:
+                    continue
+
+            sharing_state = await self.describe_sharing_state(path, is_directory=is_directory)
+            if sharing_state.get("mode") != "direct" or not str(sharing_state.get("public_id") or "").strip():
+                continue
+
+            share_status = self._owner_share_status(sharing_state)
+            requires_password = bool(sharing_state.get("requires_password"))
+            if normalized_status == "password":
+                if not requires_password:
+                    continue
+            elif normalized_status != "all" and share_status != normalized_status:
+                continue
+
+            summary["total"] += 1
+            summary[share_status] = int(summary.get(share_status, 0)) + 1
+            if requires_password:
+                summary["password"] += 1
+            if is_directory:
+                summary["directories"] += 1
+            else:
+                summary["files"] += 1
+
+            item = {
+                "name": name,
+                "path": path,
+                "is_directory": is_directory,
+                "size": 0 if is_directory else int(doc.get("size") or 0),
+                "created_at": doc.get("created_at"),
+                "modified_at": doc.get("modified_at") or doc.get("created_at"),
+                "meta": doc.get("meta", {}) if isinstance(doc.get("meta"), dict) else {},
+                "chunks": doc.get("chunks", []) if not is_directory else [],
+                "is_favorite": bool(doc.get("is_favorite", False)),
+                "is_offline": bool(doc.get("is_offline", False)),
+                "sharing_state": {
+                    **sharing_state,
+                    "owner_status": share_status,
+                },
+            }
+            items.append(item)
+
+        return {
+            "items": items,
+            "summary": summary,
+            "filters": {
+                "status": normalized_status,
+                "kind": normalized_kind,
+                "q": normalized_query,
+                "limit": safe_limit,
+            },
+        }
+
     async def configure_share(
         self,
         virtual_path: str,

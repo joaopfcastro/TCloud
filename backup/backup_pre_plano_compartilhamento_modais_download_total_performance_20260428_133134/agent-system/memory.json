@@ -1,0 +1,2294 @@
+{
+  "version": "1.0",
+  "history": [
+    {
+      "timestamp": "2026-04-02T12:30:54.380887",
+      "type": "plan_generated",
+      "problem": "Seleção de idioma de áudio em vídeos cloud só aparece após cache completo",
+      "file": "plano_selecao_idioma_sem_cache_total.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-02T18:07:18.756000",
+      "type": "plan_generated",
+      "problem": "Confiabilidade do sistema de legendas no ExoPlayer com importacao do dispositivo e TCloud",
+      "file": "plano_exoplayer_legendas_imbativel.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-02T18:19:17.337142",
+      "type": "plan_generated",
+      "problem": "Gerar build EAS Android dev para testar legendas",
+      "file": "plano_build_expo_android_dev.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-02T18:31:42.979896",
+      "type": "plan_generated",
+      "problem": "Download web travado em 0% e upload sem refresh automatico da pasta",
+      "file": "plano_download_upload_web_sync.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-02T19:23:41.022585",
+      "type": "plan_generated",
+      "problem": "Download no TCloud Web travado no navegador e sem gerenciador pausavel/paralelo como no mobile",
+      "file": "plano_download_web_paralelo_pausavel.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-02T21:44:55.898423",
+      "type": "plan_generated",
+      "problem": "Download web continua travado no Chrome e o fluxo atual quebra no Safari",
+      "file": "plano_download_web_safari_chrome_estavel.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-02T22:06:37.759071",
+      "type": "plan_generated",
+      "problem": "Download Web muito lento e não funcionando (usa API ao invés de streaming direto); reverter para streaming com serve_range diretamente no browser",
+      "file": "plano_reverter_download_web.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-02T22:16:02.833339",
+      "type": "plan_generated",
+      "problem": "Funcionalidade de legendas no mobile (expo-video patch e controle de estado) gerou travamento do player nativo. Necessário remoção completa para reestabelecer estabilidade.",
+      "file": "plano_remocao_legendas_mobile.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-03T10:04:49.152932",
+      "type": "plan_generated",
+      "problem": "Downloads lentos e interrompidos no Safari Web em vez de usar as rotas nativas sem interrupção de javascript",
+      "file": "plano_download_web_regra_mobile.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-03T10:23:21.588118",
+      "type": "plan_generated",
+      "problem": "Usuário requisita um downloader paralelo bruto capaz de sobreviver a falhas com pause e resume nativos do browser sem depender do plano backend anterior falho.",
+      "file": "plano_download_web_opfs_paralelo_real.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-03T14:11:18.494419",
+      "type": "plan_generated",
+      "problem": "Download mobile falha porque serve_range recebe interactive=True mas a assinatura atual nao aceita esse parametro",
+      "file": "plano_erro_interactive_serve_range_mobile.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-03T14:30:34.475831",
+      "type": "plan_generated",
+      "problem": "Downloads mobile Android abrem arquivo salvo com URI/caminho SAF incorreto ao tocar na notificação e na sessão de downloads",
+      "file": "plano_download_mobile_caminho_saf_abertura.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-03T15:04:07.859650",
+      "type": "plan_generated",
+      "problem": "Android abre downloads em share sheet generica em vez de sugerir apps pelo tipo do arquivo",
+      "file": "plano_abertura_android_apps_por_tipo.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-03T15:20:21.430799",
+      "type": "plan_generated",
+      "problem": "Modal Visualizador de Arquivos no Android fica sem ação, vaza toques para o fundo e precisa abrir pasta, arquivo e menu corretamente",
+      "file": "plano_modal_visualizador_arquivos_android.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-03T16:26:12.288647",
+      "type": "execution_feedback",
+      "file": "plano_modal_visualizador_arquivos_android.md",
+      "execution_result": "Apos a implementacao anterior, o Visualizador de Arquivos abriu corretamente e os toques deixaram de vazar para o fundo, mas a acao Abrir Pasta continua falhando em qualquer ponto do app. O fluxo cai no fallback e exibe a mensagem de que nao foi possivel abrir automaticamente a pasta TCloud.",
+      "lessons": "A correcao estrutural de sheet resolveu o modal, mas abrir pasta no Android nao pode depender apenas de ACTION_VIEW ou intents sobre SAF. O fluxo precisa cobrir build sem metodo nativo novo, ausencia de safDirUri configurada e fallback para seletor SAF com initial URI. Tambem ha divergencia entre a pasta privada usada no download local e a pasta listada pelo visualizador quando SAF nao esta configurado."
+    },
+    {
+      "timestamp": "2026-04-03T16:27:46.505170",
+      "type": "plan_generated",
+      "problem": "Abrir Pasta no Android falha e cai no fallback textual TCloud em vez de abrir ou reconfigurar a pasta acessivel",
+      "file": "plano_erro_abertura_pasta_android.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-03T16:56:55.566113",
+      "type": "plan_generated",
+      "problem": "Android ainda abre arquivos em interface de compartilhamento porque ACTION_VIEW esta embrulhado em chooser generico",
+      "file": "plano_modal_visualizador_arquivos_android.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-03T17:24:52.385247",
+      "type": "plan_generated",
+      "problem": "Criação de EAS Build Android Debug (Development Client)",
+      "file": "plano_build_eas_debug_android.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-03T19:42:35.576530",
+      "type": "plan_generated",
+      "problem": "Abrir arquivos baixados no Android falha porque o FileProvider nao encontra a meta-data da authority com.tcloud.mobile.fileprovider",
+      "file": "plano_fileprovider_abertura_android.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-03T19:50:07.974569",
+      "type": "plan_generated",
+      "problem": "Geração de build Android dev client apk limpo via EAS",
+      "file": "plano_build_dev_client_apk.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-03T20:26:09.866531",
+      "type": "plan_generated",
+      "problem": "Ocultar nome e extensão reais dos arquivos no grupo Telegram do TCloud usando hash sem quebrar Web e Mobile",
+      "file": "plano_hash_nomes_telegram_arquivos.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-05T10:09:01.725592",
+      "type": "plan_generated",
+      "problem": "Modal de downloads web mostra status visuais imprecisos e fica preso em exportando para Downloads apos o arquivo ja ter sido entregue ao navegador",
+      "file": "plano_modal_download_web_status_visual.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-05T10:35:42.024000",
+      "type": "plan_generated",
+      "problem": "Modal de uploads web duplica visualmente o mesmo arquivo e exibe estados inconsistentes",
+      "file": "plano_modal_upload_web_duplicado_status.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-05T10:45:41.044298",
+      "type": "plan_generated",
+      "problem": "Upload modal Web mostra entrada duplicada por corrida entre taskId local e fetchServerUploads - corrigido com clientUploadId determinístico, deduplicação por taskId e reconciliação inteligente de estado",
+      "file": "plano_modal_upload_web_duplicado_status.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-05T10:59:38.282163",
+      "type": "plan_generated",
+      "problem": "Template de planos muito raso e pouco prescritivo, reduzindo a qualidade das implementacoes",
+      "file": "plano_melhoria_template_planos.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-05T11:07:17.286673",
+      "type": "plan_generated",
+      "problem": "Modal de uploads web reapresenta concluidos apos limpar e ainda sofre duplicacao residual por reidratacao terminal sem memoria de descarte",
+      "file": "plano_modal_upload_web_limpeza_estado.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-05T11:31:56.307541",
+      "type": "plan_generated",
+      "problem": "Modal de informações web do TCloud precisa mostrar metadados ricos em padrão inspirado no Finder",
+      "file": "plano_modal_info_metadados_finder_web.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-05T11:54:29.240666",
+      "type": "execution_feedback",
+      "file": "plano_modal_info_metadados_finder_web.md",
+      "execution_result": "Modal de Informações Web agora abre com shell imediato, busca detalhes via /api/file_info, mostra seções Finder-like com dados gerais, estado TCloud e metadados específicos de imagem/audio/video/PDF; backend passou a enriquecer metadata persistida com MIME, extensão, dimensões, codecs e dados básicos de PDF/imagem. Validação real feita com py_compile, node --check dos templates e teste executável do payload local para JPG e PDF.",
+      "lessons": "O ponto crítico era separar payload de listagem e payload de inspeção; enriquecer só o item da grid não resolveria. ffprobe cobriu bem mídia e parte de imagens, enquanto PDF exigiu parser best-effort local/em cache. O ambiente tinha discrepância: o venv do projeto não tinha Pillow apesar do sistema ter, então foi necessário adicionar a dependência em requirements e sincronizar o venv local para validar no mesmo interpretador do projeto."
+    },
+    {
+      "timestamp": "2026-04-05T15:07:36.602586",
+      "type": "plan_generated",
+      "problem": "Ao colocar para baixar no servidor o arquivo tambem era marcado como cache",
+      "file": "plano_cache_vs_offline.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-05T15:14:20.282257",
+      "type": "execution_feedback",
+      "file": "plano_cache_vs_offline.md",
+      "execution_result": "O plano foi executado com sucesso. O comportamento de adicionar a is_offline_job foi implementado em file_manager.py e download_manager.py, criando um set exclusivo '_active_offline_downloads' para garantir que os arquivos explicitamente baixados offline pelo utilizador não causem confusões de exibição nas UI do TCloud. A API '_handle_api_server_downloads' foi atualizada para consultar apenas o _active_offline_downloads. Item.is_cached também foi descartado no frontend index.html",
+      "lessons": "Quando houver rotinas assíncronas que usam um mesmo pool ou estrutura de cache temporária misturadas sem rotulagem semântica das ações do utilizador (temporário vs persistente offline), utilizar dicts ou sets independentes na camada do gestor e separar também no Frontend as manipulações das variáveis."
+    },
+    {
+      "timestamp": "2026-04-05T15:59:52.204023",
+      "type": "plan_generated",
+      "problem": "Transferência do TCloud para Orange Pi",
+      "file": "plano_transferencia_orange_pi.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-05T20:32:55.667543",
+      "type": "plan_generated",
+      "problem": "Build final mobile sem thumbnails de midia e com galeria de imagens preta",
+      "file": "plano_thumbnails_galeria_midia_mobile.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-05T21:02:34.949197",
+      "type": "plan_generated",
+      "problem": "Build release mobile perde thumbnails e galeria, enquanto debug local funciona normal",
+      "file": "plano_thumbnails_galeria_midia_mobile_release_vs_debug.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-05T21:17:09.703951",
+      "type": "execution_feedback",
+      "file": "plano_thumbnails_galeria_midia_mobile.md",
+      "execution_result": "Implementada a correcao do pipeline de thumbnails e renderizacao remota: o backend agora gera/normaliza thumbs de imagem/audio para JPEG e devolve content-type coerente; o mobile passou a usar um wrapper unico com fallback de expo-image para react-native Image, overlay explicito e logs estruturados. Validacao local concluida com py_compile dos backends, typecheck do TCloudMobile via tsc e script focado confirmando thumbnail JPEG 320x160.",
+      "lessons": "Quando thumbnails somem ou o viewer fica preto na release, vale atacar os dois contratos ao mesmo tempo: bytes/MIME corretos no backend e fallback real no renderer mobile. Normalizar thumbs antigos ao ler do cache evita manter payload invalido com header image/jpeg. Um wrapper unico de imagem reduz falhas silenciosas e concentra diagnostico por URL/surface."
+    },
+    {
+      "timestamp": "2026-04-05T21:23:57.956730",
+      "type": "plan_generated",
+      "problem": "Rebuild limpo de APK para uso via EAS",
+      "file": "plano_rebuild_mobile_apk_limpo.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-05T21:27:36.615845",
+      "type": "plan_generated",
+      "problem": "Implementação de thumbnails para PDFs usando a primeira página",
+      "file": "plano_thumbnail_pdf_primeira_pagina.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-06T08:53:12.851012",
+      "type": "plan_generated",
+      "problem": "Thumbnails de PDF com primeira pagina no Web e Mobile sem pesar o cliente",
+      "file": "plano_pdf_thumbnail_finder_leve_web_mobile.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-06T09:00:37.439221",
+      "type": "execution_feedback",
+      "file": "plano_pdf_thumbnail_finder_leve_web_mobile.md",
+      "execution_result": "Implementacao concluida com thumbnails de PDF no backend, preview de PDF habilitado no Web/Mobile e validacao real via testes locais e renderizacao JPEG da primeira pagina.",
+      "lessons": "O caminho mais leve foi reutilizar /api/thumbnail com geracao server-side via PyMuPDF, cache negativo curto para PDFs problematicos e habilitacao de pdf apenas em showThumbnail, sem viewer interno. O deploy precisava de deploy/src/requirements.txt para a dependencia realmente entrar no container."
+    },
+    {
+      "timestamp": "2026-04-06T09:19:07.777156",
+      "type": "execution_feedback",
+      "file": "plano_pdf_thumbnail_finder_leve_web_mobile.md",
+      "execution_result": "No Orange Pi, apos reiniciar o servidor, reenviar PDFs e ate baixa-los para o servidor, a UI continuou exibindo apenas icones genericos de PDF, sem thumbnail visivel na grid.",
+      "lessons": "Restart simples do Docker nao recompila a imagem nem instala novas dependencias; para essa feature, o risco operacional principal e o container continuar com codigo/imagem antigos ou sem PyMuPDF. O fluxo de deploy precisa explicitar rebuild completo e logs devem informar se o renderer de PDF esta disponivel no runtime."
+    },
+    {
+      "timestamp": "2026-04-06T09:26:22.891007",
+      "type": "execution_feedback",
+      "file": "plano_pdf_thumbnail_finder_leve_web_mobile.md",
+      "execution_result": "No localhost, /api/thumbnail devolvia 404 para os PDFs de /Livros. A causa raiz confirmada foi o servidor local rodando em um ambiente sem PyMuPDF e mantendo negative cache '.failed' com motivo missing_renderer. Apos instalar PyMuPDF no venv correto, ignorar stale negative cache de missing_renderer, limpar os marcadores e reexecutar as chamadas, os 5 PDFs de /Livros passaram a responder 200 image/jpeg.",
+      "lessons": "Para thumbnails de PDF, nao basta codigo e frontend corretos: o processo real precisa iniciar no ambiente Python certo, com PyMuPDF disponivel. Negative cache de missing_renderer precisa ser descartado quando o renderer passa a existir; caso contrario, o sistema continua devolvendo 404 mesmo apos o ambiente ser corrigido."
+    },
+    {
+      "timestamp": "2026-04-06T09:40:55.551112",
+      "type": "plan_generated",
+      "problem": "Carrossel de imagens no web sem loading na troca e PNG isolado no carrossel mobile",
+      "file": "plano_carrossel_imagem_web_mobile_loading_png.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-06T09:52:04.012727",
+      "type": "execution_feedback",
+      "file": "plano_carrossel_imagem_web_mobile_loading_png.md",
+      "execution_result": "Implementacao aplicada no web e no mobile. Testes viewer-gallery-store e viewer-open-coordinator passaram; expo lint concluiu sem erros. Validacao manual do carrossel web/mobile permanece pendente neste ambiente.",
+      "lessons": "O bug do PNG isolado foi resolvido ao promover viewerSessionId para fonte primaria da galeria; listFiles(folder) ficou como fallback explicito com log. No web, o problema vinha da troca imediata de innerHTML; stage persistente com preload, overlay e token de navegacao reduz tela preta e evita corrida entre cliques rapidos."
+    },
+    {
+      "timestamp": "2026-04-06T10:07:00.976997",
+      "type": "plan_generated",
+      "problem": "Arquivos MKV não reproduzem no Web enquanto MP4 funciona e o Mobile continua normal",
+      "file": "plano_streaming_mkv_web_hls_estavel.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-06T10:20:03.761171",
+      "type": "plan_generated",
+      "problem": "Regressão no Web removeu o consumo progressivo do transcode fMP4 por pipe e quebrou playback de MKV",
+      "file": "plano_regressao_transcode_pipe_blob_web_mkv.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-06T10:30:49.615894",
+      "type": "plan_generated",
+      "problem": "MKV no Web voltou a abrir, mas com blob progressivo ficou lento, trava por volta de 10 segundos e perdeu o player Video.js",
+      "file": "plano_mkv_web_videojs_mse_sem_trava.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-06T10:44:02.053552",
+      "type": "execution_feedback",
+      "file": "plano_mkv_web_videojs_mse_sem_trava.md",
+      "execution_result": "Fluxo Web transcodificado passou a usar o mesmo Video.js do MP4 nativo com MediaSource/SourceBuffer como caminho principal, fallback explicito para blob progressivo, reinicio do pipeline no seek server-side e na troca de audio, e espelho equivalente em deploy/src/templates/index.html. Validacao real nesta rodada: node --check dos dois templates, py_compile de http_server.py com PYTHONPYCACHEPREFIX=/tmp e conferência de alinhamento root/deploy.",
+      "lessons": "Para transcode fMP4 por pipe no Web, o caminho estavel e manter o shell do Video.js e trocar apenas o transporte para MSE; blobs progressivos devem ficar como fallback. Seek server-side e audio switch precisam recriar a sessao MSE no mesmo player, sem voltar ao /stream direto nem a um <video> paralelo."
+    },
+    {
+      "timestamp": "2026-04-06T11:43:18.156604",
+      "type": "plan_generated",
+      "problem": "Safari fica carregando indefinidamente e Chrome reproduz MKV de forma instavel com flicker, duracao errada e falhas em audio/legendas no player Web",
+      "file": "plano_mkv_web_videojs_hls_safari_chrome_definitivo.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-06T12:06:03.012567",
+      "type": "execution_feedback",
+      "file": "plano_mkv_web_videojs_hls_safari_chrome_definitivo.md",
+      "execution_result": "Migrei o playback Web transcodificado de MKV/AVI/FLV/WMV para sessoes HLS com Video.js, playlists autenticadas e limpeza de sessao; validei compilacao Python/JS e smoke test local com MKV sintetico gerando media.m3u8, init.mp4 e segmentos .m4s.",
+      "lessons": "Safari e Chrome ficam mais estaveis quando MKV Web sai do pipe fMP4/MSE e passa para HLS por sessao. Para manter duracao total e seek coerentes apos recriar a sessao, foi necessario sobrepor timeline do player com offset absoluto e duracao conhecida. Tambem foi necessario reescrever playlists com token para que init/segments autenticados funcionem no browser."
+    },
+    {
+      "timestamp": "2026-04-06T20:41:20.007591",
+      "type": "plan_generated",
+      "problem": "MKV no Web continua falhando em Safari e Chrome porque o HLS atual usa manifesto sintético e transcode sem perfil browser-safe",
+      "file": "plano_mkv_web_hls_manifesto_codec_browser_safe.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-06T20:45:28.952860",
+      "type": "execution_feedback",
+      "file": "plano_mkv_web_hls_manifesto_codec_browser_safe.md",
+      "execution_result": "A execucao trocou o playback Web HLS de MKV para media playlist direta em vez de master sintetico, removeu CODECS hard-coded do manifesto, forçou encode browser-safe no FFmpeg (yuv420p, H.264 Main 4.1, GOP fixo) e fechou o runtime do Video.js para Safari nativo e Chrome via VHS. Validacao real feita com py_compile, node --check e smoke test local de HLS/ffprobe gerando media.m3u8, init.mp4 e segmentos .m4s com H.264/AAC.",
+      "lessons": "No TCloud Web, gerar HLS nao basta; o player quebra se o manifesto de entrada mentir sobre CODECS ou se a sessao usar master sintetico desnecessario. Para sessao unica, media.m3u8 direto e encode explicitamente browser-safe sao mais robustos do que anunciar avc1 fixo e deixar o encoder decidir sozinho o perfil efetivo."
+    },
+    {
+      "timestamp": "2026-04-06T21:01:16.876532",
+      "type": "plan_generated",
+      "problem": "MKV no Web continua falhando em Safari e Chrome porque a sessao HLS atual usa segmentos fMP4 que quebram no primeiro append/decode",
+      "file": "plano_mkv_web_hls_ts_segmentos_browser_safe.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-06T21:05:15.720432",
+      "type": "execution_feedback",
+      "file": "plano_mkv_web_hls_ts_segmentos_browser_safe.md",
+      "execution_result": "O playback Web de MKV passou a iniciar sessoes HLS com segment_type mpegts por default em vez de fmp4, mantendo media.m3u8 como entrada do player e expondo segment_type/playlist_kind no payload e nos logs do frontend. A validacao real incluiu py_compile, node --check, comparacao local de HLS fmp4 vs mpegts com FFmpeg e smoke test do proprio _start_web_hls_session gerando media.m3u8 e segmentos .ts por default.",
+      "lessons": "Os consoles do Safari e do Chrome deslocaram a causa raiz do manifesto para o primeiro segmento real: append failure no Chrome e decode abort no Safari apontaram mais para CMAF/fMP4 do que para playlist ou URL. No contexto atual do TCloud, HLS com MPEG-TS e playlist event conservadora e a melhor base para compatibilidade imediata, enquanto fmp4 deve ficar como modo de laboratorio por env var."
+    },
+    {
+      "timestamp": "2026-04-06T21:24:36.667674",
+      "type": "plan_generated",
+      "problem": "MKV no Web continua falhando em Safari e Chrome mesmo após ajustes HLS; precisa trocar a baseline para variante MP4 browser-safe estável com Range",
+      "file": "plano_mkv_web_variant_mp4_browser_safe_definitivo.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-06T21:51:32.586643",
+      "type": "execution_feedback",
+      "file": "plano_mkv_web_variant_mp4_browser_safe_definitivo.md",
+      "execution_result": "Implementacao concluida: MKV Web saiu de HLS por sessao como default e passou para variante MP4 browser-safe com Range; smoke tests locais do builder e do contrato Range passaram.",
+      "lessons": "Quando HLS de MKV continua falhando em Safari e Chrome mesmo apos ajustes de manifesto, codec e segmentacao, a correção robusta e trocar a baseline para asset MP4 estavel com normalizacao explicita de audio/timestamps e servir via Range. A infraestrutura de variantes estaveis existente no backend era a base certa para essa migracao."
+    },
+    {
+      "timestamp": "2026-04-06T22:29:41.355723",
+      "type": "plan_generated",
+      "problem": "MKV fica carregando indefinidamente no TCloud Web porque prepared_mp4_variant bloqueia o request HTTP durante o transcode completo. Solução: verificação de cache rápida + pipe fMP4 provisório + build em background.",
+      "file": "plano_mkv_web_prepared_variant_timeout_fix.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-06T22:36:53.537719",
+      "type": "execution_feedback",
+      "file": "plano_mkv_web_prepared_variant_timeout_fix.md",
+      "execution_result": "IMPLEMENTADO com sucesso. Backend: _serve_stable_web_video_variant agora é non-blocking (check de cache em disco ~1ms). Se variante não existe, retorna None e dispara build em background. Frontend: startPreparedTranscodedSource instala managed timeline para pipe delivery e detecta variant via loadedmetadata. SSR seeking ativado para pipe delivery. Deploy sincronizado. Compilação Python OK. Não foi possível testar com servidor rodando (falta dependência jwt no Mac) — necessário validar no deploy real.",
+      "lessons": "1. NUNCA bloquear request HTTP com transcode/build completo. 2. Separar check (rápido) de build (lento) é pattern obrigatório. 3. Pipe fMP4 é fallback provisório confiável. 4. Managed timeline resolve duração para streams sem moov atom. 5. Header X-TCloud-Delivery permite frontend adaptar comportamento sem lógica frágil."
+    },
+    {
+      "timestamp": "2026-04-06T22:55:47.372761",
+      "type": "plan_generated",
+      "problem": "MKV falha no Safari (pipe fMP4 rejeitado) e demora 3min no Chrome (re-codificação desnecessária). Solução: HLS com mpegts + remux inteligente (-c:v copy para H.264) como modo principal.",
+      "file": "plano_mkv_web_hls_remux_streaming_fluido.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-06T23:00:22.186917",
+      "type": "execution_feedback",
+      "file": "plano_mkv_web_hls_remux_streaming_fluido.md",
+      "execution_result": "IMPLEMENTADO. Backend: modo padrão trocado para hls_session, codec detection adicionado ao _start_web_hls_session (remux para H.264, transcode para outros), HLS session API aberta para qualquer modo, background variant build disparado ao criar sessão HLS, duração local via ffprobe. Frontend: TRANSCODED_WEB_PLAYBACK_MODE trocado para hls_session. Deploy sincronizado. Compilação OK.",
+      "lessons": "1. Pipe fMP4 não funciona no Safari - HLS com mpegts é obrigatório. 2. Remux (-c:v copy) é 100x mais rápido que re-codificação quando o codec fonte é H.264. 3. Flags de keyframe (-g, -keyint_min, -force_key_frames) não se aplicam com -c:v copy. 4. HLS session API deve ser independente do modo de transcode para permitir múltiplas estratégias. 5. Duração de arquivos locais precisa de ffprobe explícito."
+    },
+    {
+      "timestamp": "2026-04-07T10:07:04.721149",
+      "type": "plan_generated",
+      "problem": "Player MKV com 5 defeitos UX: sem loading state, botão play rosa, sem progress bar, legendas falham, timeout sem retry",
+      "file": "plano_mkv_ux_video_player_melhorias.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-07T10:14:41.234903",
+      "type": "execution_feedback",
+      "file": "plano_mkv_ux_video_player_melhorias.md",
+      "execution_result": "SUCESSO: CSS overrides do Fantasy aplicados, overlay via glassmorphism injetado no container do player, retry e tela de erro para HLS implementados com time-out extendido para 45s, timing de legendas corrigido usando player.one('loadeddata'). Deploy atualizado com sucesso.",
+      "lessons": "CSS local override preserva as dimensões do control-bar enquanto muda completamente as cores. O retry automático para sessão HLS no frontend dá uma flexibilidade gigante para edge cases de rede sem quebrar de primeira. Promises devem respeitar eventos de ciclo de vida do player (loadeddata) se o recarregamento do source descartar os media tracks injetados precocemente."
+    },
+    {
+      "timestamp": "2026-04-07T10:29:16.969386",
+      "type": "plan_generated",
+      "problem": "Ajustes no Video Player MKV: Correção de tracks ausentes, UI da barra de progresso, e liberação da barra de seek",
+      "file": "plano_mkv_correcoes_finais.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-07T10:33:37.540706",
+      "type": "execution_feedback",
+      "file": "plano_mkv_correcoes_finais.md",
+      "execution_result": "SUCESSO: As rotinas de loadMediaTracks foram atreladas confiavelmente ao loadeddata limpando antigos UI objects. A progress control bar recebeu o recuo correto para o thumb e o override the seekable() + mudança pra vod habilitaram o avanço perfeito na Timeline em arquivos MKV HLS.",
+      "lessons": "1. Utilizar videojs.registerComponent sem limpar botões preexistentes causa memory leak visual; o teardown precisa ser explícito. 2. O evento 'loadeddata' dispara toda vez que houver restart de transcoding na promise src()! 3. Playlists HLS do tipo 'event' inibem hardcoded proxy seek no VideoJs. HLS Transcoder vivo deve operar no escopo VOD para manter a responsividade integral da timeline."
+    },
+    {
+      "timestamp": "2026-04-07T11:07:45.544360",
+      "type": "plan_generated",
+      "problem": "Viabilidade e arquitetura para integrar Google Drive como novo local no TCloud web e mobile com copia, movimentacao e manipulacao de arquivos",
+      "file": "plano_integracao_google_drive_web_mobile.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-07T11:17:45.539185",
+      "type": "plan_generated",
+      "problem": "MKV web sem seek funcional, trilhas ausentes e lentidao global no TCloud",
+      "file": "plano_mkv_seek_trilhas_lentidao_global.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-07T11:32:22.018379",
+      "type": "execution_feedback",
+      "file": "plano_mkv_seek_trilhas_lentidao_global.md",
+      "execution_result": "Implementacao aplicada no backend e frontend: probe raw interno para MKV cloud, seek gerenciado por clique na barra, recarga de trilhas com descarte stale, HLS com readrate em input local/cacheado e sem build paralelo de variante MP4 no primeiro play. Validacao executada com py_compile nos dois http_server.py e node --check nos dois templates/index.html. Nao foi possivel reproduzir o playback end-to-end neste ambiente.",
+      "lessons": "Probe de trilhas nao pode depender do /stream transcodado para MKV cloud; o source swap do HLS exige recarga de trilhas consciente de sessao; o primeiro play de MKV nao deve competir com build de variante em background; validacao de runtime do player ainda precisa ser feita em ambiente com servidor ativo e um MKV real."
+    },
+    {
+      "timestamp": "2026-04-07T11:50:09.481879",
+      "type": "plan_generated",
+      "problem": "MKV web ainda falha no seek para frente, some com trilhas e entra em timeout HLS",
+      "file": "plano_mkv_seek_timeout_hls_trilhas.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-07T11:58:59.224447",
+      "type": "execution_feedback",
+      "file": "plano_mkv_seek_timeout_hls_trilhas.md",
+      "execution_result": "Implementacao aplicada no backend e frontend: fluxo HLS on-demand deixou de usar EVENT e -re, seek passou a preemptar a sessao anterior antes de abrir outra, destroy de sessao agora aceita motivo, e o carregamento de trilhas ganhou retry curto e telemetria por sessao. Validacao real concluida com py_compile e node --check dos templates espelhados; falta confirmacao manual end-to-end no player com MKV real.",
+      "lessons": "O gargalo real estava mais no contrato operacional da sessao HLS do que na barra visual. Preemptar a sessao anterior durante SSR reduz risco de timeout, e logs de readiness/probe por elapsed_ms tornam a proxima depuracao muito mais objetiva. Menus de audio/legenda em MKV HLS single-rendition continuam dependendo do fluxo custom de trilhas, entao retry curto por session_id ajuda a evitar falso zero logo apos player.src()."
+    },
+    {
+      "timestamp": "2026-04-07T14:14:39.113689",
+      "type": "plan_generated",
+      "problem": "Legenda embutida de MKV seleciona no player web mas nao renderiza, com prefetch/cache opacos e falha em fluxo assicrono",
+      "file": "plano_mkv_legenda_embutida_cache_renderizacao_definitiva.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-07T14:23:36.970157",
+      "type": "execution_feedback",
+      "file": "plano_mkv_legenda_embutida_cache_renderizacao_definitiva.md",
+      "execution_result": "Implementei status explicito de prefetch/cache de legenda embutida no backend e troquei o frontend para fluxo deferido: o item embutido agora so seleciona apos o VTT ser realmente carregado.",
+      "lessons": "A causa raiz era dupla: prefetch de fonte podia expirar sem mensagem util enquanto o cache seguia em andamento, e o frontend marcava a trilha embutida como selecionada antes de existir uma track carregada. O fluxo robusto precisa expor status real do backend e evitar selecao otimista para legendas embutidas."
+    },
+    {
+      "timestamp": "2026-04-07T15:00:36.208632",
+      "type": "execution_feedback",
+      "file": "plano_mkv_legenda_embutida_cache_renderizacao_definitiva.md",
+      "execution_result": "Corrigi o desalinhamento temporal da legenda embutida no player web aplicando shift do WebVTT pelo start_seconds da sessao HLS atual e restaurando a legenda ativa apos server-seek com o novo offset.",
+      "lessons": "A timeline exibida pelo player era absoluta por causa do managed timeline do HLS, mas a legenda embutida continuava relativa ao inicio original do MKV. Em streams com seek por nova sessao, a legenda precisa ser reidratada com offset negativo da sessao atual para manter sincronismo."
+    },
+    {
+      "timestamp": "2026-04-07T15:21:45.811121",
+      "type": "execution_feedback",
+      "file": "plano_mkv_legenda_embutida_cache_renderizacao_definitiva.md",
+      "execution_result": "Ocorreu ReferenceError em captureActiveSubtitleState durante o seek",
+      "lessons": "Funções utilitárias como captureActiveSubtitleState não devem ficar encapsuladas dentro da closure do fetch Promise.all, pois callbacks de eventos anteriores como handlePointerSeek não terão acesso."
+    },
+    {
+      "timestamp": "2026-04-07T15:22:01.505458",
+      "type": "plan_generated",
+      "problem": "ReferenceError na captura de estado de legenda ao realizar seek em MKV",
+      "file": "plano_mkv_erro_seek_subtitles_reference.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-07T17:20:20.933066",
+      "type": "plan_generated",
+      "problem": "Legendas embutidas nao funcionam no inicio, menu marca selecao dupla e botoes de audio/legenda aparecem com atraso",
+      "file": "plano_legendas_inicio_imediato_menu_sem_delay.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-07T17:31:55.630879",
+      "type": "execution_feedback",
+      "file": "plano_legendas_inicio_imediato_menu_sem_delay.md",
+      "execution_result": "Implementacao aplicada no frontend e backend com validacao real de sintaxe: http_server.py compilou com PYTHONPYCACHEPREFIX=/tmp, os scripts inline de templates/index.html passaram em node --check e o fluxo agora usa estado central de legenda, bootstrap inicial sem delay artificial e tentativa de extracao progressiva antes do fallback para cache completo. Nao foi possivel confirmar o comportamento E2E do player no browser neste ambiente porque faltam dependencias Python do app para rodar testes/imports completos e nao houve sessao de reproducao visual aberta aqui.",
+      "lessons": "O gargalo real nao era apenas cache; havia competicao entre selecao manual do menu e o estado real do TextTrack. Tornar attach/ativacao assincronos e derivar selected do estado central do player reduz o check duplo. No backend, tentar extracao embutida por stream bruto antes de materializar a fonte inteira cria um caminho mais cedo para MKV cloud, mantendo fallback seguro. Validacao futura deve priorizar um teste manual com MKV cloud real para observar pending->active e checar se o parse error de blob desapareceu."
+    },
+    {
+      "timestamp": "2026-04-07T17:42:22.860894",
+      "type": "execution_feedback",
+      "file": "plano_legendas_inicio_imediato_menu_sem_delay.md",
+      "execution_result": "Segunda iteracao aplicada apos o print mostrar que o duplo selecionado persistia. O frontend agora sincroniza de forma autoritaria a selecao do menu apos cada refresh/update, marcando apenas o item cujo menuId corresponde ao estado central do player (__off__, __auto__ ou entry.id). Tambem propaguei menuId estavel para os itens e fechei a integracao do item automatico na store central. Validacao real novamente concluida com py_compile do backend e node --check dos scripts inline do template.",
+      "lessons": "Quando o Video.js mantem estado interno do MenuItem e o DOM e reconstruido varias vezes, so calcular selected no createItems nao basta; e preciso um passo pos-update que limpe classes residuais e reimponha a selecao correta. O identificador estavel por item no DOM/componente facilita esse tipo de reconciliacao sem depender da ordem dos itens."
+    },
+    {
+      "timestamp": "2026-04-07T17:52:29.706798",
+      "type": "execution_feedback",
+      "file": "plano_legendas_inicio_imediato_menu_sem_delay.md",
+      "execution_result": "Correcao adicional aplicada para erro de playback HLS em arquivo totalmente cacheado. O backend deixou de montar a sessao HLS de cloud fully-cached via concat demuxer dos chunks e passou a usar leitura raw HTTP interna do arquivo original, alimentada pelo cache existente. O codec probe do mesmo fluxo tambem foi corrigido para nao inspecionar apenas o primeiro chunk. Validacao real concluida com py_compile de http_server.py.",
+      "lessons": "Chunks do cache sao fatias binarias do arquivo original, nao arquivos de midia independentes; usar concat demuxer neles no HLS e estruturalmente fragil e pode gerar corrupcao/segmentos invalidos. Para playback totalmente cacheado, e mais seguro expor o arquivo original continuo por uma rota interna raw/range e deixar o FFmpeg ler esse fluxo continuo. O caminho de arquivo nao cacheado foi preservado sem mudanca."
+    },
+    {
+      "timestamp": "2026-04-07T18:11:43.125981",
+      "type": "execution_feedback",
+      "file": "plano_legendas_inicio_imediato_menu_sem_delay.md",
+      "execution_result": "Refinada a restauracao de legendas apos seek/audio-switch com identificacao estavel por entryId/track_index, reaproveitamento apenas quando sessionId/timelineOffset batem e realinhamento automatico do VTT por timeline para evitar troca indevida full/forced e dessintonia apos seek.",
+      "lessons": "O bug residual tinha duas causas combinadas: match frouxo por label/idioma entre trilhas embedded semelhantes e reescrita de WebVTT que descartava o timestamp mas mantinha o payload do cue, gerando parse errors e drift apos seek. A restauracao precisa usar identidade estavel de trilha e qualquer legenda reaproveitada em sessao transcoded deve validar sessionId/timelineOffset antes de reutilizar o track."
+    },
+    {
+      "timestamp": "2026-04-07T19:18:49.357911",
+      "type": "execution_feedback",
+      "file": "plano_legendas_inicio_imediato_menu_sem_delay.md",
+      "execution_result": "Adicionada resiliencia no load de subtitle candidates durante server-seek: quando /api/subtitle_candidates retorna vazio, o frontend reconstrói as trilhas embutidas a partir de /api/media_tracks, reutiliza a ultima lista valida do mesmo arquivo como fallback e agenda retry mesmo quando apenas as legendas zeram.",
+      "lessons": "O fluxo anterior so reagia quando audio e legenda falhavam juntos. Em seek/transcoded houve caso parcial em que audio voltou e subtitle_candidates veio vazio; sem fallback, o menu sumia. Para esse tipo de pipeline assíncrono, a UI precisa tolerar falhas parciais e ter fonte secundaria de reconstrução."
+    },
+    {
+      "timestamp": "2026-04-07T19:32:28.683629",
+      "type": "plan_generated",
+      "problem": "Legendas MKV perdem sincronia apos seek em stream e cacheado",
+      "file": "plano_legendas_mkv_seek_sincronia_stream_cacheado.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-07T19:37:38.934183",
+      "type": "plan_generated",
+      "problem": "MKV precisa iniciar so apos carregar tracks e pausar corretamente durante seek",
+      "file": "plano_mkv_bootstrap_tracks_seek_pausa_netflix.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-07T19:48:07.406653",
+      "type": "execution_feedback",
+      "file": "plano_legendas_mkv_seek_sincronia_stream_cacheado.md",
+      "execution_result": "Implementacao aplicada no frontend e backend: o player agora invalida/remocao remote text tracks stale por sessionId/timelineOffset, recria a legenda apos seek com metadados da sessao atual e expõe telemetria temporal no endpoint/resposta de subtitle. Validacao real concluida com py_compile de http_server.py, node --check do script inline extraido de templates/index.html e 11 testes passando em ./venv/bin/python -m unittest test_subtitle_labels.py.",
+      "lessons": "O VTT base deve permanecer absoluto por arquivo/trilha; a sincronizacao correta depende de recriar ou rejeitar tracks stale no frontend quando sessionId ou timelineOffset mudam. So desabilitar trackRef nao basta no Video.js: remover a remote text track e limpar seus metadados reduz risco de cues antigas sobreviverem apos seek."
+    },
+    {
+      "timestamp": "2026-04-07T19:54:56.411188",
+      "type": "execution_feedback",
+      "file": "plano_mkv_bootstrap_tracks_seek_pausa_netflix.md",
+      "execution_result": "Implementacao complementar aplicada no player web MKV/HLS: o fluxo transcodado ganhou estado de bootstrap por session_id, o play automatico deixou de acontecer imediatamente em startTranscodedHlsSession(), tracks.load.finish agora libera o resume via gate explicito e requestManagedServerSeek() passou a pausar player e audio auxiliar antes da troca de sessao. Validacao real concluida com node --check do script inline extraido de templates/index.html e 11 testes passando em ./venv/bin/python -m unittest test_subtitle_labels.py.",
+      "lessons": "A UX ruim vinha do mesmo problema estrutural em dois pontos: play cedo demais no open inicial e ausencia de seek_hold no server-seek. Centralizar o resume automatico em maybeResumeBootstrapPlayback() reduz corridas entre loadedmetadata/canplay/tracks reload, e pausar explicitamente o player antes do SSR evita o video rodando por baixo do overlay."
+    },
+    {
+      "timestamp": "2026-04-07T20:07:48.012969",
+      "type": "plan_generated",
+      "problem": "Seek MKV ainda nao congela o video e legenda pode ficar selecionada sem render apos bootstrap",
+      "file": "plano_seek_hold_congelamento_legenda_residual.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-07T20:16:03.455597",
+      "type": "execution_feedback",
+      "file": "plano_seek_hold_congelamento_legenda_residual.md",
+      "execution_result": "Implementacao aplicada no player web MKV/HLS: seek_hold agora impõe hard pause no player e no media element, com guard rail contra play prematuro; o bootstrap de tracks ganhou deduplicacao por session_id; e a restauracao de legenda passou a devolver status estruturado, bloqueando resume otimista e reconciliando o menu com a TextTrack real.",
+      "lessons": "O gate de bootstrap so fica confiavel quando o estado funcional da legenda entra no contrato, nao apenas o estado visual do menu. Em seek HLS, pausar so o Video.js facade nao basta: o media element e auto-resumes do tech tambem precisam de guarda. Dedupe por session_id reduz corridas entre loadedmetadata, session promise e reload manual de trilhas."
+    },
+    {
+      "timestamp": "2026-04-07T20:34:57.875580",
+      "type": "execution_feedback",
+      "file": "plano_seek_hold_congelamento_legenda_residual.md",
+      "execution_result": "Refinamento adicional aplicado: a sessao HLS anterior deixou de ser destruida imediatamente durante server-seek e agora e agendada para cleanup tardio, reduzindo os 404 de playlist antiga; o player oculta a vjs-tech enquanto o overlay de loading estiver ativo; o frontend reativa prefetch de subtitle source quando o status anterior ficou em timeout/extract_error; e o backend passou a materializar a fonte de legenda embutida em background sem timeout agressivo no prefetch.",
+      "lessons": "Os 404 do HLS nao vinham so do Video.js, mas do frontend invalidando a sessao anterior cedo demais enquanto o tech ainda a desalocava. Em subtitle source prefetch de cloud file, timeout agressivo no background cria erro ruidoso e piora a restauracao da legenda; prefetch em background deve esperar a cache terminar e o frontend precisa saber retriggerar quando encontrar estado timeout."
+    },
+    {
+      "timestamp": "2026-04-07T21:24:21.091059",
+      "type": "execution_feedback",
+      "file": "plano_legenda_embutida_nao_aparece_carregamento_imediato.md",
+      "execution_result": "Implementacao concluida com feedback visual imediato no frontend, polling de legenda embutida reduzido para 60s com progresso visivel, e extracao progressiva no backend ampliada/logada. Validacao real: py_compile do http_server.py passou com PYTHONPYCACHEPREFIX em /tmp; o ambiente nao possui git repo nem pytest instalado no venv para testes automatizados adicionais.",
+      "lessons": "Quando a legenda embutida demora, o maior problema percebido e a falta de feedback e o estado falso de selecao. Reusar o toast global com duracao persistente resolve a UX sem refactor grande. Para MKV cloud, aumentar a janela da extracao progressiva e logar seu inicio ajuda a reduzir o tempo preso em pending e melhora a observabilidade."
+    },
+    {
+      "timestamp": "2026-04-07T21:24:47.211627",
+      "type": "plan_generated",
+      "problem": "ReferenceError na captura de estado de legenda ao realizar seek em MKV",
+      "file": "plano_mkv_erro_seek_subtitles_reference.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-08T08:23:06.491922",
+      "type": "plan_generated",
+      "problem": "Implementar legendas HLS segmentadas por sessao para evitar download integral do VTT no player web MKV",
+      "file": "plano_legendas_hls_segmentadas_netflix.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-08T08:42:03.779735",
+      "type": "execution_feedback",
+      "file": "plano_legendas_hls_segmentadas_netflix.md",
+      "execution_result": "Implementacao aplicada no backend e no player web: a sessao HLS agora publica subtitulos via EXT-X-MEDIA, gera playlists e segmentos WebVTT por track_id sob demanda, usa master_playlist_url no player e prefere TextTrack nativa da sessao com fallback hibrido para /api/subtitle. Validacao real concluida com py_compile em http_server.py e deploy/src/http_server.py, node --check dos scripts inline de templates/index.html e deploy/src/templates/index.html, e 13 testes unitarios verdes em test_subtitle_labels.py + test_hls_subtitle_segmenter.py.",
+      "lessons": "Para legenda tipo Netflix no TCloud nao bastava segmentar VTT; foi necessario trocar o player para usar o master.m3u8, anunciar EXT-X-MEDIA no manifesto e reconciliar o menu custom com TextTracks nativas do HLS. O rollout hibrido e importante porque permite preferir a trilha HLS sem perder o fallback legado quando a track nativa ainda nao materializa de forma confiavel."
+    },
+    {
+      "timestamp": "2026-04-08T09:05:41.277392",
+      "type": "execution_feedback",
+      "file": "plano_legendas_hls_segmentadas_netflix.md",
+      "execution_result": "Ajustado o fluxo HLS de legendas para preaquecer playlists segmentadas da sessão no backend e no frontend, reduzindo o fallback lento de /api/subtitle e restaurando legendas mais cedo após seek/server reload.",
+      "lessons": "Prefetch apenas da fonte do MKV não basta para UX tipo Netflix; a playlist/segmentação da trilha também precisa nascer cedo. Em sessões HLS com seek recriando session_id, o prewarm deve começar no create da sessão e continuar no bootstrap do player para que a TextTrack nativa esteja pronta antes da restauração."
+    },
+    {
+      "timestamp": "2026-04-08T09:30:44.753750",
+      "type": "plan_generated",
+      "problem": "Seek de MKV ficou lento e legenda HLS continua falhando apos implantacoes",
+      "file": "plano_mkv_seek_lento_legenda_hls_desabilitada.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-09T13:03:21.009950",
+      "type": "execution_feedback",
+      "file": "plano_mkv_seek_lento_legenda_hls_desabilitada.md",
+      "execution_result": "Implementada a reducacao do prewarm de subtitles no caminho de seek com bootstrap_reason propagado frontend-backend, limitacao do priming para 1 trilha e skip de prewarm HLS/source-prefetch em sessoes de server-seek/progress-control/audio-switch. No frontend, o modo hybrid agora faz fallback tardio para o fluxo legado quando a TextTrack HLS falha em estados como rejected_not_ready/rejected_not_showing ou perde saude apos a ativacao, com registro de trilha native_unhealthy e recuperacao automatica para sidecar/embedded.",
+      "lessons": "O problema nao estava no formato basico dos segmentos WebVTT: os testes do segmentador continuaram passando. A regressao vinha de tratar subtitle HLS como caminho unico cedo demais e de aquecer playlists/trilhas demais no lifecycle de seek. Tornar hybrid um modo de confiabilidade exigiu degradacao tardia real, nao apenas fallback quando a track nativa nem chegava a aparecer. Cancelar timers de health-check quando a selecao muda evita fallback fantasma apos o usuario desligar ou trocar a legenda."
+    },
+    {
+      "timestamp": "2026-04-09T13:27:23.083898",
+      "type": "plan_generated",
+      "problem": "Externalizar legendas embutidas de MKV no upload e corrigir autoplay apos seek",
+      "file": "plano_upload_mkv_sidecar_legenda_seek_autoplay.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-09T13:41:22.349644",
+      "type": "execution_feedback",
+      "file": "plano_upload_mkv_sidecar_legenda_seek_autoplay.md",
+      "execution_result": "Implementacao aplicada no backend e no player web: uploads .mkv agora podem externalizar legendas embutidas antes do Telegram via preprocessamento com ffprobe/ffmpeg, gerando MKV limpo + sidecars .vtt persistidos no TCloud com metadados de grupo; discovery cloud passou a priorizar sidecars gerados por metadata; operacoes de delete/rename/copy/offline ganharam propagacao basica para o grupo; /api/upload_chunk passou a bloquear MKV; e o resume do seek no player foi endurecido para nao finalizar autoplay prematuramente quando play() falha antes do canplay. Validacao real concluida com py_compile dos backends root/deploy, node --check dos scripts inline root/deploy, 15 testes unitarios verdes (test_hls_subtitle_segmenter.py, test_subtitle_labels.py, test_mkv_upload_helpers.py) e snippets de runtime importando os helpers novos.",
+      "lessons": "A melhor correção para legenda embutida instavel em MKV cloud foi mover o trabalho para o upload, nao para o seek. Externalizar a subtitle antes do Telegram reaproveita o pipeline sidecar/HLS ja existente e reduz dependencia de embedded extraction por sessao. No player, o autoplay apos seek falhava porque maybeResumeBootstrapPlayback() finalizava o bootstrap no finally mesmo quando play() rejeitava cedo; manter o hold e rearmar uma tentativa em canplay torna o resume mais confiavel. Em lifecycle de arquivos gerados, metadata persistida de grupo e fundamental para nao depender so do nome do sidecar."
+    },
+    {
+      "timestamp": "2026-04-09T16:53:32.850935",
+      "type": "plan_generated",
+      "problem": "Priorizar sidecar na mesma pasta e corrigir seek com legenda do TCloud",
+      "file": "plano_sidecar_mesma_pasta_seek_legenda_tcloud.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-09T17:27:56.595097",
+      "type": "execution_feedback",
+      "file": "plano_sidecar_mesma_pasta_seek_legenda_tcloud.md",
+      "execution_result": "Implementacao aplicada no backend e no player web: sidecars gerados pelo TCloud agora suprimem a trilha embedded equivalente em subtitle_candidates/session subtitle_tracks, o frontend filtra candidatos ocultos e o helper getPlayerTimelineOffsetSeconds foi movido para o escopo raiz do player para impedir o ReferenceError no seek com legenda do TCloud ativa.",
+      "lessons": "O pipeline de externalizacao no upload ja estava pronto; o problema residual era de consumo no playback. A forma mais segura de esconder embedded foi usar source_track_index e authoritative_sidecar em vez de heuristica ampla por qualquer sidecar na pasta. Para validar o HTML embarcado, node --check precisa rodar sobre o script extraido do template, porque o Node nao aceita .html diretamente e o arquivo test_syntax.js do repositorio nao reflete fielmente o template atual."
+    },
+    {
+      "timestamp": "2026-04-09T17:34:48.004607",
+      "type": "plan_generated",
+      "problem": "Mobile exibe fallback escuro sem thumbnail e PDFs nao mostram primeira pagina com paridade ao web",
+      "file": "plano_mobile_pdf_thumbnail_fallback_primeira_pagina.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-09T17:39:34.224427",
+      "type": "execution_feedback",
+      "file": "plano_sidecar_mesma_pasta_seek_legenda_tcloud.md",
+      "execution_result": "A implementacao anterior voltou a permitir seek, mas deixou as legendas dessincronizadas e o picker Do TCloud criou entrada sidecar duplicada sem reutilizar a trilha descoberta da mesma pasta; a supressao de embedded ficou inconsistente na experiencia final.",
+      "lessons": "Quando o usuario escolhe legenda pelo picker Do TCloud durante uma sessao com timelineOffset > 0, nao se pode anexar o VTT bruto via attachRemoteSubtitleTrack fora do fluxo normal, porque isso ignora o alinhamento da sessao. O picker precisa reutilizar a entrada sidecar ja descoberta no menu quando existir, ou passar por loadSubtitleEntryViaLegacyDelivery para aplicar o mesmo tratamento de timeline e evitar entradas duplicadas."
+    },
+    {
+      "timestamp": "2026-04-09T18:04:54.899449",
+      "type": "plan_generated",
+      "problem": "Erro rejected_not_showing no TCloud mobile e falta de auto-discovery de legendas na mesma pasta do vídeo",
+      "file": "plano_fix_subtitle_rejected_not_showing_auto_folder.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-09T19:23:34.776622",
+      "type": "plan_generated",
+      "problem": "Legendas do picker falham ao carregar para arquivos locais e player trava após o seek do mkv",
+      "file": "plano_fix_subtitle_picker_local_bug_and_seek_resume.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-09T19:43:25.653106",
+      "type": "plan_generated",
+      "problem": "Reorganizar legendas MKV para usar sidecars do TCloud como fonte autoritativa, esconder embedded no menu e estabilizar seek",
+      "file": "plano_reorganizacao_legendas_mkv_sidecar_autoritativa.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-09T19:48:14.155246",
+      "type": "execution_feedback",
+      "file": "plano_reorganizacao_legendas_mkv_sidecar_autoritativa.md",
+      "execution_result": "Implementado modo autoritativo para MKV externalizado no backend, ocultando embedded em subtitle_candidates/session quando ha sidecars geradas validas. No frontend, o restore passou a priorizar track_id/path/generated_group_id e o fluxo legado de sidecar agora degrada de rejected_not_ready para carregamento por texto WebVTT em vez de erro terminal. Validacao concluida com unittest no venv do projeto, py_compile e checagem sintatica do JavaScript extraido do template.",
+      "lessons": "A externalizacao no upload ja existia; o que faltava era fechar a autoridade fim a fim no discovery e no restore. Tambem ficou claro que sidecar legacy por RemoteTextTrack ainda pode falhar tarde com rejected_not_ready, entao o fallback para loadSubtitleText precisa existir mesmo fora do caminho HLS de sessao. Para validar este repo, o interpretador correto era venv/bin/python, nao o python3 do sistema."
+    },
+    {
+      "timestamp": "2026-04-09T19:59:10.839512",
+      "type": "execution_feedback",
+      "file": "plano_reorganizacao_legendas_mkv_sidecar_autoritativa.md",
+      "execution_result": "Refinamento adicional apos novos prints: o backend passou a reconhecer sidecars geradas mesmo com divergencia NFC/NFD em generated_from_video_path e tambem por fallback do padrao de nome tcloud.embedded.*. No frontend, entradas escolhidas pelo picker agora sao registradas no menu do TCloud antes da ativacao, evitando que a legenda vire apenas uma track desconhecida exposta como 'legenda automática'. Tambem foi adicionado fallback otimista de selecao para sidecars quando a RemoteTextTrack ainda nao marcou cues a tempo.",
+      "lessons": "Os novos prints mostraram que 'legenda automática' era um sintoma importante: a track existia, mas nao estava vinculada a uma entry gerenciada em _subtitleMenuEntries. Outro ponto critico era a comparacao literal de generated_from_video_path no backend, que falhava facilmente em caminhos com normalizacao Unicode diferente no macOS. Em fluxos de WebVTT remoto, vale tentar selecao otimista antes de declarar rejected_not_ready terminal."
+    },
+    {
+      "timestamp": "2026-04-09T20:48:05.862514",
+      "type": "plan_generated",
+      "problem": "Reconhecimento automatico de legendas em MKV e MP4 apenas na pasta relacionada ao arquivo",
+      "file": "plano_reconhecimento_inteligente_legendas_pasta_relacionada.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-09T21:01:57.738272",
+      "type": "execution_feedback",
+      "file": "plano_reconhecimento_inteligente_legendas_pasta_relacionada.md",
+      "execution_result": "Implementacao concluida no discovery de legendas. O backend passou a procurar sidecars em diretorios relacionados como legendas/subs/subtitles, aplicar score de vinculo por nome e release info, remover o fallback permissivo que aceitava qualquer .srt/.vtt solto e priorizar sidecars com maior match. Validacao real feita com ./venv/bin/python -m unittest test_subtitle_labels.py, py_compile dos dois http_server.py e script manual reproduzindo descoberta em subpasta legendas com exclusao de arquivo nao relacionado.",
+      "lessons": "A regressao afetava MKV e MP4 porque ambos dependiam do mesmo _discover_sidecar_subtitles. O ganho veio de separar escopo de busca e heuristica de match: primeiro limitar diretorios relacionados, depois pontuar candidatos. Tambem foi necessario tratar nomes encurtados em subpastas relacionadas e ignorar sufixos regionais como BR quando combinados com idioma, para evitar que pt-BR derrubasse o score."
+    },
+    {
+      "timestamp": "2026-04-09T21:16:20.245635",
+      "type": "plan_generated",
+      "problem": "Legendas .vtt na mesma pasta do video nao sao reconhecidas automaticamente no menu do player",
+      "file": "plano_reconhecimento_automatico_legendas_mesma_pasta.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-09T21:29:35.041275",
+      "type": "execution_feedback",
+      "file": "plano_reconhecimento_automatico_legendas_mesma_pasta.md",
+      "execution_result": "Implementei fallback seguro de same_dir para sidecars no discovery backend, corrigi a inferencia de idioma para nao confundir tokens do titulo com codigo de lingua e propaguei match_reason/match_score no payload final de subtitle_candidates. A validacao passou com 33 testes e simulacao direta do caso Marshals retornando 1 sidecar automatico com basename_fallback.",
+      "lessons": "O gargalo real estava no acceptance path de _discover_sidecar_subtitles no branch cloud, nao no menu. Quando o parser estrito falha, um fallback por basename ordenado com token episodico resolve o caso sem reabrir falsos positivos. Tambem foi necessario ignorar tokens do proprio titulo ao inferir idioma para evitar rotulos errados como Alemao por causa do 'de' em Historia.de.Yellowstone."
+    },
+    {
+      "timestamp": "2026-04-09T21:42:27.429506",
+      "type": "execution_feedback",
+      "file": "plano_reconhecimento_automatico_legendas_mesma_pasta.md",
+      "execution_result": "Adicionei uma segunda camada de resiliencia: quando /api/subtitle_candidates ainda vier vazio, o player agora reconstrui sidecars automaticas a partir da propria listagem currentItems da pasta atual e injeta essas entradas no menu. Mantive o fallback backend por basename e validei com 33 testes, py_compile e node --check do HTML/JS.",
+      "lessons": "O caso real mostrou que somente endurecer o discovery backend nao bastava; a UI precisava um fallback final usando a listagem da pasta que ja estava carregada e visivel ao usuario. Isso cobre MP4 e MKV quando o console ainda mostra subtitleCount 0 apesar das legendas estarem no mesmo diretorio."
+    },
+    {
+      "timestamp": "2026-04-09T22:05:29.065245",
+      "type": "plan_generated",
+      "problem": "Falha no reconhecimento automático de legendas sidecar na mesma pasta",
+      "file": "plano_correcao_reconhecimento_legendas.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-09T22:09:04.056150",
+      "type": "execution_feedback",
+      "file": "plano_correcao_reconhecimento_legendas.md",
+      "execution_result": "SUCESSO: Legendas agora são reconhecidas automaticamente. Validado com script simulando NFD, caminhos relativos e heurística de tokens.",
+      "lessons": "1. No macOS (NFD), a correspondência de nomes requer normalização explícita via unicodedata. 2. Caminhos locais enviados pelo frontend podem ser relativos ao servidor e precisam de fallback de resolução. 3. Heurísticas baseadas em contagem de tokens ignoram nomes simples e precisam ser flexibilizadas."
+    },
+    {
+      "timestamp": "2026-04-09T22:13:03.617674",
+      "type": "plan_generated",
+      "problem": "Build Android APK distribution mode via EAS",
+      "file": "plano_build_android_apk_eas.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-09T22:20:14.517490",
+      "type": "plan_generated",
+      "problem": "Legendas na mesma pasta não reconhecidas por causa da extensão do vídeo no match de tokens",
+      "file": "plano_correcao_reconhecimento_legendas_frontend.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-09T22:22:17.617511",
+      "type": "execution_feedback",
+      "file": "plano_correcao_reconhecimento_legendas_frontend.md",
+      "execution_result": "Sucesso na implementação da heurística robusta no front-end e back-end. Legendas na mesma pasta agora são detectadas mesmo com extensões de vídeo diferentes e metadados extras no nome.",
+      "lessons": "1. Sempre remover extensões de mídia do basoname antes da tokenização. 2. O match deve ser bidirecional (vídeo pode ser subsequência da legenda ou vice-versa). 3. Logs de debug com matchReason são essenciais para depuração em produção sem acesso direto aos arquivos."
+    },
+    {
+      "timestamp": "2026-04-10T06:15:43.206911",
+      "type": "plan_generated",
+      "problem": "Melhorar a apresentação das legendas no menu, mostrando o idioma e tipo em vez do nome do arquivo.",
+      "file": "plano_melhoria_apresentacao_legendas.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-10T06:23:30.878735",
+      "type": "execution_feedback",
+      "file": "plano_melhoria_apresentacao_legendas.md",
+      "execution_result": "Implementado com sucesso no frontend (templates/index.html) e backend (http_server.py). O menu de legendas agora prioriza nomes de idiomas amigáveis e exibe corretamente os tipos [FULL] e [Forçada], evitando a poluição visual de nomes de arquivos.",
+      "lessons": "1. A lógica de labels deve ser síncrona entre o frontend e o backend para evitar confusão. 2. A detecção de 'nome de arquivo' é crucial para decidir quando substituir o rótulo pelo idioma. 3. O uso de flags amigáveis como [FULL] melhora significativamente a percepção de qualidade do player."
+    },
+    {
+      "timestamp": "2026-04-10T06:35:09.514358",
+      "type": "plan_generated",
+      "problem": "Menus de audio e legenda exibem nomes tecnicos em vez de idiomas humanizados",
+      "file": "plano_rotulos_humanizados_menus_audio_legenda.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-10T06:56:46.139021",
+      "type": "execution_feedback",
+      "file": "plano_rotulos_humanizados_menus_audio_legenda.md",
+      "execution_result": "Implementada a normalizacao canonica de labels para audio e legenda com nova camada compartilhada em media_track_labels.py, persistencia corrigida para sidecars externalizadas em file_manager.py, recomputacao defensiva de labels tecnicas antigas em http_server.py e endurecimento dos fallbacks do player web em templates/index.html para nao reintroduzir filenames tecnicos. Validacao real concluida com py_compile dos arquivos alterados e runtime assertions da nova camada de labels confirmando Ingles, Comentário do Diretor - Espanhol e Português [Forçada]. Os unittests existentes nao puderam rodar completos neste ambiente porque http_server.py depende de modulos ausentes como aiohttp, jwt, aiofiles e pymongo.",
+      "lessons": "Este bug nao estava em um unico ponto: a label boa do backend era recontaminada por metadata persistida, fallback de pasta e label nativa do browser. Centralizar a heuristica em uma camada compartilhada e tornar o frontend defensivo contra raw labels tecnicas reduz muito a chance de regressao. Em ambientes locais deste projeto, os testes que importam http_server.py so sao executaveis com um venv que contenha as dependencias do servidor; py_compile e asserts isolados ajudam a validar a logica quando esse ambiente nao esta disponivel."
+    },
+    {
+      "timestamp": "2026-04-10T06:57:01.686138",
+      "type": "plan_generated",
+      "problem": "PDFs no mobile não estão apresentando thumbnail",
+      "file": "plano_mobile_pdf_thumbnail.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-10T07:26:34.194148",
+      "type": "execution_feedback",
+      "file": "plano_rotulos_humanizados_menus_audio_legenda.md",
+      "execution_result": "Após a implementação das labels humanizadas surgiu regressão observável no playback web de MKV com 404 'Arquivo não encontrado' na criação da sessão HLS. A correção adicionou fallback defensivo em file_manager.py:get_file_meta() para resolver metadata por listagem do diretório pai e comparação Unicode NFC/NFD do filename quando a busca direta falha. Validação real concluída com py_compile de file_manager.py/http_server.py/media_track_labels.py e teste runtime com FakeDb confirmando que o fallback encontra o arquivo mesmo quando o path pedido e o path armazenado divergem por normalização Unicode.",
+      "lessons": "O funil de playback web depende fortemente de get_file_meta(); quando esse lookup falha, o sintoma aparece como 404 no HLS session, stream e thumbnail. Em arquivos com acentos e histórico de cópia no macOS, vale ter fallback por diretório pai + filename normalizado além do lookup direto por path. Também ficou claro que ambiente cheio impede aplicar patches e here-docs, então limpar cache transitório do projeto pode ser necessário para conseguir corrigir regressões urgentes."
+    },
+    {
+      "timestamp": "2026-04-10T08:04:39.784840",
+      "type": "execution_feedback",
+      "file": "plano_rotulos_humanizados_menus_audio_legenda.md",
+      "execution_result": "Melhorei a identificação de idioma das legendas sidecar corrigindo falsos positivos no parser de filename, endurecendo a normalização de códigos de idioma, recomputando sidecars geradas com metadata legado incorreto e adicionando fallback por conteúdo da legenda para casos ambíguos.",
+      "lessons": "Não basta humanizar labels; a extração de idioma precisa rejeitar tokens ambíguos do título como de/la/el, não aceitar qualquer código de 2 letras no frontend e desconfiar de metadata persistido quando o filename técnico ou o conteúdo da própria legenda apontam outro idioma."
+    },
+    {
+      "timestamp": "2026-04-10T08:14:35.163430",
+      "type": "execution_feedback",
+      "file": "plano_mobile_pdf_thumbnail.md",
+      "execution_result": "Sucesso. Implementado warmup agressivo no backend (list_directory) e resiliência aumentada no mobile (5 retentativas de 8s para PDFs). Adicionado loader visual para PDFs.",
+      "lessons": "Thumbnails de arquivos pesados (PDF) exigem warmup proativo na listagem de pastas e tolerância maior no frontend para evitar ícones genéricos por timeout."
+    },
+    {
+      "timestamp": "2026-04-10T08:20:47.390991",
+      "type": "plan_generated",
+      "problem": "Gerar build Android APK de produção via Expo EAS",
+      "file": "plano_build_android_apk.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-10T08:28:48.617348",
+      "type": "execution_feedback",
+      "file": "plano_build_android_apk.md",
+      "execution_result": "Build Android APK (Release) iniciado com sucesso. Link: https://expo.dev/accounts/joaopfcastro/projects/tcloud-mobile/builds/0f61f76c-304a-42a1-9cfc-637f6ca5000e",
+      "lessons": "Perfil apk-release validado; necessário PATH explícito para npx no macOS."
+    },
+    {
+      "timestamp": "2026-04-10T08:38:44.873924",
+      "type": "plan_generated",
+      "problem": "Erro 500 ao carregar legendas em arquivos MP4 no TCloud Web",
+      "file": "plano_subtitle_mp4_error.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-10T08:43:55.880083",
+      "type": "execution_feedback",
+      "file": "plano_subtitle_mp4_error.md",
+      "execution_result": "Sucesso. Backend agora detecta arquivos de legenda pela extensão e serve como sidecar automaticamente, corrigindo o erro 500 no MP4 nativo.",
+      "lessons": "Sempre adicionar fallbacks baseados em extensão de arquivo para rotas de extração de mídia para tolerar discrepâncias do frontend."
+    },
+    {
+      "timestamp": "2026-04-10T08:56:19.395146",
+      "type": "plan_generated",
+      "problem": "MKV Subtitle 500 error and Seek Playlist failure",
+      "file": "plano_mkv_subtitle_seek.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-10T09:00:02.753621",
+      "type": "execution_feedback",
+      "file": "plano_mkv_subtitle_seek.md",
+      "execution_result": "Sucesso na implementação das melhorias de probe e seek. Testes de regressão passaram.",
+      "lessons": "MKV cloud exige parâmetros de probe robustos (-analyzeduration 20M) e flags de fastseek para evitar erros de playlist no Video.js durante seeks."
+    },
+    {
+      "timestamp": "2026-04-10T11:59:25.383422",
+      "type": "plan_generated",
+      "problem": "Player MKV web falha no seek forward, usa loading pesado para audio e legenda e perde autoplay apos reposicionamento",
+      "file": "plano_mkv_seek_autoplay_notificacao_discreta.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-10T12:06:45.559692",
+      "type": "execution_feedback",
+      "file": "plano_mkv_seek_autoplay_notificacao_discreta.md",
+      "execution_result": "Implementacao aplicada no player web MKV/HLS e nos espelhos de deploy. O bootstrap de trilhas passou a usar o overlay discreto centralizado via updateTrackSyncStatus em vez do loading pesado para audio/legenda; a intencao de autoplay agora e preservada com _tcloudPlaybackIntent para evitar falso paused durante seek; caminhos de direct play em blob/MSE foram bloqueados enquanto o bootstrap nao atingir resumed; e a destruicao/retire da sessao anterior ganhou janela maior para reduzir 404 de playlist antiga. Validacao real concluida com node --check dos scripts extraidos de templates/index.html e deploy/src/templates/index.html e py_compile de http_server.py e deploy/src/http_server.py.",
+      "lessons": "No seek MKV/HLS, perder autoplay pode ser tanto um problema de gate quanto de captura fraca da intencao do usuario; rastrear play/pause explicitamente no player e mais robusto do que confiar apenas em paused() no momento do seek. Tambem ficou claro que o projeto ja tinha um canal visual melhor para trilhas em updateSubtitleStatusOverlay; o erro era continuar usando o overlay pesado do player para sincronizacao de audio/legenda. Por fim, aumentar com cuidado a graca da sessao anterior e os delays de destroy ajuda a reduzir 404 residuais sem voltar a destruicao agressiva que historicamente piorava a transicao."
+    },
+    {
+      "timestamp": "2026-04-10T12:51:19.892027",
+      "type": "execution_feedback",
+      "file": "plano_mkv_seek_autoplay_notificacao_discreta.md",
+      "execution_result": "Refinamento adicional aplicado no autoplay pos-seek do player web MKV/HLS. O fluxo passou a capturar um snapshot de intencao de reproducao no inicio da interacao com a progress bar e no evento de seeking, e o handler de pause deixou de apagar _tcloudPlaybackIntent durante scrubbing/seek tecnico. Isso endereca o sintoma visto no console, em que wasPlayingBeforeSeek chegava false mesmo quando o usuario estava assistindo antes de avancar a barra. Validacao real executada com node --check dos scripts extraidos de templates/index.html e deploy/src/templates/index.html.",
+      "lessons": "Para seek server-side em Video.js, inferir autoplay so no momento do request e fragil porque o player pode emitir pause/seeking antes do handler principal. A captura correta precisa acontecer no inicio da interacao da barra e o pause tecnico durante scrubbing nao pode ser tratado como pausa intencional do usuario."
+    },
+    {
+      "timestamp": "2026-04-10T18:06:08.039655",
+      "type": "plan_generated",
+      "problem": "PDFs grandes estao lentos porque a thumbnail ainda depende do PDF original em vez de um sidecar oculto persistente",
+      "file": "plano_pdf_thumbnail_oculta_upload_telegram.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-10T20:53:51.478406",
+      "type": "execution_feedback",
+      "file": "plano_pdf_thumbnail_oculta_upload_telegram.md",
+      "execution_result": "Implementado sidecar oculto de thumbnail para PDF no backend, com geracao no upload classico e chunked, persistencia do vinculo em meta.preview_asset, consumo preferencial no Web e no Mobile e filtragem de arquivos ocultos das listagens. Validacao concluida com py_compile, unittest de upload classico/chunked e renderizacao PDF, teste Jest do helper mobile e tsc sem erros.",
+      "lessons": "No codigo real, o buraco mais importante estava em finish_stream_upload, que finalizava PDFs sem gerar preview persistente. O caminho mais robusto foi tratar a primeira pagina como arquivo oculto persistente em /.sys/pdf_thumbs e reaproveitar o padrao de sidecar ja existente no FileManager. A validacao tambem mostrou um warning real de cache em disco; criar o diretorio da thumb dentro de _cache_thumbnail_payload foi necessario para a solucao ficar limpa em runtime, nao so nos testes."
+    },
+    {
+      "timestamp": "2026-04-10T21:25:26.073634",
+      "type": "plan_generated",
+      "problem": "Rebuild Android APK para distribuição via Expo EAS",
+      "file": "plano_rebuild_android_apk_eas.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-11T22:11:17.508910",
+      "type": "plan_generated",
+      "problem": "Aviso de carregamento de audio e legendas aparece em arquivos nativos em vez de ficar restrito ao fluxo MKV",
+      "file": "plano_aviso_audio_legendas_apenas_mkv.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-11T22:14:31.655640",
+      "type": "execution_feedback",
+      "file": "plano_aviso_audio_legendas_apenas_mkv.md",
+      "execution_result": "Implementacao aplicada nos templates raiz e deploy: o helper updateTrackSyncStatus agora bloqueia os avisos 'Carregando audio e legendas...' e 'Sincronizando legenda...' para arquivos nao MKV, preservando o carregamento funcional de trilhas e mantendo o aviso para MKV transcodado. Validacao real concluida com node --check do JavaScript inline extraido de templates/index.html e deploy/src/templates/index.html, alem de conferencia estatica dos call sites e sincronizacao dos espelhos.",
+      "lessons": "No player Web do TCloud, o problema nao estava em loadMediaTracks(), e sim em deixar o helper visual ignorar o tipo real do arquivo. Anexar o item atual ao player e centralizar a elegibilidade do aviso no proprio updateTrackSyncStatus reduz regressao futura melhor do que espalhar ifs por cada call site."
+    },
+    {
+      "timestamp": "2026-04-12T08:38:35.415599",
+      "type": "plan_generated",
+      "problem": "Transicao brusca e falta de fluidez no carrossel de imagens do TCloud Mobile",
+      "file": "plano_mobile_carrossel_imagem_transicao_suave.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-12T08:44:17.980007",
+      "type": "execution_feedback",
+      "file": "plano_mobile_carrossel_imagem_transicao_suave.md",
+      "execution_result": "Implementacao concluida no viewer mobile com janela curta de preload, promocao antecipada de full-res para imagem atual e adjacentes, placeholder persistente e loader menos invasivo. Validacao real executada com viewer-image-window.test.ts, viewer-gallery-store.test.ts, npx tsc --noEmit e eslint dos arquivos alterados, todos aprovados.",
+      "lessons": "A causa raiz estava na promocao tardia de streamUrl para o slide seguinte, nao no gesto do FlatList. A correcao viavel no contexto atual foi manter o pager existente e adicionar helper puro de janela de preload, cache readiness por path e placeholder continuo no TCloudRemoteImage, evitando reescrever o carrossel inteiro."
+    },
+    {
+      "timestamp": "2026-04-12T09:13:44.718523",
+      "type": "plan_generated",
+      "problem": "Migrar o player mobile para react-native-video com audio, legendas automaticas e importacao",
+      "file": "plano_mobile_react_native_video_legendas_audio.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-12T09:26:13.404646",
+      "type": "execution_feedback",
+      "file": "plano_mobile_react_native_video_legendas_audio.md",
+      "execution_result": "Migracao executada no TCloudMobile: expo-video removido, react-native-video integrado via plugin Expo, viewer mobile refatorado para consumir media_tracks/subtitle_candidates, trocar audio por /stream?audio=N, selecionar/importar legendas do TCloud e do dispositivo, com labels humanizadas e validacao local em lint/typecheck/jest.",
+      "lessons": "No mobile do TCloud, a combinacao mais robusta foi manter o video em /stream e anexar apenas a legenda selecionada em source.textTracks. Para importacao do dispositivo, upload HTTP + polling em /api/server_uploads foi mais confiavel que depender de file:// local. A tipagem de react-native-video v6 exige SelectedTrackType enum e language ISO639_1 para textTracks."
+    },
+    {
+      "timestamp": "2026-04-12T09:28:45.731578",
+      "type": "plan_generated",
+      "problem": "Rebuild Android APK com transição suave da Splash Screen (cor #1a1d23)",
+      "file": "plano_rebuild_android_splash_suave.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-12T10:26:34.605593",
+      "type": "plan_generated",
+      "problem": "Player mobile lento, overlays bloqueando controles e trilhas de audio/legenda sem efeito",
+      "file": "plano_mobile_player_rapido_controles_trilhas_funcionais.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-12T11:10:01.910404",
+      "type": "execution_feedback",
+      "file": "plano_mobile_player_rapido_controles_trilhas_funcionais.md",
+      "execution_result": "Player mobile ajustado para UX mais leve e trocas funcionais: overlay central removido, barra inferior removida, buffering virou chip não bloqueante, áudio passou a usar apenas source.uri com ?audio=, e legendas agora usam URLs absolutas validadas antes da aplicação.",
+      "lessons": "No mobile do TCloud, URLs relativas de legenda vindas do backend precisam ser absolutizadas no client antes de chegar ao react-native-video. Também é importante usar uma única autoridade para áudio no player e evitar overlays persistentes ou updates de progresso desnecessários que brigam com os controles nativos."
+    },
+    {
+      "timestamp": "2026-04-12T11:36:19.334078",
+      "type": "plan_generated",
+      "problem": "Criação de build developer Android APK via EAS",
+      "file": "plano_build_developer_android.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-12T11:40:54.607925",
+      "type": "execution_feedback",
+      "file": "plano_build_developer_android.md",
+      "execution_result": "Build iniciada com sucesso via EAS. URL da build: https://expo.dev/accounts/joaopfcastro/projects/tcloud-mobile/builds/02bb4db3-5272-4511-91bf-7036fac102ae",
+      "lessons": "O ambiente de terminal inicial tem PATH limitado. Foi necessário incluir /opt/homebrew/bin para localizar node, npm e eas. O comando eas deve ser executado com --non-interactive em ambientes automatizados."
+    },
+    {
+      "timestamp": "2026-04-12T12:15:14.076492",
+      "type": "plan_generated",
+      "problem": "Player mobile mostra legenda carregada no header, mas o icone nativo CC nao fica sincronizado nem funcional para selecionar a trilha.",
+      "file": "plano_mobile_sincronia_legenda_nativa_player.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-12T12:19:40.818032",
+      "type": "execution_feedback",
+      "file": "plano_mobile_sincronia_legenda_nativa_player.md",
+      "execution_result": "Player mobile passou a usar catalogo estavel de textTracks no react-native-video, sincronizacao via onTextTracks/onTextTrackDataChanged e controlsStyles explicito no Android. O botao customizado de legenda agora escreve no mesmo estado consumido pelo player nativo, sem reconstruir textTracks a cada troca.",
+      "lessons": "No react-native-video mobile, selectedTextTrack deve mudar separadamente de source.textTracks. Reconstruir textTracks por clique reinicia o playback e quebra a utilidade do CC nativo. Eventos onTextTracks e onTextTrackDataChanged sao essenciais para reconciliar o estado real do player com a UI customizada."
+    },
+    {
+      "timestamp": "2026-04-12T12:36:33.453465",
+      "type": "plan_generated",
+      "problem": "Erro no player mobile ao aplicar legenda, mensagem duplicada e reconhecimento falho de sidecar na mesma pasta",
+      "file": "plano_mobile_legendas_erro_duplo_reconhecimento_mesma_pasta.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-12T12:44:29.854571",
+      "type": "execution_feedback",
+      "file": "plano_mobile_legendas_erro_duplo_reconhecimento_mesma_pasta.md",
+      "execution_result": "Player mobile ajustado para promover legendas manuais ao catálogo nativo antes da seleção, eliminar a duplicidade de erro no fluxo de troca e reforçar a observabilidade/discovery do caso Sintel.mp4 + Sintel.pt.srt. Validação concluída com tsc e eslint no TCloudMobile, py_compile dos arquivos Python e script direcionado confirmando discovery/candidate payload do sidecar same_dir.",
+      "lessons": "O defeito central não estava só no discovery: a legenda manual falhava porque selectedTextTrack dependia de um catálogo que não era atualizado antes da tentativa de aplicação. Também ficou claro que rollback de trilha e erro fatal de playback precisam ter superfícies visuais separadas para não duplicar mensagens. No backend, blindar o caso real com teste/script específico de same_dir é mais eficaz do que assumir que o fallback existente cobre todos os nomes simples."
+    },
+    {
+      "timestamp": "2026-04-12T12:56:16.078811",
+      "type": "execution_feedback",
+      "file": "plano_mobile_legendas_erro_duplo_reconhecimento_mesma_pasta.md",
+      "execution_result": "Segundo ciclo de execução: _gather_subtitle_candidates passou a preservar sidecars descobertas quando o probe do vídeo falha, cobrindo o caso real /Sintela18/Sintel.mp4 com subtitleCandidatesCount 0 no mobile. No player mobile, handleLoad agora confirma a legenda pendente quando a trilha esperada já veio no onLoad, reduzindo timeout ao selecionar sidecar do TCloud.",
+      "lessons": "O log do Expo revelou que o bug principal não era apenas matching de arquivo: sidecars descobertas podiam ser descartadas depois por uma exceção de probe, fazendo a API inteira responder vazia. No mobile, depender só de onTextTracks/onTextTrackDataChanged era frágil; onLoad também precisa funcionar como evidência de aplicação quando o catálogo já foi recarregado com a trilha pedida."
+    },
+    {
+      "timestamp": "2026-04-12T13:05:03.920521",
+      "type": "plan_generated",
+      "problem": "Legendas mobile continuam falhando no root /Sintel (1).mp4 sem discovery automatico e sem logs suficientes para fechar a causa raiz",
+      "file": "plano_mobile_legendas_root_same_dir_logs_robustos.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-12T13:09:40.348600",
+      "type": "execution_feedback",
+      "file": "plano_mobile_legendas_root_same_dir_logs_robustos.md",
+      "execution_result": "Implementado patch de matching para ignorar sufixo de copia em nomes como /Sintel (1).mp4, com logs estruturados no pipeline backend/mobile e teste cobrindo sidecar no root virtual; validado com ./venv/bin/python -m unittest test_subtitle_labels.py e npm --prefix TCloudMobile run lint.",
+      "lessons": "O caso root virtual com nome duplicado por sufixo parentetico falhava no matching por token extra; normalizar esse sufixo no stem do video fecha o discovery sem refatoracao ampla. Logs por etapa em discovery e aplicacao manual ajudam a separar catalogo automatico vazio de falha de confirmacao nativa."
+    },
+    {
+      "timestamp": "2026-04-12T16:42:35.745401",
+      "type": "execution_feedback",
+      "file": "plano_mobile_legendas_root_same_dir_logs_robustos.md",
+      "execution_result": "Implementado fallback mobile para descobrir sidecars da mesma pasta quando subtitle_candidates vier vazio e reload controlado do react-native-video ao aplicar/remover legenda, preservando posição. Validado com npm --prefix TCloudMobile run lint (sem erros, apenas warnings pré-existentes do projeto).",
+      "lessons": "Quando o backend real ainda responde catalogo vazio, o mobile pode reconstruir candidatos a partir de listFiles da pasta atual usando heurística de basename. Para react-native-video 6.x, adicionar sidecar em runtime precisa forçar reload do player para o nativo reprocessar textTracks; verificar a URL remota sozinha nao basta."
+    },
+    {
+      "timestamp": "2026-04-12T16:55:03.373791",
+      "type": "execution_feedback",
+      "file": "plano_mobile_legendas_root_same_dir_logs_robustos.md",
+      "execution_result": "Ajustado o fluxo manual para materializar a legenda escolhida em arquivo .vtt local antes de enviá-la ao react-native-video, além de melhorar a sheet de opções com rolagem para listas longas. Validado com npm --prefix TCloudMobile run lint (sem erros, apenas warnings antigos).",
+      "lessons": "Em Android, sidecar externa por URL HTTP pode continuar invisível ao player nativo mesmo com fetch válido; materializar a trilha em cache local é uma estratégia mais robusta para o react-native-video reprocessar textTracks. Sheets com muitas legendas precisam de área rolável para não degradar a seleção."
+    },
+    {
+      "timestamp": "2026-04-12T17:02:45.572456",
+      "type": "execution_feedback",
+      "file": "plano_mobile_legendas_root_same_dir_logs_robustos.md",
+      "execution_result": "Corrigido o nome do arquivo de cache das legendas para Android, trocando o cache key por versão sanitizada sem barras/acentos, e ampliado o reconhecimento de idiomas a partir do filename para cobrir códigos como nl/pl/ru. Validado com npm --prefix TCloudMobile run lint (sem erros, apenas warnings antigos).",
+      "lessons": "Em expo-file-system no Android, o path final precisa ser totalmente sanitizado; usar nomes derivados de path/label com barras ou caracteres reservados pode virar subdiretório implícito e causar ENOENT. Para labels corretas no menu, a inferência deve usar normalizeLanguageCode em qualquer token do filename, não uma lista curta fixa."
+    },
+    {
+      "timestamp": "2026-04-12T17:12:13.774820",
+      "type": "execution_feedback",
+      "file": "plano_mobile_legendas_root_same_dir_logs_robustos.md",
+      "execution_result": "Migrado o fluxo de sidecar no mobile para renderização manual em overlay a partir do VTT retornado pelo backend, sincronizada por onProgress, sem depender do reconhecimento nativo de textTracks no Android. Mantidas as melhorias de menu com scroll e labels. Validado com npm --prefix TCloudMobile run lint (sem erros, apenas warnings antigos).",
+      "lessons": "Quando o react-native-video/Android continua emitindo onTextTracks vazio mesmo com subtitle URI válida e arquivo local preparado, a solução mais robusta no contexto atual é tratar sidecars como overlay controlado pelo app. Isso evita ficar bloqueado por limitações/bugs do parser nativo de legendas externas e entrega comportamento determinístico no TCloud mobile."
+    },
+    {
+      "timestamp": "2026-04-12T17:24:11.669371",
+      "type": "plan_generated",
+      "problem": "Legendas mobile não funcionam: overlay manual falha no parse SRT e materialização em disco falha com ENOENT no Android",
+      "file": "plano_legendas_nativas_mobile.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-12T17:35:00.140439",
+      "type": "plan_generated",
+      "problem": "ExoPlayer 6.x ignora textTracks remotas (textTrackTitles sempre vazio); tipo SUBRIP errado para URL que entrega WebVTT; reload antes de applyTracks causa remontagem com tracks vazias",
+      "file": "plano_legendas_nativas_mobile.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-12T17:50:27.562490",
+      "type": "plan_generated",
+      "problem": "Grid mobile quebra alinhamento na última linha incompleta",
+      "file": "plano_grid_ultima_linha_incompleta_mobile.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-12T17:52:38.783157",
+      "type": "execution_feedback",
+      "file": "plano_grid_ultima_linha_incompleta_mobile.md",
+      "execution_result": "Correcao implementada na grid mobile: BrowserGridItem agora usa coluna rigida compartilhada com BrowserSkeleton via browser-layout.ts, FlatList passou a usar GRID_COLUMNS e columnWrapperStyle com flex-start. ESLint dos arquivos alterados passou. Typecheck global continua falhando apenas por erros preexistentes em TCloudMobile/app/viewer.tsx, fora do escopo desta entrega.",
+      "lessons": "Em FlatList com numColumns fixo no React Native, flex proporcional no item real pode quebrar a ultima linha incompleta mesmo quando o skeleton parece correto. A forma mais robusta foi padronizar um contrato unico de coluna com flexBasis+width+maxWidth e flexGrow/flexShrink controlados, alem de alinhar o wrapper da linha ao inicio para evitar redistribuicao futura."
+    },
+    {
+      "timestamp": "2026-04-12T18:28:51.674534",
+      "type": "plan_generated",
+      "problem": "Legendas sidecar sao baixadas, mas o player nativo nao reconhece nem renderiza a TextTrack injetada",
+      "file": "plano_legendas_sidecar_injecao_texttrack_player_nativo.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-12T18:40:56.612550",
+      "type": "execution_feedback",
+      "file": "plano_legendas_sidecar_injecao_texttrack_player_nativo.md",
+      "execution_result": "Implementacao concluida no mobile: o viewer agora separa availableSubtitleEntries do attach set nativo, injeta no react-native-video apenas trilhas materializadas com nativeTrackUri local, agenda o reload so apos o commit do attach set e remove o sucesso otimista quando recognizedTitles permanece vazio. Validacao executada: jest no novo teste de attach set passou, npx tsc --noEmit passou e npx eslint nos arquivos alterados passou.",
+      "lessons": "No TCloudMobile, source.textTracks nao pode ser derivado diretamente do catalogo de UI; o player nativo precisa receber um attach set separado com trilhas realmente materializadas. Tambem ficou confirmado no codigo real que o reload do Video precisa acontecer apos o commit React do attach set, senao o remount volta com textTracks vazios. Por fim, subtitle_apply_settled_fallback sem confirmacao nativa cria falso positivo e precisa ser tratado como falha com rollback."
+    },
+    {
+      "timestamp": "2026-04-12T20:52:53.943925",
+      "type": "plan_generated",
+      "problem": "Player nativo mobile nao reconhece sidecar .vtt local via file:// mesmo com attach set correto",
+      "file": "plano_legendas_sidecar_content_uri_player_nativo.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-12T21:01:26.054256",
+      "type": "execution_feedback",
+      "file": "plano_legendas_sidecar_content_uri_player_nativo.md",
+      "execution_result": "Implementei a resolucao de URI nativa para legendas sidecar no mobile: o modulo AndroidOpenFile agora expoe resolveContentUri(), o viewer materializa a legenda em cache e promove content:// quando disponivel, e o attach set/logs passaram a registrar scheme, mime e fallback do resolver. Validacao real concluida com jest, tsc e eslint passando. A compilacao Android nativa nao rodou neste ambiente porque falta Java Runtime, entao a confirmacao final de reconhecimento do player ainda depende de rebuild/apparelho.",
+      "lessons": "Depois que o attach set React ficou correto, a etapa mais valiosa foi explicitar o contrato da URI nativa em vez de seguir ajustando estado de UI. Reaproveitar o FileProvider existente no modulo AndroidOpenFile minimizou mudanca e deixou o fallback para file:// visivel por log quando a bridge nativa ainda nao estiver disponivel ou falhar. Para esse tipo de bug, logs com nativeTrackScheme, resolverAttempted e resolverError reduzem bastante a ambiguidade da validacao em device."
+    },
+    {
+      "timestamp": "2026-04-12T21:06:46.945371",
+      "type": "plan_generated",
+      "problem": "Criação de build nativa APK para distribuição via EAS",
+      "file": "plano_build_apk_distribuicao.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-12T21:11:19.973078",
+      "type": "execution_feedback",
+      "file": "plano_build_apk_distribuicao.md",
+      "execution_result": "Build iniciada com sucesso via EAS (perfil apk-release). Link do dashboard: https://expo.dev/accounts/joaopfcastro/projects/tcloud-mobile/builds",
+      "lessons": "Utilizar o perfil apk-release com buildType: apk garante a geração de um instalável direto para distribuição interna."
+    },
+    {
+      "timestamp": "2026-04-12T21:29:59.766567",
+      "type": "plan_generated",
+      "problem": "Criação de build debug/desenvolvimento APK via EAS",
+      "file": "plano_build_apk_debug.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-12T21:43:48.147819",
+      "type": "plan_generated",
+      "problem": "Transformar o ecossistema de apps do TCloud Web, trocar Estatisticas por Configuracoes como app principal e centralizar tudo que e configuravel no TCloud",
+      "file": "plano_tcloud_web_apps_ricos_configuracoes_principal.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-12T21:54:18.229915",
+      "type": "execution_feedback",
+      "file": "plano_tcloud_web_apps_ricos_configuracoes_principal.md",
+      "execution_result": "Implementacao concluida com metadata formal de apps, store persistente de configuracoes, APIs /api/settings, app first-party Configuracoes e alinhamento do deploy/runtime.",
+      "lessons": "No TCloud, app principal precisa ser metadata formal e exemplos prefixados com _ devem ficar fora da sidebar. Configuracoes editaveis pela Web precisam usar store persistente propria em runtime dir em vez de depender de rewrite do .env dentro do container. Em deploy, alinhar TCLOUD_RUNTIME_DIR com os volumes montados evita falsa persistencia."
+    },
+    {
+      "timestamp": "2026-04-13T08:26:12.208694",
+      "type": "plan_generated",
+      "problem": "Melhorar app Configurações do TCloud Web com design nativo, segredos funcionais e seção de armazenamento",
+      "file": "plano_configuracoes_web_design_funcional_armazenamento.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-13T08:43:40.859001",
+      "type": "execution_feedback",
+      "file": "plano_configuracoes_web_design_funcional_armazenamento.md",
+      "execution_result": "App Configurações foi redesenhado para usar linguagem visual alinhada ao Finder Web do TCloud, ganhou seção Armazenamento, endpoint dedicado para revelação de segredos por olhinho e payload agregado /api/settings/storage. Validação executada com py_compile, checagem de sintaxe do script embutido via node --check, teste direcionado do contrato de segredos em Config e verificação de espelho entre raiz e deploy/src.",
+      "lessons": "No TCloud, py_compile não captura erros lógicos de refactor em payloads; vale complementar com smoke tests direcionados para métodos de Config. A revelação segura de segredos funciona melhor preservando /api/settings mascarado e adicionando rota dedicada no-store por chave. O backend atual expõe inventário de armazenamento principalmente pelo conjunto offline conhecido, então a UX de Armazenamento deve refletir essa verdade técnica em vez de prometer um inventário universal de cache."
+    },
+    {
+      "timestamp": "2026-04-13T08:49:01.960036",
+      "type": "plan_generated",
+      "problem": "Remoção de rótulos de principal da interface",
+      "file": "plano_remocao_rotulo_principal.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-13T08:54:06.367678",
+      "type": "plan_generated",
+      "problem": "Melhoria estética premium do app de configurações (macOS style)",
+      "file": "plano_melhoria_estetica_configuracoes.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-13T09:05:07.408786",
+      "type": "plan_generated",
+      "problem": "Transbordamento de texto em tokens de bots",
+      "file": "plano_corrigir_transbordamento_texto.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-13T09:34:10.340224",
+      "type": "plan_generated",
+      "problem": "Diferenciação de ciclo de vida de arquivos (Cache Permanente vs. Temporário 24h)",
+      "file": "plano_diferenciacao_ciclo_vida_cache.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-13T09:43:42.449211",
+      "type": "plan_generated",
+      "problem": "Falha no reconhecimento de legendas locais via content URI no player nativo mobile",
+      "file": "plano_legendas_content_uri_http_player_nativo.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-13T09:49:52.804071",
+      "type": "execution_feedback",
+      "file": "plano_diferenciacao_ciclo_vida_cache.md",
+      "execution_result": "Sucesso absoluto. Backend e Frontend sincronizados com a nova taxonomia de ciclo de vida.",
+      "lessons": "A integração entre o storage handler e o get_recents foi eficiente para mapear cache volátil sem redundância de dados."
+    },
+    {
+      "timestamp": "2026-04-13T10:33:32.645905",
+      "type": "execution_feedback",
+      "file": "plano_legendas_content_uri_http_player_nativo.md",
+      "execution_result": "Viewer mobile ajustado para abandonar file/content URI no caminho principal de legenda: handleSelectSubtitle agora valida e anexa a trilha por URL HTTP autenticada de /api/subtitle, adiciona nativeDeliveryMode=server_http, centraliza attach/logs por esquema e reforca a verificacao remota do recurso. Validacao real concluida com npx tsc --noEmit, npm test -- --runInBand utils/__tests__/subtitle-native-attach.test.ts api/__tests__/tcloud.test.ts e npm run lint -- app/viewer.tsx utils/subtitle-native-attach.ts api/tcloud.ts.",
+      "lessons": "No TCloudMobile, o ponto critico nao era mais discovery nem FileProvider: o app ja tinha uma subtitle URL HTTP valida e a perdia ao materializar o VTT em cache local antes do attach. Tratar nativeTrackUri como a URI final real entregue ao player, com nativeDeliveryMode explicito e attach/logs por esquema, reduz bastante a ambiguidade do runtime. Tambem ficou confirmado que vale centralizar a absolutizacao de URLs de legenda em buildSubtitleTrackUri e manter file/content apenas como fallback experimental, nao como contrato principal."
+    },
+    {
+      "timestamp": "2026-04-13T10:37:43.819213",
+      "type": "plan_generated",
+      "problem": "Atualização de build debug/desenvolvimento APK via EAS",
+      "file": "plano_build_apk_debug_v2.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-13T10:45:45.804174",
+      "type": "plan_generated",
+      "problem": "Listagem do cache temporario falha e linguagem offline confunde armazenamento",
+      "file": "plano_correcao_cache_temporario_e_nomenclatura_servidor.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-13T10:47:20.676205",
+      "type": "execution_feedback",
+      "file": "plano_build_apk_debug_v2.md",
+      "execution_result": "FALHA: Limite de builds gratuitas do EAS atingido para este mês.",
+      "lessons": "Quando o limite do EAS Cloud é atingido, a alternativa é realizar o build local usando a flag --local."
+    },
+    {
+      "timestamp": "2026-04-13T11:01:11.647015",
+      "type": "execution_feedback",
+      "file": "plano_correcao_cache_temporario_e_nomenclatura_servidor.md",
+      "execution_result": "Implementacao aplicada na raiz e em deploy/src. O inventario de /api/settings/storage agora nasce de get_storage_inventory(), baseado em arquivos visiveis com chunks e no estado real dos chunks em disco, eliminando a heuristica por recents para o cache temporario. O payload passou a expor contadores canonicos de itens permanentes, temporarios, prontos e preparando, preservando aliases legados de compatibilidade. A UI de Configuracoes foi atualizada para mostrar No Servidor versus Temporario (24h), com filtros e cards alinhados aos novos campos, e os textos visiveis de offline foram removidos dos principais fluxos de storage e Finder. Validacao real executada com py_compile dos backends raiz/deploy, node --check do JavaScript extraido de apps/settings e templates raiz/deploy, smoke test do helper get_storage_inventory e smoke test do endpoint _handle_api_settings_storage com payload canonico.",
+      "lessons": "No TCloud, get_recents nao serve como fonte de verdade para cache temporario: o inventario correto precisa cruzar o catalogo de arquivos com chunks com o estado efetivo do cache em disco. Tambem ficou claro que a palavra offline deve ficar restrita a compatibilidade tecnica interna; a camada visivel do produto precisa falar em No Servidor e Temporario (24h). Para evitar regressao entre ambientes, backend espelhado entre raiz e deploy/src deve ser validado com diff apos cada mudanca estrutural."
+    },
+    {
+      "timestamp": "2026-04-13T11:01:41.644566",
+      "type": "execution_feedback",
+      "file": "plano_correcao_cache_temporario_e_nomenclatura_servidor.md",
+      "execution_result": "Implementacao concluida na raiz e em deploy/src. O inventario de /api/settings/storage agora nasce de get_storage_inventory(), baseado em arquivos visiveis com chunks e no estado real dos chunks em disco, eliminando a heuristica por recents para o cache temporario. O payload passou a expor contadores canonicos de itens permanentes, temporarios, prontos e preparando, preservando aliases legados de compatibilidade. A UI de Configuracoes foi atualizada para mostrar No Servidor versus Temporario (24h), com filtros e cards alinhados aos novos campos, e os textos visiveis de offline foram removidos dos principais fluxos de storage e Finder. Validacao real concluida com py_compile dos backends raiz/deploy, node --check do JavaScript extraido de apps/settings e templates raiz/deploy, smoke test do helper get_storage_inventory e diff limpo entre os backends espelhados. A tentativa de smoke direto do handler HTTP foi bloqueada no ambiente atual por dependencia local ausente no import de http_server.py (modulo jwt).",
+      "lessons": "No TCloud, get_recents nao serve como fonte de verdade para cache temporario: o inventario correto precisa cruzar o catalogo de arquivos com chunks com o estado efetivo do cache em disco. Tambem ficou claro que a palavra offline deve ficar restrita a compatibilidade tecnica interna; a camada visivel do produto precisa falar em No Servidor e Temporario (24h). Quando o ambiente local nao consegue importar o servidor por dependencia ausente, o historico deve registrar explicitamente a limitacao e apoiar a confianca da entrega em sintaxe, smoke tests focados e paridade entre espelhos raiz/deploy."
+    },
+    {
+      "timestamp": "2026-04-13T11:02:29.664025",
+      "type": "execution_feedback",
+      "file": "plano_correcao_cache_temporario_e_nomenclatura_servidor.md",
+      "execution_result": "Implementacao concluida na raiz e em deploy/src. O inventario de /api/settings/storage agora nasce de get_storage_inventory(), baseado em arquivos visiveis com chunks e no estado real dos chunks em disco, eliminando a heuristica por recents para o cache temporario. O payload passou a expor contadores canonicos de itens permanentes, temporarios, prontos e preparando, preservando aliases legados de compatibilidade. A UI de Configuracoes foi atualizada para mostrar No Servidor versus Temporario (24h), com filtros e cards alinhados aos novos campos, e os textos visiveis de offline foram removidos dos principais fluxos de storage e Finder. Validacao real concluida com py_compile dos backends raiz/deploy, node --check do JavaScript extraido de apps/settings e templates raiz/deploy, smoke test do helper get_storage_inventory, smoke test do handler _handle_api_settings_storage usando venv/bin/python e diff limpo entre os backends espelhados.",
+      "lessons": "No TCloud, get_recents nao serve como fonte de verdade para cache temporario: o inventario correto precisa cruzar o catalogo de arquivos com chunks com o estado efetivo do cache em disco. Tambem ficou claro que a palavra offline deve ficar restrita a compatibilidade tecnica interna; a camada visivel do produto precisa falar em No Servidor e Temporario (24h). Para smoke tests do servidor neste projeto, vale preferir o interpretador do venv local quando imports como jwt nao estao disponiveis no python do sistema."
+    },
+    {
+      "timestamp": "2026-04-13T11:55:37.888496",
+      "type": "plan_generated",
+      "problem": "Quebra de layout e legibilidade ruim no inventário de armazenamento devido a nomes de arquivos longos e elipse central.",
+      "file": "plano_correcao_estetica_inventario.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-13T11:58:54.900855",
+      "type": "execution_feedback",
+      "file": "plano_correcao_estetica_inventario.md",
+      "execution_result": "Sucesso. Implementado truncamento CSS e tooltips no inventário e jobs de armazenamento.",
+      "lessons": "Usar min-width: 0 em containers flex é essencial para que text-overflow: ellipsis funcione em seus filhos em layouts complexos."
+    },
+    {
+      "timestamp": "2026-04-13T20:13:09.663067",
+      "type": "plan_generated",
+      "problem": "Painel APPS com instalacao por ZIP/GitHub, desinstalacao protegida, permissoes granulares e runtime seguro para apps do TCloud",
+      "file": "plano_painel_apps_permissoes_instalacao.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-13T21:17:57.256490",
+      "type": "execution_feedback",
+      "file": "plano_painel_apps_permissoes_instalacao.md",
+      "execution_result": "Implementacao inicial concluida com runtime de apps persistente, instalacao por ZIP/GitHub, painel APPS, permissoes granulares e sessao escopada para apps nao-system; validado com py_compile, unittest e paridade raiz/deploy.",
+      "lessons": "1. O ponto critico real era o envio de JWT bruto ao iframe; a sessao escopada resolve isso para apps nao-system sem quebrar o settings. 2. O registry persistente em runtime precisa sobreviver a rescans sem perder metadados de origem como GitHub/ZIP. 3. Remover allow-same-origin do iframe quebraria o postMessage do runtime por origem opaca; o endurecimento precisa acontecer pelo token escopado e pelos endpoints mediadores, nao por esse sandbox isoladamente."
+    },
+    {
+      "timestamp": "2026-04-14T09:23:05.453487",
+      "type": "plan_generated",
+      "problem": "Mudar frase Preparar no Servidor para Baixar no Servidor!",
+      "file": "plano_baixar_no_servidor.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-14T09:26:41.590575",
+      "type": "execution_feedback",
+      "file": "plano_baixar_no_servidor.md",
+      "execution_result": "Sucesso",
+      "lessons": "O usuário prefere um tom mais limpo na interface, sem o uso de exclamações em comandos padrão."
+    },
+    {
+      "timestamp": "2026-04-14T09:56:08.879047",
+      "type": "plan_generated",
+      "problem": "Pré-selecionar 'Tipo' como ordenação padrão",
+      "file": "plano_predeterminacao_tipo_ordenacao.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-14T10:19:01.995917",
+      "type": "plan_generated",
+      "problem": "Opcao Tipo deve ser o padrao de ordenacao no Finder apos login quando nao houver preferencia salva",
+      "file": "plano_tipo_preselecionado_login.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-14T10:21:36.740130",
+      "type": "execution_feedback",
+      "file": "plano_tipo_preselecionado_login.md",
+      "execution_result": "Correcao implementada em templates/index.html: o estado inicial currentSort e o fallback de loadSortPreference para contextos normais passaram de name asc para type asc. Validacao executada no ambiente confirmou por leitura do arquivo e checagem via node que os dois defaults agora apontam para type e que a excecao de recents permanece em date desc. Nao houve alteracao em login, persistencia de tcloud_sort_pref_* ou endpoints backend.",
+      "lessons": "Neste fluxo, o login nao precisa de tratamento especial porque handleLogin ja recarrega a view por loadPath(currentPath), que por sua vez centraliza a reidratacao de ordenacao em loadSortPreference. Para defaults visuais persistidos em localStorage, a correcao mais segura e mexer apenas no valor inicial e no fallback sem sobrescrever preferencias salvas do usuario."
+    },
+    {
+      "timestamp": "2026-04-14T10:36:37.455014",
+      "type": "plan_generated",
+      "problem": "Preload inteligente no carrossel de imagens do TCloud Web para eliminar loading recorrente entre fotos adjacentes",
+      "file": "plano_preload_inteligente_carrossel_imagens_web.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-14T10:42:43.853885",
+      "type": "execution_feedback",
+      "file": "plano_preload_inteligente_carrossel_imagens_web.md",
+      "execution_result": "Implementado preload inteligente no carrossel web em templates/index.html: o viewer agora deduplica preloads por URL, aquece automaticamente a imagem anterior e a próxima apos a imagem atual estabilizar, poda o cache local do stage para a janela adjacente e limpa o estado corretamente no teardown do modal. Validacao executada com parse real dos blocos <script> do templates/index.html via Node e smoke test em Node com stub de Image confirmando adjacencia [1,3] no item central, borda [1] no primeiro item e preloading de prev/current/next no fluxo principal.",
+      "lessons": "O stage do viewer web ja estava correto visualmente; a lacuna era coordenacao de preload, nao reestruturacao do modal. Centralizar build da URL, preload deduplicado e teardown do stage reduz risco de corrida e de memoria residual. Em ambiente sem browser interativo, um smoke test com stub de Image em Node foi suficiente para validar a logica de adjacencia e aquecimento sem inventar evidencia visual."
+    },
+    {
+      "timestamp": "2026-04-14T22:28:28.252167",
+      "type": "plan_generated",
+      "problem": "Persistencia de configuracoes do app web e ativacao de botoes do painel Configuracoes",
+      "file": "plano_correcao_persistencia_env_botoes_configuracoes.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-14T22:40:29.721934",
+      "type": "execution_feedback",
+      "file": "plano_correcao_persistencia_env_botoes_configuracoes.md",
+      "execution_result": "Implementada persistencia canonica em managed_settings.json com espelho atomico de .env quando o arquivo existe, diagnostico de divergencia/env mirror na API e endurecimento das acoes do app Configuracoes com feedback visivel. Validacao real concluida com py_compile raiz/deploy, node --check do script inline raiz/deploy, unittest dedicado test_settings_persistence.py e regressao em test_app_runtime_platform.py.",
+      "lessons": "No TCloud, o save de Configuracoes nao pode depender de uma unica fonte de verdade. Store gerenciado precisa ser canonico, .env deve ser espelho opportunistico e a UI deve comunicar claramente quando a gravacao ficou so no runtime. Botoes assíncronos em apps embutidos precisam tratar erro de rede e parse JSON explicitamente para nao parecerem mortos."
+    },
+    {
+      "timestamp": "2026-04-15T09:36:54.413588",
+      "type": "plan_generated",
+      "problem": "Polir interface do app Configurações para eliminar quebras de layout em botões e descrições do painel Aplicativos",
+      "file": "plano_polimento_interface_configuracoes_apps.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-15T09:45:48.328094",
+      "type": "plan_generated",
+      "problem": "Polir todo o app Configurações do TCloud com sistema consistente de botões, overflow, cards e responsividade",
+      "file": "plano_polimento_global_app_configuracoes.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-15T10:03:27.101680",
+      "type": "execution_feedback",
+      "file": "plano_polimento_global_app_configuracoes.md",
+      "execution_result": "Implementacao concluida em apps/settings/index.html com polimento sistemico do app Configuracoes: nova taxonomia de botoes, separacao de overflow por semantica, cards e group-cards mais consistentes, tabelas com wrapper responsivo, melhorias visuais em Servidor, Armazenamento, Aplicativos e Diagnostico, e seletor ZIP refinado com CTA proprio e feedback textual truncado. Validacao real executada com node --check do script embutido e screenshots Playwright mockados das secoes Aplicativos, Servidor e Armazenamento, confirmando que os CTAs principais nao quebram em duas linhas e que textos densos ficaram mais controlados.",
+      "lessons": "1. No settings do TCloud, o problema real nao era um botao isolado; a causa raiz estava em contratos fracos de .button e .muted reaproveitados em seis secoes. 2. setButtonBusy precisa preservar innerHTML quando a UI passa a usar botoes com icone e label encapsulado; trocar apenas textContent quebra o componente novo. 3. Para validar frontend embutido em HTML unico, Playwright com rotas mockadas do proprio app e uma forma objetiva de verificar layout sem depender do backend real. 4. O input nativo de file seguia poluindo o visual mesmo apos os outros ajustes; esconder o controle cru e expor um CTA dedicado com linha de selecao refinou bastante a aparencia final."
+    },
+    {
+      "timestamp": "2026-04-16T14:49:09.930228",
+      "type": "plan_generated",
+      "problem": "Persistencia de estado e botao continuar no player de video web",
+      "file": "plano_resume_player_video_web.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-16T15:06:27.609701",
+      "type": "execution_feedback",
+      "file": "plano_resume_player_video_web.md",
+      "execution_result": "Implementada persistencia de progresso no player web com endpoint POST /api/playback_progress, armazenamento cloud em meta.playback_resume, fallback local em localStorage e botao lateral Continuar de MM:SS nos templates principal e deploy.",
+      "lessons": "Para este player, o caminho robusto foi separar resume do bootstrap HLS existente: backend pequeno com helper de meta + rota dedicada, e frontend com controller proprio acoplado a pause/close/ended/timeupdate. O botao precisa viver em #player-container para sobreviver a player-box-maximized e body.fullscreen-mode sem disputar a control bar do Video.js."
+    },
+    {
+      "timestamp": "2026-04-16T18:05:05.479123",
+      "type": "execution_feedback",
+      "file": "plano_resume_player_video_web.md",
+      "execution_result": "A primeira implementacao do resume funcionou parcialmente: o botao apareceu, mas ficou no meio do video, nao sumia durante a reproducao, nao reagia ao clique na barra inferior e desaparecia no fullscreen nativo do player. A segunda iteracao reposicionou o chip para o canto inferior direito, moveu o elemento para dentro do player do Video.js e corrigiu a logica de auto-hide e dismiss pela progress bar.",
+      "lessons": "No Video.js, overlays que precisam sobreviver a fullscreen nativo nao podem ficar como irmaos do elemento do player; precisam ser filhos de player.el(). Tambem e facil quebrar auto-hide quando o timer e reiniciado em todo timeupdate: o correto aqui foi agendar uma unica vez por sessao visivel e dismiss por pointerdown/mousedown/click nos elementos da progress bar para cobrir Safari."
+    },
+    {
+      "timestamp": "2026-04-16T18:37:16.394790",
+      "type": "execution_feedback",
+      "file": "plano_resume_player_video_web.md",
+      "execution_result": "O botão de resume recebeu um refinamento visual com glassmorphism mais rico e os overlays de loading, erro e status de legenda passaram a ser montados dentro do player do Video.js, mantendo visibilidade também em fullscreen.",
+      "lessons": "No TCloud Web, qualquer UI auxiliar do player que precise sobreviver ao fullscreen do Video.js deve ser movida para player.el() e não ficar apenas como irmã do elemento de video no modal. Vale centralizar esse comportamento em um helper único para evitar regressões entre overlays."
+    },
+    {
+      "timestamp": "2026-04-16T20:39:24.092992",
+      "type": "plan_generated",
+      "problem": "Playback HLS web falha com Arquivo não encontrado em arquivos com acento mesmo com metadados ok",
+      "file": "plano_correcao_playback_hls_caminho_utf8.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-16T20:59:12.675624",
+      "type": "execution_feedback",
+      "file": "plano_correcao_playback_hls_caminho_utf8.md",
+      "execution_result": "Correcao implementada no backend e frontend para resolver caminhos cloud com UTF-8, NFD/NFC e percent-encoding. O arquivo alvo deixou de falhar por 'arquivo nao encontrado': /api/file_info e /api/media_tracks responderam para o caminho canonico, e /api/web_playback/session tambem conseguiu resolver o path percent-encoded para o resolved_path canonico do arquivo. Em validacoes posteriores, algumas tentativas de warmup HLS retornaram 'Timeout preparando stream HLS', indicando uma etapa residual de startup/transcodificacao separada do bug de roteamento/path.",
+      "lessons": "Centralizar a resolucao de path cloud no backend evita divergencia entre file manager e player. O frontend tambem precisa propagar resolved_path da sessao para tracks, subtitles e retries; manter o path original pode reintroduzir erro com acentuacao e percent-encoding. Validacoes devem distinguir falha de lookup/path de falha posterior no startup HLS para nao misturar causas."
+    },
+    {
+      "timestamp": "2026-04-16T21:27:06.039672",
+      "type": "plan_generated",
+      "problem": "Timeout preparando stream HLS no warmup cloud apos correcao de path",
+      "file": "plano_timeout_warmup_hls_cloud.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-16T21:35:10.146916",
+      "type": "execution_feedback",
+      "file": "plano_timeout_warmup_hls_cloud.md",
+      "execution_result": "Implementacao concluida no codigo. O startup HLS cloud agora prefere input HTTP interno bruto/seekable em vez de cloud-pipe, faz codec probe nesse mesmo source, tenta remux copy para H.264 com fallback unico para libx264 e aceita replace_session_id para preemptar a sessao anterior antes do novo startup. Validacao real feita com ./venv/bin/python -m py_compile http_server.py managed_config.py test_web_playback_startup.py, ./venv/bin/python -m unittest test_web_playback_startup.py, ./venv/bin/python -m unittest test_hls_subtitle_segmenter.py, ./venv/bin/python -m unittest test_playback_resume_backend.py e checagem sintatica do JavaScript inline de templates/index.html via Node.",
+      "lessons": "O timeout remanescente nao estava mais em lookup de path; o branch cloud quente ainda caia em cloud-pipe e perdia o remux para H.264. Tornar o source HTTP interno o caminho padrao do HLS cloud recuperou probe e remux sem exigir cache total. Outro ponto estrutural era a preempcao apenas nominal no frontend; enviar replace_session_id e destruir a sessao anterior no backend reduz sobreposicao de pipelines FFmpeg em seek/retry/audio-switch. O venv do projeto precisa ser usado para testes que importam http_server.py, porque o python3 do sistema nao tinha a dependencia jwt."
+    },
+    {
+      "timestamp": "2026-04-16T22:00:07.769802",
+      "type": "plan_generated",
+      "problem": "Expandir arquivamento web com extracao multi-formato e compressao integrada",
+      "file": "plano_arquivamento_web_multiformato.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-18T06:33:55.273736",
+      "type": "execution_feedback",
+      "file": "plano_arquivamento_web_multiformato.md",
+      "execution_result": "Implementacao cloud-first concluida na raiz: ArchiveService, rotas /api/archive/*, settings de arquivamento, toolbar/context menu/modais e manager de jobs. Validado com py_compile, checagem de sintaxe do JavaScript da shell e teste end-to-end controlado para compactacao+extracao em zip, tar.gz e 7z. RAR ficou habilitado apenas para extracao via rarfile + bsdtar; criacao de RAR permanece desabilitada.",
+      "lessons": "A arquitetura atual do TCloud ja tinha cache e upload suficientes; o ponto critico era introduzir um servico intermediario de job e capabilities sem abrir escrita no modo local. O rollout real ficou mais seguro mantendo tudo cloud-first, tornando 7z e rar dependencias opcionais e expondo o estado operacional no app Configuracoes. O plano original pedia espelho em deploy/src, mas a execucao foi adaptada para respeitar a instrucao explicita do usuario de nao modificar a pasta deploy."
+    },
+    {
+      "timestamp": "2026-04-18T22:07:47.418328",
+      "type": "plan_generated",
+      "problem": "Modal de compactação/descompactação não mostra estado real e processo é lento",
+      "file": "plano_archive_progress_performance.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-19T09:47:00.209389",
+      "type": "plan_generated",
+      "problem": "Falha na compactacao por contrato quebrado entre cache em chunks, UI sem erro terminal e necessidade de streaming compression",
+      "file": "plano_correcao_compactacao_streaming_tcloud.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-19T10:23:50.263931",
+      "type": "execution_feedback",
+      "file": "plano_correcao_compactacao_streaming_tcloud.md",
+      "execution_result": "Implementacao concluida com correcao do caminho de materializacao multi-chunk no archive_service/file_manager, modal de arquivamento passando a refletir erro terminal e progresso real via polling, e streaming compression habilitado para zip e tar.gz com fallback staged para 7z. Validado com py_compile, parse de JS do index.html e smoke tests reais para materializacao multi-chunk, ZIP streaming e TAR.GZ streaming.",
+      "lessons": "A falha principal nao era race condition pura, mas quebra de contrato: get_cached_file_path so funcionava para arquivo de 1 chunk. O caminho de streaming tar.gz precisou ser adaptado ao Python 3.9 usando gzip.GzipFile + tarfile modo w|, porque w|gz nao aceita compresslevel nesse runtime. Jobs de arquivamento precisam expor error_message, failed_stage, detail, unit e indeterminate para a UI sair de estados genericos e travados."
+    },
+    {
+      "timestamp": "2026-04-19T15:31:49.855133",
+      "type": "execution_feedback",
+      "file": "plano_correcao_compactacao_streaming_tcloud.md",
+      "execution_result": "A execucao mostrou que a compactacao em streaming concluia no backend, mas o modal de arquivamento nao refletia as mudancas de fase de forma visivel durante compactacao e descompactacao. Foi ajustado o polling do frontend para ritmo ativo, invalida cache do endpoint de jobs e o backend passou a publicar fase de uploading mais cedo no pipeline de streaming.",
+      "lessons": "Em jobs curtos e com streaming, polling de 2s e insuficiente para representar fases intermediarias. O backend pode concluir a operacao corretamente e ainda assim a UX parecer travada. Para esse fluxo, o service precisa publicar o estado de uploading assim que o stream comeca a ser drenado e o frontend precisa consultar o endpoint com frequencia maior enquanto houver jobs ativos ou modal aberto."
+    },
+    {
+      "timestamp": "2026-04-19T15:41:52.585279",
+      "type": "plan_generated",
+      "problem": "Modal de arquivamento não mostra corretamente as etapas reais de compactação e descompactação e aparenta travamento em Listando arquivos",
+      "file": "plano_modal_arquivamento_etapas_reais.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-19T15:53:23.826129",
+      "type": "execution_feedback",
+      "file": "plano_modal_arquivamento_etapas_reais.md",
+      "execution_result": "Implementacao concluida com ajuste do contrato de fases no archive_service e redesenho do modal de arquivamento com timeline, estado indeterminado e limpeza de estados terminais",
+      "lessons": "No fluxo streaming, stage sem message causa texto stale no modal; estados terminais precisam limpar current_file/detail/current-total; progresso indeterminado nao deve usar percentual fixo porque transmite travamento."
+    },
+    {
+      "timestamp": "2026-04-19T16:03:50.963913",
+      "type": "plan_generated",
+      "problem": "Modal de arquivamento não atualiza em runtime e permanece em Listando arquivos mesmo com compactação concluída",
+      "file": "plano_modal_arquivamento_nao_atualiza_runtime.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-19T16:21:52.446460",
+      "type": "execution_feedback",
+      "file": "plano_modal_arquivamento_nao_atualiza_runtime.md",
+      "execution_result": "O backend estava emitindo as fases e propriedades do job de forma correta e rápida pelo _consume_archive_upload_stream. O problema residia 100% no frontend porque a marcação excessiva de múltiplos pills do DOM gerava confusão visual: a fase 'Listando...' permanecia fixa no timeline gerando a falsa interpretação de congelamento, agravada pelos arrays complexos de status. Ao simplificar e substituir o phaseMarkup usando apenas o currentPhaseMarkup ativo, a UI passa a refletir fielmente o job.message processado e avanços numéricos do archivePrimaryStatus sem ambiguidades visuais.",
+      "lessons": "A abstração ou 'embelezamento' das fases no UI (ex: timelines redundantes) pode camuflar o verdadeiro estado do sistema e fazer uma tarefa finalizada parecer travada numa etapa inicial se a distinção visual for falha."
+    },
+    {
+      "timestamp": "2026-04-19T19:35:24.729013",
+      "type": "execution_feedback",
+      "file": "plano_modal_arquivamento_nao_atualiza_runtime.md",
+      "execution_result": "A interface passou a exibir apenas o status ativo. Porém, em nova tentativa de compactação, o frontend ficou travado num estado onde a API retornava 'Listando arquivos' em 0/2, enquanto o arquivo base já estava presente. O processo asyncio possivelmente foi cancelado ou o loop de varredura travou devido a instabilidade com aiohttp ou FUSE em varredura mista.",
+      "lessons": "1. A interface não deve assumir progresso apenas se status='done'. O travamento ocorreu porque o Python engoliu silenciosamente uma falha ou Cancellation no loop _collect_archive_entries. 2. A ausência de try/except abrangente que captura BaseException faz a tarefa morrer sem notificar a API."
+    },
+    {
+      "timestamp": "2026-04-19T20:48:21.709910",
+      "type": "plan_generated",
+      "problem": "Arquivos somem no Finder web ao acionar menu auxiliar/contextual e arquivamento",
+      "file": "plano_correcao_sumico_arquivos_menu_auxiliar_web.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-19T21:02:15.648429",
+      "type": "execution_feedback",
+      "file": "plano_correcao_sumico_arquivos_menu_auxiliar_web.md",
+      "execution_result": "Correcao implementada no backend e frontend. ArchiveService agora encerra jobs cancelados ou abortados por asyncio/BaseException em estado terminal, e o Finder web deixa de reaplicar busca oculta apos menu auxiliar/contextual, evitando a grade vazia falsa. Validado com py_compile, node --check, testes direcionados de CancelledError/KeyboardInterrupt e smoke manual no localhost:8080.",
+      "lessons": "O travamento de arquivamento vinha de tarefas asyncio que morriam fora de except Exception e deixavam jobs orfaos em running. O sumico visual dos arquivos vinha de estado de busca residual e de thumbnails 404 contaminando a renderizacao. Preservar a busca apenas quando a UI esta visivel e amortecer falhas temporarias de thumbnail reduz regressao no Finder web."
+    },
+    {
+      "timestamp": "2026-04-19T21:11:57.854745",
+      "type": "execution_feedback",
+      "file": "plano_correcao_sumico_arquivos_menu_auxiliar_web.md",
+      "execution_result": "A correcao inicial resolveu o sumico de arquivos e o travamento de jobs, mas introduziu regressao no grid de thumbnails. O follow-up removeu JavaScript inline quebrado nos atributos da imagem, passou a ligar handlers de load/error por codigo e deixou a exibicao da thumbnail independente do onload. O backend de /api/thumbnail foi revalidado com resposta 200 para imagens e PDFs reais.",
+      "lessons": "Nao injetar JSON.stringify diretamente dentro de atributos HTML com aspas, porque caminhos validos quebram o parser do handler inline. Em thumbnails, a visibilidade nao deve depender do onload para evitar race conditions de render; o navegador deve poder desenhar a imagem assim que a resposta chegar."
+    },
+    {
+      "timestamp": "2026-04-19T21:17:20.806781",
+      "type": "execution_feedback",
+      "file": "plano_correcao_sumico_arquivos_menu_auxiliar_web.md",
+      "execution_result": "Follow-up aplicado para limpar estado de busca restaurado pelo navegador. A UI agora reseta a busca no boot, detecta restauracao incoerente em pageshow e nao reabre mais o campo com valor antigo como zzzzzz_nao_existe.",
+      "lessons": "Campos de busca embutidos no toolbar podem ser restaurados por Safari/Chrome sem disparar os eventos esperados. Para esse tipo de UI, o bootstrap precisa normalizar o estado visual e o valor do input explicitamente, em vez de assumir que o DOM iniciou limpo."
+    },
+    {
+      "timestamp": "2026-04-19T21:20:49.353309",
+      "type": "execution_feedback",
+      "file": "plano_correcao_sumico_arquivos_menu_auxiliar_web.md",
+      "execution_result": "Campo de busca endurecido contra autocomplete indevido de navegadores e gerenciadores de senha. O input passou a usar atributos de ignore comuns, tipo search, nome neutro e readonly por padrao, sendo desbloqueado apenas em interacao explicita do usuario.",
+      "lessons": "Autocomplete off isoladamente nao basta contra extensoes e password managers. Em campos de busca fora de formularios de login, vale combinar nome neutro, atributos de ignore por fornecedor e readonly inicial com desbloqueio por foco/click do usuario."
+    },
+    {
+      "timestamp": "2026-04-19T21:25:16.615484",
+      "type": "execution_feedback",
+      "file": "plano_correcao_sumico_arquivos_menu_auxiliar_web.md",
+      "execution_result": "A heuristica de password manager persistia mesmo com autocomplete off e atributos de ignore. O campo de busca foi migrado de input tradicional para um searchbox contenteditable plain-text, mantendo a UX de busca e removendo o principal gatilho de autofill. Smoke no Chrome apos a mudanca nao reproduziu mais o dropdown de sugestoes de senha.",
+      "lessons": "Quando extensoes e o navegador ignoram atributos de autofill, a correção robusta é trocar o tipo de controle e sair do padrão input usado em credenciais. Para barras de busca, contenteditable com normalizacao de texto e handlers de paste/keydown reduz muito esse acoplamento com gerenciadores de senha."
+    },
+    {
+      "timestamp": "2026-04-19T21:49:33.182309",
+      "type": "plan_generated",
+      "problem": "Status de arquivamento no frontend não evolui em runtime, não mostra finalizado e o modal não fecha ao concluir",
+      "file": "plano_status_arquivamento_runtime_auto_fechamento.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-20T09:12:15.911893",
+      "type": "execution_feedback",
+      "file": "plano_status_arquivamento_runtime_auto_fechamento.md",
+      "execution_result": "Implementacao concluida com timeout explicito nas etapas de listagem/materializacao do ArchiveService para impedir jobs presos em running/listing, rastreamento do job.id retornado pelos POSTs de compactacao/extracao no frontend e auto-fechamento do modal de arquivamento apenas quando o job rastreado conclui com sucesso. Validado com unittest real do backend para timeouts em metadados e listagem de arvore, py_compile de archive_service/http_server/teste e parse de sintaxe do JavaScript extraido de templates/index.html via node --check. A API local respondeu em localhost:8080, mas o endpoint protegido retornou 401 sem credenciais, entao nao houve smoke autenticado ponta a ponta no navegador.",
+      "lessons": "1. O bug restante nao era so visual: o frontend realmente ignorava o job.id retornado pelos POSTs e por isso nao tinha como encerrar o fluxo certo. 2. Polling agressivo nao resolve sozinho quando a fase listing nao tem timeout; sem reclassificacao terminal o job continua parecendo ativo para sempre. 3. Vale testar timeouts do ArchiveService com doubles pequenos e Python 3.9 em mente; o teste novo precisou de from __future__ import annotations para aceitar unions modernas."
+    },
+    {
+      "timestamp": "2026-04-20T09:37:38.463831",
+      "type": "plan_generated",
+      "problem": "Modal de arquivamento Zip/Unzip no Web nao atualiza o progresso real do job",
+      "file": "plano_modal_arquivamento_sync_progresso_runtime.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-20T09:47:49.889222",
+      "type": "execution_feedback",
+      "file": "plano_modal_arquivamento_sync_progresso_runtime.md",
+      "execution_result": "Implementacao aplicada no backend e frontend do arquivamento Web. O ArchiveService passou a expor progresso estruturado com stage_label, overall_percent, heartbeat e metadados de bytes; materializacao e uploads longos agora usam progress_callback; e o frontend passou a rastrear o job ativo por /api/archive/jobs/{job_id} enquanto preserva a listagem global. Validacao real concluida com py_compile de archive_service.py, file_manager.py, deploy/src/file_manager.py e test_archive_service.py, 4 unittests verdes em test_archive_service.py e node --check do JavaScript extraido de templates/index.html. Nao houve validacao E2E autenticada no browser nesta sessao.",
+      "lessons": "No modal de arquivamento Web do TCloud, o problema nao era falta de polling e sim contrato de progresso incompleto. Usar overall_percent no backend e consultar o job ativo por job_id no frontend reduz ambiguidade visual. Tambem ficou claro que fases longas como materializacao e upload precisam plugar progress_callback existente no file_manager para evitar estados binarios ou congelados."
+    },
+    {
+      "timestamp": "2026-04-20T10:19:11.475596",
+      "type": "plan_generated",
+      "problem": "Implementar lixeira no TCloud Web com mover para lixeira, restaurar e esvaziar",
+      "file": "plano_lixeira_web_recuperacao_arquivos.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-20T10:38:09.457372",
+      "type": "execution_feedback",
+      "file": "plano_lixeira_web_recuperacao_arquivos.md",
+      "execution_result": "Implementada a Lixeira no TCloud Web com colecoes dedicadas no backend, novas rotas /api/trash, move-to-trash no fluxo de exclusao do Finder, restauracao por item/lote, esvaziamento e menu de contexto/toolbar da view Lixeira. Validacao concluida com py_compile, checagem de sintaxe do JavaScript extraido do template e unittest local do fluxo de trash em memoria.",
+      "lessons": "Neste projeto, a Lixeira precisa ficar fora das colecoes ativas porque path e unico e o mesmo caminho precisa ser reutilizavel apos delete. Tambem foi importante tratar a identidade da selecao no frontend por trash_entry_id na view especial, e nao por path, para evitar colisoes entre itens deletados com o mesmo caminho original. Por fim, o restore ficou mais robusto com rollback local dos docs ativos inseridos se algum passo posterior falhar."
+    },
+    {
+      "timestamp": "2026-04-21T11:06:43.673514",
+      "type": "execution_feedback",
+      "file": "plano_lixeira_web_recuperacao_arquivos.md",
+      "execution_result": "Ajustes finos da Lixeira aplicados no TCloud Web: toolbar reduzida para duas ações globais com visual refinado, menu de contexto encurtado para evitar quebra de linha e preservação de modified_at ao mover para a Lixeira, restaurar e sincronizar metadados auxiliares.",
+      "lessons": "Na Lixeira, trashed_at não deve substituir modified_at na UI. Operações sistêmicas de trash/restore e atualização de sidecars/preview não devem tocar modified_at do arquivo principal. Menus compactos precisam de rótulos curtos e nowrap para manter o design consistente."
+    },
+    {
+      "timestamp": "2026-04-21T11:58:46.909769",
+      "type": "execution_feedback",
+      "file": "plano_lixeira_web_recuperacao_arquivos.md",
+      "execution_result": "Refinamento de performance da Lixeira aplicado: mover múltiplos itens agora usa uma única chamada em lote, restore_all e empty_all evitam leituras redundantes da árvore da lixeira, o esvaziamento consolida a exclusão de chunks do Telegram com fallback individual resiliente e os botões superiores voltaram ao raio visual compatível com o TCloud Web.",
+      "lessons": "A maior lentidão vinha mais do encadeamento de requests e roundtrips desnecessários do que da UI em si. Em operações de lixeira, batching e deduplicação trazem ganho perceptível imediato. Exclusões em lote no Telegram precisam fallback individual para não falhar por mensagens de serviço."
+    },
+    {
+      "timestamp": "2026-04-21T12:35:42.386531",
+      "type": "plan_generated",
+      "problem": "CMD/Ctrl+A durante busca seleciona itens invisiveis e delete abre lixeira para arquivos fora do quadro",
+      "file": "plano_correcao_cmd_a_delete_busca.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-21T12:46:03.439820",
+      "type": "execution_feedback",
+      "file": "plano_correcao_cmd_a_delete_busca.md",
+      "execution_result": "Implementei a correcao em templates/index.html: a selecao agora usa o mesmo escopo visivel da busca, CMD/Ctrl+A fora do editor seleciona apenas itens filtrados, Shift+click usa o conjunto visivel e Delete/Backspace nao abrem modal quando o foco esta no campo de busca contenteditable. Validado com checagem sintatica do script inline, execucao real no Safari sem modal destrutivo ao pressionar Delete com foco na busca e teste comportamental em Node executando as funcoes reais extraidas do template.",
+      "lessons": "No Finder web do TCloud, o bug nao estava na lixeira e sim na divergencia entre currentItems e o subconjunto realmente visivel. Tratar apenas INPUT como contexto editavel e insuficiente quando a busca usa contenteditable. Centralizar getVisibleItems(), reconciliar selectedItems contra esse escopo e remover funcoes duplicadas mortas reduz o risco de regressao em atalhos destrutivos."
+    },
+    {
+      "timestamp": "2026-04-21T14:50:51.074888",
+      "type": "plan_generated",
+      "problem": "Arquivamento web falha no streaming, não expõe suporte real a 7z e o modal não mostra o status atual",
+      "file": "plano_revisao_arquivamento_streaming_7z_modal.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-21T14:58:16.928406",
+      "type": "execution_feedback",
+      "file": "plano_revisao_arquivamento_streaming_7z_modal.md",
+      "execution_result": "Implementação concluída com endurecimento do staging do upload streaming, capability reasons por formato, suporte 7z ativo no venv atual e modal de compactação exibindo status atual e indisponibilidade de backend quando aplicável. Validação real concluída com 7 testes verdes, py_compile, parse do JavaScript do template e verificação dos imports py7zr/rarfile e capabilities do ArchiveService.",
+      "lessons": "No arquivamento do TCloud, o diretório de staging do streaming precisa ser recriado no ponto de uso tanto no ArchiveService quanto no FileManager, porque confiar apenas no mkdir do boot é frágil. Também ficou claro que suporte opcional como 7z precisa virar capability observável com motivo explícito; requirements.txt sozinho não garante que a UI possa oferecer o formato."
+    },
+    {
+      "timestamp": "2026-04-21T15:09:39.774048",
+      "type": "execution_feedback",
+      "file": "plano_revisao_arquivamento_streaming_7z_modal.md",
+      "execution_result": "Follow-up aplicado no frontend do arquivamento web: o modal deixou de se auto-fechar no sucesso, o polling ativo caiu para 250ms e a compactação cloud passou a preferir formatos streaming na abertura do modal. O seletor agora avisa explicitamente quando um formato como 7z usa compactação em duas etapas e pode materializar tudo antes de compactar.",
+      "lessons": "No TCloud Web, mesmo com backend correto o modal pode parecer quebrado se o polling ativo for lento e houver auto-fechamento agressivo. Para cloud archiving, o formato padrão da UI deve priorizar os formatos realmente streaming; manter 7z disponível sem destacá-lo como caminho staged induz o usuário a uma regressão perceptível de performance."
+    },
+    {
+      "timestamp": "2026-04-22T13:33:22.904697",
+      "type": "plan_generated",
+      "problem": "Modal de arquivamento entra em Concluído cedo, não mostra estado real e precisa auto-fechar só após conclusão verdadeira com reveal do arquivo gerado",
+      "file": "plano_modal_arquivamento_done_prematuro_auto_close_reveal.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-22T13:47:06.099865",
+      "type": "execution_feedback",
+      "file": "plano_modal_arquivamento_done_prematuro_auto_close_reveal.md",
+      "execution_result": "Backend passou a expor revision monotônica e terminal_ready; o modal agora reconcilia snapshots por frescor, evita Concluído prematuro, auto-fecha apenas após conclusão real e reaplica seleção/destaque do output_path quando a compactação termina na pasta atual. Validação local executada com unittest, py_compile, parse do JS inline e smoke do payload serializado.",
+      "lessons": "No modal de arquivamento, status bruto não é suficiente: a UI precisa tratar done/error/canceled por terminal_ready e reconciliar respostas concorrentes de /jobs e /jobs/{id} por revision. Reveal do arquivo gerado precisa acontecer depois do reload da pasta e antes do auto-close; se o item não estiver visível, o fluxo deve cair em fallback explícito em vez de prender o modal."
+    },
+    {
+      "timestamp": "2026-04-22T19:50:44.759042",
+      "type": "plan_generated",
+      "problem": "Modal de arquivamento travado em Na Fila porque renderArchiveJobs saia silenciosamente ao nao encontrar o elemento archive-empty que era destruido pelo proprio innerHTML",
+      "file": "plano_modal_arquivamento_travado_na_fila.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-23T09:26:22.434675",
+      "type": "plan_generated",
+      "problem": "Descompactacao web ainda baixa o archive inteiro antes de extrair; definir extracao via streaming sem quebrar o modal",
+      "file": "plano_descompactacao_streaming_sem_cache_modal_web.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-23T09:35:16.834926",
+      "type": "plan_generated",
+      "problem": "Ajustar a descompactacao web para tudo via streaming reaproveitando o codigo atual e evitando dependencias Python extras",
+      "file": "plano_descompactacao_streaming_total_sem_dependencias_extras.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-23T09:46:42.581062",
+      "type": "execution_feedback",
+      "file": "plano_descompactacao_streaming_total_sem_dependencias_extras.md",
+      "execution_result": "Implementado caminho principal de extracao web via streaming usando bsdtar/libarchive alimentado por iter_file_chunks_for_archive, sem materializar o archive inteiro antes da extracao. Capabilities e config foram atualizados para expor o backend streaming extract, e a suite test_archive_service.py validou o novo fluxo com ZIP real via stream e sem regressao nos testes existentes.",
+      "lessons": "1. O maior ganho veio de trocar o consumidor final do stream, nao o transporte: iter_file_chunks_for_archive e _QueueBackedSyncReader ja davam a base correta. 2. Bsdtar emite nomes extraidos em stderr com prefixo x, o que permite atualizar current_file do modal sem WebSocket nem parser novo por formato. 3. Para esta entrega, remover o predownload do archive inteiro foi a correção robusta principal; manter o upload da árvore extraída no fluxo existente reduziu risco e preservou compatibilidade."
+    },
+    {
+      "timestamp": "2026-04-23T10:02:39.490652",
+      "type": "execution_feedback",
+      "file": "plano_descompactacao_streaming_total_sem_dependencias_extras.md",
+      "execution_result": "ZIP segue funcionando via streaming; 7Z falhava em runtime porque bsdtar neste host exige stdin seekable para esse formato. A implementacao foi ajustada para usar streaming apenas nos formatos pipe-safe (zip, tar.gz) e rotear 7Z para o backend legado, preservando o modal.",
+      "lessons": "Nem todo formato anunciado por um backend CLI suporta leitura por pipe no ambiente real. A capability de streaming precisa refletir formatos efetivamente pipe-safe; 7Z deve permanecer no fallback legado enquanto nao houver backend seekless validado."
+    },
+    {
+      "timestamp": "2026-04-23T10:09:53.761389",
+      "type": "execution_feedback",
+      "file": "plano_descompactacao_streaming_total_sem_dependencias_extras.md",
+      "execution_result": "7Z agora extrai sem pre-download completo do archive. A implementacao usa um reader seekable sob demanda sobre os chunks ja existentes, permitindo ao py7zr ler apenas as partes necessarias; ZIP continua em streaming via bsdtar.",
+      "lessons": "Para 7Z, pipe puro nao e a melhor rota no host atual porque o formato exige seek. A solucao mais viavel no TCloud e reaproveitar os chunks/caching ja existentes para expor uma origem seekable on-demand ao backend py7zr, evitando materializacao integral."
+    },
+    {
+      "timestamp": "2026-04-23T15:53:57.823431",
+      "type": "execution_feedback",
+      "file": "plano_descompactacao_streaming_total_sem_dependencias_extras.md",
+      "execution_result": "A UX de reveal na descompactação múltipla ainda falhava porque a primeira recarga da pasta podia acontecer antes de a listagem refletir os novos arquivos. O frontend agora mantém um retry curto de reveal antes de cair no fallback, preservando a seleção e o destaque visual quando os itens aparecem logo depois.",
+      "lessons": "Para extração com múltiplos arquivos no TCloud Web, não basta ter reveal_paths corretos; a UI também precisa tolerar a latência entre o fim do job e a atualização da listagem da pasta. O fallback não pode disparar no primeiro reload quando o fluxo depende de consistência eventual da view."
+    },
+    {
+      "timestamp": "2026-04-23T16:17:26.033256",
+      "type": "plan_generated",
+      "problem": "Destinos dos modais de compactar e extrair aceitam caminhos inexistentes",
+      "file": "plano_destino_pastas_existentes_arquivamento.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-23T16:26:31.250519",
+      "type": "execution_feedback",
+      "file": "plano_destino_pastas_existentes_arquivamento.md",
+      "execution_result": "Implementacao aplicada em backend, frontend e testes. ArchiveService agora valida que destination e uma pasta existente antes de criar jobs de extracao ou compactacao; _resolve_extract_destination e _resolve_output_archive_path nao criam mais o destino base informado pelo usuario; os modais Web trocaram o campo Destino livre por input readonly com seletor de pastas existentes via /api/files; testes de contrato foram adicionados em test_archive_service.py. Validacao concluida com py_compile, unittest de test_archive_service.py e parse dos scripts inline de templates/index.html via Node.",
+      "lessons": "Para o arquivamento Web do TCloud, destination deve ser tratado como contrato de diretorio existente no backend, mesmo quando a UI limita a selecao. A criacao automatica precisa ficar restrita a outputs derivados da operacao, como a pasta new_folder e subpastas internas do archive. Reaproveitar /api/files para navegar apenas diretorios evita endpoint novo e reduz risco."
+    },
+    {
+      "timestamp": "2026-04-23T17:03:03.040733",
+      "type": "execution_feedback",
+      "file": "plano_destino_pastas_existentes_arquivamento.md",
+      "execution_result": "Apos validacao visual, o seletor inline de destino deixava o modal de compactacao grande demais quando havia varias pastas. A UI foi refinada para renderizar o picker como popover fixo ancorado no campo Destino, com altura maxima, scroll proprio e linhas mais compactas; o modal nao cresce mais ao abrir a lista.",
+      "lessons": "Seletores de pasta dentro de modais operacionais devem usar popover/overlay com scroll proprio, nao ocupar o fluxo vertical do formulario. Em listas com muitas pastas, botoes de acao compactos com icone reduzem altura e preservam os campos principais visiveis."
+    },
+    {
+      "timestamp": "2026-04-23T17:06:29.991831",
+      "type": "execution_feedback",
+      "file": "plano_destino_pastas_existentes_arquivamento.md",
+      "execution_result": "A segunda validacao visual mostrou que o popover ainda parecia transparente e se misturava aos campos do modal. A apresentacao foi refinada com fundo solido escuro, bordas/divisorias opacas, sombra mais forte e posicionamento lateral quando houver espaco, evitando sobrepor Nome do arquivo/Formato no desktop.",
+      "lessons": "Popovers sobre modal com backdrop escuro nao devem depender de variaveis de tema que possam ter transparencia. Para seletores de pasta, posicionar lateralmente quando ha espaco melhora legibilidade e preserva o formulario; abaixo do campo deve ser fallback para telas estreitas."
+    },
+    {
+      "timestamp": "2026-04-23T17:16:08.272963",
+      "type": "plan_generated",
+      "problem": "Menu auxiliar web estreito com Favoritos transbordando",
+      "file": "plano_menu_auxiliar_favoritos_sem_overflow.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-23T17:20:54.534975",
+      "type": "execution_feedback",
+      "file": "plano_menu_auxiliar_favoritos_sem_overflow.md",
+      "execution_result": "Plano executado. O menu contextual web foi ajustado em templates/index.html e deploy/src/templates/index.html: largura fixa de 180px substituida por largura moderada/responsiva, itens protegidos contra overflow, icones fixados no flex e labels multi-selecao de favoritos encurtados para Favoritar/Desfavoritar N itens. Validacao estatica, sintaxe de showContextMenu e medicao headless com Chrome confirmaram largura de 220px e ausencia de overflow/quebra nos labels principais.",
+      "lessons": "Ao aplicar patches em CSS repetido, validar o bloco alvo explicitamente evita alteracao acidental em seletores anteriores como a barra de busca. Menus contextuais compactos devem combinar largura moderada com labels operacionais curtos; aumentar apenas a largura ou depender de ellipsis nao e a melhor solucao."
+    },
+    {
+      "timestamp": "2026-04-23T17:32:46.920823",
+      "type": "plan_generated",
+      "problem": "Lixeira lenta e race condition que redireciona a view para Lixeira apos navegacao mais recente",
+      "file": "plano_lixeira_rapida_sem_redirecionamento.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-23T17:40:31.157721",
+      "type": "execution_feedback",
+      "file": "plano_lixeira_rapida_sem_redirecionamento.md",
+      "execution_result": "Implementacao aplicada em database.py, file_manager.py, http_server.py, templates/index.html e test_trash_flow.py. GET /api/trash agora lista raizes de forma leve por padrao, include_counts=1 calcula contagens em lote sem get_trash_tree por item, e os loaders principais do Web usam token de navegacao com AbortController para ignorar respostas obsoletas. Restore, empty e mover para lixeira agora recarregam somente se o usuario ainda estiver na view de origem. Validacao concluida com unittest de trash, py_compile, parse dos scripts inline e smoke test Node reproduzindo /api/trash atrasado seguido de loadPath('/').",
+      "lessons": "Para a Lixeira do TCloud Web, a arvore completa deve ficar restrita a restore/purge; a abertura precisa usar roots leves. Em views assíncronas do Finder Web, a intencao mais recente do usuario deve ser protegida por navigationSeq e abort, e mutacoes lentas nao devem forcar reload se o usuario ja navegou para outra view. O espelho deploy/src esta defasado e nao contem a feature atual de Lixeira, entao nao foi sincronizado nesta correcao pontual."
+    },
+    {
+      "timestamp": "2026-04-23T18:06:28.183069",
+      "type": "plan_generated",
+      "problem": "Feedback visual ausente em ações assíncronas iniciadas por modais",
+      "file": "plano_feedback_visual_modais_acoes_assincronas.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-23T18:14:07.372876",
+      "type": "execution_feedback",
+      "file": "plano_feedback_visual_modais_acoes_assincronas.md",
+      "execution_result": "Implementacao aplicada em templates/index.html. Acoes assincronas iniciadas por modais agora usam beginModalActionLoading para alterar cursor, marcar overlay ocupado, desabilitar botao, exibir spinner/texto de loading e restaurar estado via cleanup idempotente em finally. O modal generico de confirmacao cobre Mover/Apagar/Esvaziar, e os modais de Extrair/Compactar ganharam botoes identificaveis com loading imediato antes do backend responder e cleanup antes da abertura do gerenciador de arquivamento. Validacao real executada com node --check dos 3 scripts inline extraidos do template e smokes Node para helper, bloqueio de duplo clique no confirm modal e submit de extract/compress.",
+      "lessons": "Para modais do TCloud Web, o feedback visual precisa iniciar antes do primeiro await: botao disabled, aria-busy, spinner e cursor devem ser aplicados sincronicamente no handler. O cleanup deve ser idempotente porque em sucesso pode ser chamado antes da troca de modal e novamente no finally. Validar scripts inline exige extrair os blocos script do HTML antes de rodar node --check."
+    },
+    {
+      "timestamp": "2026-04-23T19:15:53.757988",
+      "type": "plan_generated",
+      "problem": "Implementar compartilhamento externo de arquivos e pastas via link público no TCloud",
+      "file": "plano_compartilhamento_externo_links_publicos.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-23T22:21:05.634383",
+      "type": "execution_feedback",
+      "file": "plano_compartilhamento_externo_links_publicos.md",
+      "execution_result": "Implementacao concluida com backend de compartilhamento publico, shell publica separada, branch publico de streaming, modal do owner com configuracao de link e indicadores visuais direct/inherited. Validacoes executadas: py_compile, unittest (4 testes) e checagem de sintaxe do JavaScript embutido.",
+      "lessons": "No TCloud, compartilhamento publico de pasta funciona melhor como escopo herdado de subarvore com share_token de sessao separado do public_id. O Finder precisa receber sharing_state do backend para evitar badges stale, e a pagina publica deve ser isolada da SPA autenticada para nao herdar 401/login indevidos."
+    },
+    {
+      "timestamp": "2026-04-24T06:08:52.738146",
+      "type": "plan_generated",
+      "problem": "Refatoração do ícone de compartilhamento grande e mal ajustado",
+      "file": "plano_refatoracao_icone_compartilhamento.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-24T06:12:17.861850",
+      "type": "execution_feedback",
+      "file": "plano_refatoracao_icone_compartilhamento.md",
+      "execution_result": "O posicionamento (left: -5px) ficou desconectado da pasta e as cores brancas/cinzas desapareceram contra capas claras.",
+      "lessons": "1. Posicionamento para ícones à esquerda não deve usar o mesmo offset negativo agressivo (-5px) que a direita usa, pois a margem visual das formas destoa. 2. A cor deve ser vibrante (monocromática, porém com contraste) para funcionar em white-covers e dark-backgrounds simultaneamente."
+    },
+    {
+      "timestamp": "2026-04-24T06:12:53.480238",
+      "type": "plan_generated",
+      "problem": "Melhoria visual nas bordas, cores e legibilidade do ícone flat de compartilhamento",
+      "file": "plano_melhoria_icone_compartilhamento_v2.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-24T06:25:51.809727",
+      "type": "execution_feedback",
+      "file": "plano_melhoria_icone_compartilhamento_v2.md",
+      "execution_result": "Ficou feio a cor roxa e a posição (-2px) flutuou esquisito na pasta azul. O usuário exigiu cópia exata do modelo da estrela (top: -5px, left: -5px) e pediu nova cor.",
+      "lessons": "1. A tab superior esquerda da pasta em SVG (pasta azul do TCloud) tem um declive profundo; colocar ícones colados em -2px em 'top/left' faz parecer que a bolinha está levitando no corte da pasta. O -5px espelha a margem esteticamente e foi exigência direta. 2. Roxa para overlay icon não agradou."
+    },
+    {
+      "timestamp": "2026-04-24T06:26:29.530648",
+      "type": "plan_generated",
+      "problem": "Ajuste fino de simetria do posicionamento para top: -5px left: -5px do ícone de compartilhamento e mudança de cor.",
+      "file": "plano_ajuste_fino_icone_compartilhamento.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-24T08:20:35.438450",
+      "type": "execution_feedback",
+      "file": "plano_ajuste_fino_icone_compartilhamento.md",
+      "execution_result": "O usuário ainda rejeitou overlays na imagem do cover/pasta e solicitou que o indicador de compartilhamento seja movido para o lado do nome do arquivo (label) e seja da cor branca.",
+      "lessons": "1. Overlays sobre ícones (grid-view) podem comprometer a estética fluída da interface quando muitos atributos existem. Mudar para a label do item resolve a poluição visual. 2. A cor branca junto ao texto traz padronização."
+    },
+    {
+      "timestamp": "2026-04-24T08:21:09.560854",
+      "type": "plan_generated",
+      "problem": "Migração da interface visual de compartilhamento para label inline branca",
+      "file": "plano_icone_compartilhamento_inline_label.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-24T08:29:15.038649",
+      "type": "plan_generated",
+      "problem": "Melhoria visual modal de compartilhamento, botoes de salvar e expirar",
+      "file": "plano_melhorias_apresentacao_modal_compartilhamento.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-24T08:39:21.552257",
+      "type": "plan_generated",
+      "problem": "Bug Z-Index sobreposicao confirm modal e share modal",
+      "file": "plano_correcao_zindex_modal_confirmacao.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-24T08:52:42.726334",
+      "type": "plan_generated",
+      "problem": "Remocao status de loading tecnico e FOUC no modal de compartilhamento",
+      "file": "plano_correcao_fouc_modal_compartilhamento.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-24T10:17:03.961411",
+      "type": "plan_generated",
+      "problem": "Date picker não fecha após seleção no modal de compartilhamento",
+      "file": "plano_correcao_fechamento_datepicker.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-24T10:25:39.748749",
+      "type": "plan_generated",
+      "problem": "Date picker confuso sem presets e sem validação de datas passadas, campo max acessos sem limite",
+      "file": "plano_melhoria_datepicker_maxaccess_validacao.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-24T10:34:09.486197",
+      "type": "execution_feedback",
+      "file": "plano_melhoria_datepicker_maxaccess_validacao.md",
+      "execution_result": "Sucesso: Campos alinhados, limite de 100k aplicado com validação instantânea e bloqueio de datas passadas.",
+      "lessons": "Validação on-the-fly melhora significativamente a percepção de qualidade; o uso de presets para datas economiza cliques desnecessários."
+    },
+    {
+      "timestamp": "2026-04-24T10:37:37.433561",
+      "type": "plan_generated",
+      "problem": "Página pública de compartilhamento não segue o design Finder do TCloud Web e usa video nativo que quebra vídeos verticais e não suporta MKV pelo player TCloud",
+      "file": "plano_design_compartilhamento_publico_player_tcloud.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-24T10:52:15.431453",
+      "type": "execution_feedback",
+      "file": "plano_design_compartilhamento_publico_player_tcloud.md",
+      "execution_result": "Implementacao concluida: pagina publica de compartilhamento redesenhada para se aproximar do TCloud Web/Finder, payload publico passou a expor capacidades de midia, videos diretos usam Video.js e videos que exigem transcodificacao usam sessoes HLS publicas validadas por share_token. Testes unittest e checagens de sintaxe passaram.",
+      "lessons": "Para compartilhamento publico, reutilizar o pipeline web_playback exige endpoints escopados por public_id/share_token e URLs HLS publicas; videos verticais precisam de palco com object-fit contain e limites de largura para nao quebrar o layout. Manter legendas publicas desligadas no MVP evita expor rotas privadas ate haver desenho dedicado."
+    },
+    {
+      "timestamp": "2026-04-24T11:03:11.293414",
+      "type": "execution_feedback",
+      "file": "plano_design_compartilhamento_publico_player_tcloud.md",
+      "execution_result": "Usuario reportou regressao visual e funcional na pagina publica: link sem senha quebrava com Cannot read properties of null (reading innerHTML) e a informacao Expira em ficava mal disposta/truncada. Corrigido em templates/shared_item.html com fluxo tolerante a acesso automatico sem botao de desbloqueio, detalhes em duas linhas e lista coerente para compartilhamento de arquivo unico.",
+      "lessons": "O acesso automatico de compartilhamentos sem senha nao deve depender de elementos do card de senha. Componentes de detalhe na sidebar precisam separar rotulo e valor para datas longas. Validar a pagina publica deve incluir links sem senha, nao apenas protegidos por senha."
+    },
+    {
+      "timestamp": "2026-04-24T11:08:23.407453",
+      "type": "execution_feedback",
+      "file": "plano_design_compartilhamento_publico_player_tcloud.md",
+      "execution_result": "Usuario reportou que o video vertical continuava cortado, sem controles aparentes do player, e que o nome longo prejudicava a apresentacao. Ajustado templates/shared_item.html: modo arquivo unico reduz a coluna de itens e amplia o preview, Video.js aplica object-fit contain/object-position center tambem no .vjs-tech, controles ficam visiveis, e nomes longos sao compactados visualmente com title preservando o nome completo.",
+      "lessons": "No Video.js, ajustar apenas o wrapper nao garante enquadramento: o elemento interno .vjs-tech precisa receber object-fit/object-position. Para links de arquivo unico, a grade deve priorizar o preview e encurtar nomes gerados longos sem ocultar o valor completo."
+    },
+    {
+      "timestamp": "2026-04-24T11:22:34.785139",
+      "type": "execution_feedback",
+      "file": "plano_design_compartilhamento_publico_player_tcloud.md",
+      "execution_result": "Usuario pediu melhoria geral de apresentacao e abertura de conteudo em modal no estilo TCloud Web. Atualizado templates/shared_item.html para transformar o painel direito em resumo/inspecao, abrir arquivos em modal dedicado com titlebar macOS/TCloud, renderizar video e audio via Video.js no modal, manter PDF/imagem em visualizacao ampla, melhorar controles/menus do Video.js e preservar a lista como navegacao.",
+      "lessons": "A pagina publica deve separar navegacao de consumo do arquivo: lista e detalhes no shell, conteudo em modal. O player publico precisa herdar estilos do player principal no nivel do modal, nao ficar espremido no painel de preview."
+    },
+    {
+      "timestamp": "2026-04-24T11:39:38.398603",
+      "type": "execution_feedback",
+      "file": "plano_design_compartilhamento_publico_player_tcloud.md",
+      "execution_result": "Usuario pediu remover abertura automatica do conteudo, remover a opcao Abrir direto e deixar o modal/player com dimensoes iguais ao TCloud Web. Ajustado templates/shared_item.html: renderFileViewer agora apenas seleciona/mostra placeholder e a abertura acontece somente por botao; links Abrir direto foram removidos do painel e do modal; cartao preview-summary foi removido; public-player-box passou a usar width 80vw, height 80vh e max-width 1200px como o player principal.",
+      "lessons": "A pagina publica nao deve abrir modal automaticamente ao selecionar ou carregar arquivo unico. Acoes publicas devem evitar expor stream direto quando a experiencia desejada e o player controlado. Para paridade visual, dimensoes do modal precisam copiar literalmente o player principal."
+    },
+    {
+      "timestamp": "2026-04-24T12:11:08.153432",
+      "type": "execution_feedback",
+      "file": "plano_design_compartilhamento_publico_player_tcloud.md",
+      "execution_result": "Usuario pediu remover a aba/card central do painel direito e expandir a apresentacao do nome do arquivo, com o tipo exibido logo abaixo. Ajustado templates/shared_item.html: preview-header virou cabecalho ampliado com preview-title em ate 3 linhas e preview-subtitle logo abaixo; viewer-frame de arquivo agora usa um shell vazio no lugar do card intermediario; estados de diretorio, link protegido e erro tambem atualizam o subtitulo corretamente.",
+      "lessons": "No painel de inspecao publico, o nome e o tipo do arquivo funcionam melhor como cabecalho persistente do que como card dentro do corpo. Remover o componente intermediario reduz ruido visual e evita truncamento agressivo em telas estreitas."
+    },
+    {
+      "timestamp": "2026-04-24T19:50:17.527197",
+      "type": "execution_feedback",
+      "file": "plano_design_compartilhamento_publico_player_tcloud.md",
+      "execution_result": "Usuario pediu remover a parte vazia do painel direito e colocar o tipo do arquivo ao lado do tamanho, alem de adicionar busca e filtro na toolbar. Ajustado templates/shared_item.html: preview-panel entra em modo summary-only para arquivo unico, ocultando o corpo vazio; viewer-facts agora combina tamanho e extensao na mesma linha; toolbar ganhou barra de busca por nome/tipo e menu de filtro por categoria com rerender dinamico da lista.",
+      "lessons": "No compartilhamento publico, a area de inspecao precisa se adaptar ao contexto: em arquivo unico faz mais sentido um resumo compacto do que reservar um corpo vazio. Busca e filtro no topo funcionam melhor quando operam sobre currentItems e rerenderizam a lista sem refetch."
+    },
+    {
+      "timestamp": "2026-04-24T19:58:18.191466",
+      "type": "plan_generated",
+      "problem": "Remover painel preview-panel summary-only da pagina publica de compartilhamento de arquivo unico",
+      "file": "plano_remocao_preview_panel_compartilhamento.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-24T19:59:44.046625",
+      "type": "plan_generated",
+      "problem": "Remover painel preview-panel summary-only da pagina publica de compartilhamento de arquivo unico preservando senha e erros",
+      "file": "plano_remocao_preview_panel_compartilhamento.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-24T20:06:10.945829",
+      "type": "plan_generated",
+      "problem": "Remover painel preview-panel tambem em compartilhamentos publicos de pasta e abrir arquivos direto no modal",
+      "file": "plano_remocao_preview_panel_pastas_compartilhadas.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-24T20:15:25.716784",
+      "type": "plan_generated",
+      "problem": "Adicionar toolbar estilo Finder na pagina publica de compartilhamento com busca filtro e roteamento de caminho",
+      "file": "plano_toolbar_compartilhamento_estilo_finder.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-24T20:31:25.076605",
+      "type": "plan_generated",
+      "problem": "toolbar e carrossel da pagina de compartilhamento divergentes do TCloud Web normal",
+      "file": "plano_toolbar_carrossel_compartilhamento_tcloud_web.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-24T20:42:33.677052",
+      "type": "execution_feedback",
+      "file": "plano_toolbar_carrossel_compartilhamento_tcloud_web.md",
+      "execution_result": "Implementado em templates/shared_item.html: removida a titlebar da pagina publica, criada toolbar publica read-only no padrao da toolbar do TCloud Web normal, adicionados grid/list, ordenacao, busca inline e carrossel publico de imagens com stage, loading, erro, retry, setas, preload adjacente e navegacao por teclado. Validacoes: sintaxe JS inline ok, teste publico via venv unittest ok, servidor local /s/ReumuPh3li2F respondeu 200 com toolbar publica presente, titlebar ausente e carrossel no HTML.",
+      "lessons": "Para o compartilhamento publico, espelhar componentes do TCloud Web normal exige adaptar permissoes: reutilizar linguagem visual e comportamento permitido, mas manter a tela read-only e usar sempre stream_url/download_url publicos retornados pelo backend. Playwright nao estava instalado; validacao visual interativa completa depende de ferramenta/browser disponivel."
+    },
+    {
+      "timestamp": "2026-04-26T09:27:56.412479",
+      "type": "plan_generated",
+      "problem": "ajustes da visualizacao publica em lista badge read-only e nomes longos com tooltip e marquee",
+      "file": "plano_compartilhamento_lista_tooltip_marquee.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-26T09:47:18.416724",
+      "type": "plan_generated",
+      "problem": "busca recursiva toolbar compartilhamento tooltip nativo e duplo clique em itens publicos",
+      "file": "plano_compartilhamento_busca_recursiva_click_tooltip.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-26T10:00:29.137909",
+      "type": "plan_generated",
+      "problem": "filtro recursivo estado vazio e sidebar enriquecida na pagina publica de compartilhamento",
+      "file": "plano_compartilhamento_filtro_recursivo_sidebar_empty_state.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-26T12:51:53.983686",
+      "type": "plan_generated",
+      "problem": "sidebar publica com link copiavel metricas recursivas e detalhes do item selecionado",
+      "file": "plano_compartilhamento_sidebar_link_metricas_selecao.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-26T13:15:04.964124",
+      "type": "plan_generated",
+      "problem": "Ajustar scroll da sidebar e reposicionar seção Selecionado",
+      "file": "plano_sidebar_selecionado_scroll.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-26T13:16:02.460818",
+      "type": "execution_feedback",
+      "file": "plano_sidebar_selecionado_scroll.md",
+      "execution_result": "Sucesso: Sidebar agora possui scroll vertical e a seção SELECIONADO foi movida para o topo, substituindo a posição original de Detalhes.",
+      "lessons": "Ajustes de layout em templates HTML/CSS devem considerar tanto a estrutura do DOM para acessibilidade e UX quanto o comportamento de overflow em containers de navegação fixos."
+    },
+    {
+      "timestamp": "2026-04-26T13:26:11.185250",
+      "type": "plan_generated",
+      "problem": "Correção de FOUC e Layout Shift nas páginas de compartilhamento",
+      "file": "plano_correcao_fouc_layout_links.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-26T13:29:21.766886",
+      "type": "execution_feedback",
+      "file": "plano_correcao_fouc_layout_links.md",
+      "execution_result": "Sucesso. Skeletons implementados e FOUC eliminado via classe .is-loading no container principal.",
+      "lessons": "O uso de classes mutantes no container raiz (is-loading) é a forma mais robusta de prevenir FOUC em SPAs ou páginas com forte carga de JS inicial."
+    },
+    {
+      "timestamp": "2026-04-26T13:57:18.483989",
+      "type": "plan_generated",
+      "problem": "Correção de FOUC e remoção de layout legado na página de links compartilhados",
+      "file": "plano_correcao_fouc_layout_links.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-26T14:55:28.214320",
+      "type": "plan_generated",
+      "problem": "Substituir ícones do modal por botão Baixar azul",
+      "file": "plano_troca_botoes_modal_baixar.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-26T14:57:25.766757",
+      "type": "execution_feedback",
+      "file": "plano_troca_botoes_modal_baixar.md",
+      "execution_result": "Sucesso. Os botões de ícone foram substituídos por um único botão Baixar azul na barra de título do modal. A altura da barra foi ajustada para 52px para melhor estética.",
+      "lessons": "Botões textuais com cores de destaque (primary) são preferidos para ações principais no modal. A remoção do botão de fechar da direita é compensada pelos controles de janela à esquerda e atalhos globais."
+    },
+    {
+      "timestamp": "2026-04-26T15:02:30.824127",
+      "type": "plan_generated",
+      "problem": "Simplificar botões de ação na lista para apenas ícones com tooltip estilizado",
+      "file": "plano_simplificacao_botoes_acoes_lista.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-26T15:05:01.616717",
+      "type": "execution_feedback",
+      "file": "plano_simplificacao_botoes_acoes_lista.md",
+      "execution_result": "Sucesso. Os botões de ação na lista, na visualização individual e no modal foram simplificados para ícones apenas com tooltips customizados estilizados como retângulos escuros (padrão do projeto).",
+      "lessons": "O uso de pseudo-elementos ::after com attr(data-tooltip) é uma forma eficiente de implementar tooltips premium sem bibliotecas externas, mantendo a consistência visual do projeto."
+    },
+    {
+      "timestamp": "2026-04-26T16:52:25.019401",
+      "type": "plan_generated",
+      "problem": "Menu de contexto padrão do navegador aparece ao clicar com botão direito nos itens da página shared_item.html, sem menu customizado como existe no index.html",
+      "file": "plano_context_menu_shared_item.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-26T18:13:35.364490",
+      "type": "plan_generated",
+      "problem": "Breadcrumb da toolbar em shared_item.html cresce sem limite em paths profundos e empurra os botões de ação",
+      "file": "plano_breadcrumb_truncate_shared_item.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-26T18:19:36.530485",
+      "type": "plan_generated",
+      "problem": "Reposicionar a cápsula de status da toolbar para a esquerda do ícone de ordenar em shared_item.html",
+      "file": "plano_status_reposition_shared_item.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-26T18:37:12.158827",
+      "type": "plan_generated",
+      "problem": "Controle granular e quebra de herança em pastas compartilhadas",
+      "file": "plano_controle_granular_compartilhamento_pastas.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-26T18:44:50.134641",
+      "type": "execution_feedback",
+      "file": "plano_controle_granular_compartilhamento_pastas.md",
+      "execution_result": "Implementação concluída: backend agora suporta sharing.inheritance_override, preserva ocultação ao gerar/remover link direto, filtra browse público, bloqueia resolução/stream/playback de itens ocultos via link da pasta pai e o modal Web ganhou controle de herança com toggle Ocultar da pasta pública e ação Gerar Link Exclusivo. Validações executadas: py_compile de database.py/file_manager.py/http_server.py/test_public_sharing.py, unittest em test_public_sharing.py com 14 testes OK e parse dos 3 scripts inline de templates/index.html via Node.",
+      "lessons": "Para controle granular de compartilhamento, a exceção precisa viver no backend e ser consultada por browse, stream e playback; esconder apenas no modal/lista pública não é segurança. configure_share e clear_sharing devem preservar inheritance_override para que link direto e visibilidade no link pai sejam estados independentes."
+    },
+    {
+      "timestamp": "2026-04-26T20:53:08.544929",
+      "type": "plan_generated",
+      "problem": "Download ZIP da pasta raiz e subpastas em compartilhamento público",
+      "file": "plano_download_zip_pastas_publicas.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-26T21:01:06.194440",
+      "type": "execution_feedback",
+      "file": "plano_download_zip_pastas_publicas.md",
+      "execution_result": "Implementado download ZIP para pasta raiz compartilhada e subpastas em compartilhamento publico, com rota backend /api/shared_item/{public_id}/download_zip, manifesto publico filtrando itens ocultos, botoes de download no frontend e teste automatizado cobrindo exclusao de subarvore oculta.",
+      "lessons": "Reutilizar os utilitarios de streaming de archive_service permitiu gerar ZIP sem criar arquivo persistente; o manifesto deve caminhar por list_public_directory para respeitar overrides de visibilidade publica; a pagina publica precisa expor download_url tambem para diretorios, incluindo a pasta atual."
+    },
+    {
+      "timestamp": "2026-04-26T21:13:48.737148",
+      "type": "plan_generated",
+      "problem": "Remover a 'barrinha' (sublinhado) de baixo do ícone de download na toolbar de shared_item.html",
+      "file": "plano_remove_underline_shared_item.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-26T21:16:52.235761",
+      "type": "plan_generated",
+      "problem": "Copiar link direto no compartilhamento publico gera URL relativa invalida",
+      "file": "plano_corrigir_copiar_link_direto.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-26T21:17:30.065059",
+      "type": "execution_feedback",
+      "file": "plano_corrigir_copiar_link_direto.md",
+      "execution_result": "Corrigido o copiar link direto no compartilhamento publico: o menu agora transforma item.download_url em URL absoluta antes de escrever no clipboard, preservando query string e token. Validado parsing dos scripts do template e simulacao de URL absoluta com Node.",
+      "lessons": "No frontend publico do TCloud, URLs relativas sao adequadas para href e fetch internos, mas toda acao de clipboard precisa normalizar para URL absoluta com new URL(valor, window.location.origin).href para evitar links invalidos fora da pagina."
+    },
+    {
+      "timestamp": "2026-04-26T21:27:28.255535",
+      "type": "plan_generated",
+      "problem": "Modal de status para zipamento em downloads ZIP da pagina publica de compartilhamento",
+      "file": "plano_modal_status_zip_compartilhamento.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-26T21:35:04.478509",
+      "type": "execution_feedback",
+      "file": "plano_modal_status_zip_compartilhamento.md",
+      "execution_result": "Implementado em templates/shared_item.html um modal publico de status para downloads ZIP, com estados de preparacao, recebimento, sucesso, erro e cancelamento. Toolbar, botoes de subpastas e menu de contexto agora usam startPublicZipDownload para ZIP; downloads de arquivos individuais continuam com link direto. Validado com node --check do JS inline, checagem estatica dos contratos e venv/bin/python -m unittest test_public_sharing.py com 15 testes OK. Tentativa de validacao visual no navegador local encontrou a pagina publica retornando Erro 500 no endpoint de resumo existente, fora do escopo desta alteracao.",
+      "lessons": "Para ZIP publico em shared_item.html, use download_kind=zip como chave de decisao e centralize o fluxo em startPublicZipDownload. Preserve links diretos para arquivos comuns. Ao extrair filename do Content-Disposition, testar filename*=UTF-8 para evitar escape incorreto na regex. A validacao visual depende do endpoint publico de resumo estar saudavel; se /api/shared_item/<id> retornar 500, a UI nao consegue carregar mesmo com o modal correto."
+    },
+    {
+      "timestamp": "2026-04-27T07:43:02.495134",
+      "type": "plan_generated",
+      "problem": "Lentidao na navegacao publica apos ZIP e demora nas metricas da sidebar",
+      "file": "plano_performance_compartilhamento_zip_sidebar.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-27T07:51:51.960239",
+      "type": "execution_feedback",
+      "file": "plano_performance_compartilhamento_zip_sidebar.md",
+      "execution_result": "Implementacao concluida em file_manager.py, http_server.py, templates/shared_item.html e test_public_sharing.py. A navegacao publica deixou de iniciar varredura recursiva client-side para metricas; foi criado endpoint /api/shared_item/{public_id}/metrics com cache em memoria, worker assincrono e TTL; a sidebar agora mostra contagem local imediata e carrega metricas globais sem bloquear browse; busca recursiva passa a usar AbortController e e cancelada na navegacao; ZIP publico continua sob demanda e ganhou log de manifesto. Validacoes executadas: py_compile de file_manager.py/http_server.py/test_public_sharing.py, unittest test_public_sharing.py com 17 testes OK, parse do JS inline de templates/shared_item.html OK. Smoke no localhost:8080 nao foi conclusivo porque o endpoint publico de resumo existente retornou 500 antes da nova rota.",
+      "lessons": "Em shared_item.html, metricas globais de compartilhamento publico nao devem usar /browse como varredura automatica; manter /browse raso evita cascata de requisicoes ao navegar. Operacoes recursivas publicas precisam ficar em contrato separado com cache, cancelamento no frontend e visibilidade filtrada por list_public_directory para nao vazar itens ocultos."
+    },
+    {
+      "timestamp": "2026-04-27T07:57:14.203151",
+      "type": "plan_generated",
+      "problem": "Remover a seção de Métricas Globais do frontend (shared_item.html) e do backend (http_server.py, file_manager.py)",
+      "file": "plano_remove_metrics_feature.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-27T08:09:50.926733",
+      "type": "plan_generated",
+      "problem": "Player da pagina compartilhada nao copia o player do TCloud Web e quebra layout/recursos em videos publicos",
+      "file": "plano_player_tcloud_pagina_compartilhada.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-27T08:13:26.733519",
+      "type": "execution_feedback",
+      "file": "plano_player_tcloud_pagina_compartilhada.md",
+      "execution_result": "Implementacao aplicada em templates/shared_item.html. Removidas regras que reduziam .video-js para 520px em videos retrato, adicionados estilos de menu/velocidade alinhados ao player TCloud Web, opcoes Video.js aproximadas do openPlayer privado e cleanup do player antes de limpar o DOM. Validacao automatizada passou com ./venv/bin/python -m unittest test_public_sharing.py e node --check do script extraido do template. Smoke visual em /s/ReumuPh3li2F ficou bloqueado porque a API local /api/shared_item/ReumuPh3li2F retornou 500 no servidor em execucao.",
+      "lessons": "A causa direta do layout quebrado era CSS publico de retrato aplicando width min(100%, 520px) na instancia .video-js e no video interno, encolhendo tambem a control bar. Para o compartilhamento publico, .video-js deve preencher o palco inteiro e apenas .vjs-tech deve usar object-fit contain. O player publico deve continuar usando /api/shared_item/{public_id}/web_playback/session, nunca o endpoint privado /api/web_playback/session."
+    },
+    {
+      "timestamp": "2026-04-27T09:10:00.507758",
+      "type": "plan_generated",
+      "problem": "Modal de senha no estilo do modal ZIP para compartilhamento protegido",
+      "file": "plano_modal_senha_compartilhamento.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-27T09:21:32.083386",
+      "type": "execution_feedback",
+      "file": "plano_player_tcloud_pagina_compartilhada.md",
+      "execution_result": "Melhoria adicional implementada para aproximar o player publico do player TCloud Web: adicionados endpoints publicos escopados por share_token para media_tracks e subtitle; o player publico agora busca trilhas embutidas, detecta sidecars .srt/.vtt compartilhados junto do video, cria menu de Legendas, cria menu de Audio quando houver multiplas faixas e salva Continuar em localStorage por public_id e relative_path. Validacoes: ./venv/bin/python -m py_compile http_server.py, ./venv/bin/python -m unittest test_public_sharing.py com 19 testes OK, node --check do JS extraido de templates/shared_item.html OK. Smoke no localhost mostrou que o processo em 8080 ainda estava com backend antigo: /api/shared_item/XTRASmWI-OrZ/media_tracks retornou 404 e o summary do link retornou 500 ate reiniciar o servidor.",
+      "lessons": "Para paridade do player publico, nao basta layout: funcionalidades devem ser expostas por endpoints publicos escopados, nunca pelos endpoints privados /api/media_tracks ou /api/subtitle. Sidecars compartilhados junto do video podem ser descobertos no frontend a partir da listagem publica da pasta e convertidos via endpoint publico /api/shared_item/{public_id}/subtitle. Continuar em link publico deve ser por visitante/navegador usando localStorage com chave public_id + relative_path."
+    },
+    {
+      "timestamp": "2026-04-27T10:27:52.783696",
+      "type": "plan_generated",
+      "problem": "Link de compartilhamento indisponível mostra tela de erro em vez de modal bloqueante com skeleton ao fundo",
+      "file": "plano_modal_erro_compartilhamento_indisponivel.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-27T11:35:51.950476",
+      "type": "execution_feedback",
+      "file": "plano_modal_erro_compartilhamento_indisponivel.md",
+      "execution_result": "SUCESSO: Implementação completa em shared_item.html. CSS adicionado (linhas ~1371-1393): .public-error-modal-overlay z-index 3300, #share-error-lock z-index 3290. HTML adicionado (linhas ~2461-2502): #share-error-lock (lock layer) e #share-error-modal (modal visual). JS adicionado: função renderShareErrorModal() que mantém is-loading (skeleton visível), aplica inert ao .public-window, ativa #share-error-lock e exibe #share-error-modal. 3 call sites substituídos (browsePath 404/410, unlockShare 404/410, bootstrapShare catch). Validação estática 100% - todos critérios do plano atendidos.",
+      "lessons": "O setStatus no comentário dentro da função não é chamada ativa — validação estática deve excluir linhas de comentário. O padrão de lock layer independente (z-index 3290 sob o modal z-index 3300) funciona: mesmo removendo o modal via DevTools o lock persiste. inert no .public-window via setAttribute é mais robusto que apenas pointer-events."
+    },
+    {
+      "timestamp": "2026-04-27T11:48:01.966594",
+      "type": "execution_feedback",
+      "file": "plano_modal_erro_compartilhamento_indisponivel.md",
+      "execution_result": "SUCESSO: Refinamento de layout aplicado. Título 'Link indisponível' centralizado com grid simétrico (1fr auto 1fr) e larguras compensadas (80px). Texto de ajuda alinhado à esquerda com justify-content: flex-start.",
+      "lessons": "Overrides locais com style em modais específicos ajudam a evitar regressões em componentes compartilhados como .public-modal-titlebar."
+    },
+    {
+      "timestamp": "2026-04-27T19:59:31.312695",
+      "type": "plan_generated",
+      "problem": "Adição de atalhos de teclado e seleção de arquivos na página de compartilhamento público",
+      "file": "plano_selecao_atalhos_compartilhamento.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-27T20:07:23.097411",
+      "type": "execution_feedback",
+      "file": "plano_selecao_atalhos_compartilhamento.md",
+      "execution_result": "Sucesso. Atalhos de teclado (Cmd+A, setas, Enter, Esc), múltipla seleção com mouse e opção 'Selecionar' no menu de contexto foram implementados em shared_item.html sem afetar funcionalidades existentes.",
+      "lessons": "A arquitetura unificada de renderização permitiu transpor facilmente a lógica de eventos do painel principal (index.html) para a página de compartilhamento, bastando adaptar a passagem de eventos e o tratamento adequado da matriz de visibilidade."
+    },
+    {
+      "timestamp": "2026-04-27T21:06:24.278917",
+      "type": "plan_generated",
+      "problem": "Implementar selecao por marquee, painel resumo dinamico e context menu para acoes em massa no compartilhamento publico",
+      "file": "plano_selecao_arrasto_multipla_compartilhamento.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-28T11:23:05.404998",
+      "type": "plan_generated",
+      "problem": "Tamanho de pastas selecionadas nao entra no total, metricas globais devem sair da UI publica e ZIP deve baixar somente selecionados",
+      "file": "plano_tamanho_zip_selecionados.md",
+      "result": "plan_generated"
+    },
+    {
+      "timestamp": "2026-04-28T11:32:00.771299",
+      "type": "execution_feedback",
+      "file": "plano_tamanho_zip_selecionados.md",
+      "execution_result": "Implementacao concluida: backend passou a calcular resumo recursivo de selecao publica e gerar ZIP somente dos itens selecionados; frontend removeu metricas globais da sidebar, usa selection_summary para tamanho de pastas selecionadas e aciona download_zip_selection para multiplos itens. Validado com py_compile, unittest test_public_sharing.py e parse do script inline de templates/shared_item.html.",
+      "lessons": "Tamanho de selecao publica com pastas deve ser contrato de backend escopado por public_id/share_token, reutilizando list_public_directory e deduplicacao de paths para evitar vazamento e duplicidade. Metricas globais podem permanecer no backend por compatibilidade, mas a UI publica deve priorizar dados objetivos da pasta atual e da selecao."
+    },
+    {
+      "timestamp": "2026-04-28T11:48:27.713003",
+      "type": "execution_feedback",
+      "file": "plano_tamanho_zip_selecionados.md",
+      "execution_result": "Refinamento concluido: a sidebar do compartilhamento publico agora mostra o tamanho total real da pasta compartilhada no payload inicial e o tamanho do arquivo compartilhado em detalhes; o botao de download da toolbar virou submenu no mesmo estilo dos menus da toolbar, permitindo baixar tudo ou somente os selecionados. Validado com py_compile, unittest test_public_sharing.py e parse do script inline.",
+      "lessons": "Para compartilhamento publico, o payload inicial do resumo precisa carregar metadado suficiente para a sidebar sem depender de polling extra. Menus de acao na toolbar ficam mais consistentes quando reutilizam o mesmo componente visual dos filtros/ordenacao em vez de criar popovers paralelos."
+    },
+    {
+      "timestamp": "2026-04-28T12:03:27.601539",
+      "type": "execution_feedback",
+      "file": "plano_tamanho_zip_selecionados.md",
+      "execution_result": "A lentidao de abertura foi corrigida removendo o calculo recursivo do tamanho total da rota inicial /api/shared_item; o tamanho total agora e carregado assincronamente no frontend apos o link abrir. O submenu de download da toolbar passou a ocultar Baixar selecionados quando nao ha itens selecionados.",
+      "lessons": "Em compartilhamento publico, dados pesados de arvore nao devem bloquear a resposta inicial do resumo. Quando uma acao depende de estado local como selecao, o menu deve esconder opcoes indisponiveis em vez de apenas desabilita-las para evitar ambiguidade visual."
+    }
+  ]
+}

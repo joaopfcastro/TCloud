@@ -8,6 +8,7 @@ from __future__ import annotations
 import logging
 import re
 import unicodedata
+import uuid
 from datetime import datetime, timezone
 
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -32,6 +33,12 @@ class Database:
         self._directories = None
         self._trash_files = None
         self._trash_directories = None
+        self._pdf_reader_progress = None
+        self._pdf_reader_tabs = None
+        self._window_layouts = None
+        self._finder_sessions = None
+        self._app_sessions = None
+        self._desktop_window_sessions = None
 
     @staticmethod
     def _visible_files_filter(extra: dict | None = None) -> dict:
@@ -48,6 +55,12 @@ class Database:
         self._directories = self._db["directories"]
         self._trash_files = self._db["trash_files"]
         self._trash_directories = self._db["trash_directories"]
+        self._pdf_reader_progress = self._db["pdf_reader_progress"]
+        self._pdf_reader_tabs = self._db["pdf_reader_tabs"]
+        self._window_layouts = self._db["window_layouts"]
+        self._finder_sessions = self._db["finder_sessions"]
+        self._app_sessions = self._db["app_sessions"]
+        self._desktop_window_sessions = self._db["desktop_window_sessions"]
 
         # Create indexes
         await self._files.create_index("path", unique=True)
@@ -63,6 +76,28 @@ class Database:
         await self._trash_directories.create_index("trash_root_entry_id")
         await self._trash_directories.create_index("original_path")
         await self._trash_directories.create_index("trashed_at")
+        await self._pdf_reader_progress.create_index(
+            [("owner_id", 1), ("document_key", 1)],
+            unique=True,
+        )
+        await self._pdf_reader_progress.create_index([("owner_id", 1), ("updated_at", -1)])
+        await self._pdf_reader_tabs.create_index(
+            [("owner_id", 1), ("app_id", 1)],
+            unique=True,
+        )
+        await self._pdf_reader_tabs.create_index("updated_at")
+        await self._window_layouts.create_index(
+            [("owner_id", 1), ("window_id", 1)],
+            unique=True,
+        )
+        await self._window_layouts.create_index([("owner_id", 1), ("updated_at", -1)])
+        await self._window_layouts.create_index("app_id")
+        await self._finder_sessions.create_index("owner_id", unique=True)
+        await self._finder_sessions.create_index("updated_at")
+        await self._app_sessions.create_index("owner_id", unique=True)
+        await self._app_sessions.create_index("updated_at")
+        await self._desktop_window_sessions.create_index("owner_id", unique=True)
+        await self._desktop_window_sessions.create_index("updated_at")
 
         # Ensure root directory exists
         root = await self._directories.find_one({"path": "/"})
@@ -354,6 +389,917 @@ class Database:
             return "directory", dir_doc
 
         return None, None
+
+    @staticmethod
+    def _serialize_pdf_reader_doc(doc: dict | None) -> dict | None:
+        if not doc:
+            return None
+        serialized = {k: v for k, v in doc.items() if k != "_id"}
+        for key, value in list(serialized.items()):
+            if isinstance(value, ObjectId):
+                serialized[key] = str(value)
+            elif isinstance(value, datetime):
+                serialized[key] = value.astimezone(timezone.utc).isoformat()
+        return serialized
+
+    @staticmethod
+    def _parse_pdf_reader_timestamp(value) -> datetime | None:
+        if isinstance(value, datetime):
+            return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+        if not value:
+            return None
+        try:
+            parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        except ValueError:
+            return None
+        return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
+
+    @staticmethod
+    def _normalize_pdf_page_rotations(value) -> dict:
+        if not isinstance(value, dict):
+            return {}
+        rotations = {}
+        for raw_page, raw_rotation in list(value.items())[:1000]:
+            try:
+                page = max(1, int(raw_page))
+                rotation = int(round(float(raw_rotation) / 90.0) * 90) % 360
+            except (TypeError, ValueError):
+                continue
+            if rotation:
+                rotations[str(page)] = rotation
+        return rotations
+
+    @staticmethod
+    def _normalize_window_layout_id(value: str, *, field_name: str = "window_id") -> str:
+        normalized = str(value or "").strip()
+        if not re.fullmatch(r"[A-Za-z0-9:_-]{1,96}", normalized):
+            raise ValueError(f"{field_name} invalido")
+        return normalized
+
+    @staticmethod
+    def _normalize_window_layout_rect(raw: dict | None, *, fallback: dict | None = None) -> dict:
+        source = raw if isinstance(raw, dict) else {}
+        fallback_source = fallback if isinstance(fallback, dict) else {}
+
+        def number_for(key: str, default: float) -> float:
+            try:
+                value = float(source.get(key, fallback_source.get(key, default)))
+            except (TypeError, ValueError):
+                value = default
+            if value != value or value in (float("inf"), float("-inf")):
+                value = default
+            return value
+
+        width = max(1.0, min(10000.0, number_for("width", 900.0)))
+        height = max(1.0, min(10000.0, number_for("height", 620.0)))
+        x = max(-10000.0, min(10000.0, number_for("x", 0.0)))
+        y = max(-10000.0, min(10000.0, number_for("y", 0.0)))
+        return {"x": x, "y": y, "width": width, "height": height}
+
+    @staticmethod
+    def _normalize_window_layout_viewport(raw: dict | None) -> dict:
+        source = raw if isinstance(raw, dict) else {}
+
+        def positive_number(key: str, default: float) -> float:
+            try:
+                value = float(source.get(key, default))
+            except (TypeError, ValueError):
+                value = default
+            if value != value or value in (float("inf"), float("-inf")):
+                value = default
+            return max(0.0, min(10000.0, value))
+
+        return {
+            "width": positive_number("width", 0.0),
+            "height": positive_number("height", 0.0),
+            "devicePixelRatio": max(0.1, min(8.0, positive_number("devicePixelRatio", 1.0) or 1.0)),
+        }
+
+    @classmethod
+    def _serialize_window_layout_doc(cls, doc: dict | None) -> dict | None:
+        return cls._serialize_pdf_reader_doc(doc)
+
+    @classmethod
+    def _normalize_desktop_window_payload(cls, raw: dict | None, *, kind: str) -> dict:
+        source = raw if isinstance(raw, dict) else {}
+        payload: dict = {}
+        if kind == "finder":
+            mode = str(source.get("mode") or "cloud").strip().lower()
+            if mode not in {"cloud", "local"}:
+                mode = "cloud"
+            path = str(source.get("path") or ("/" if mode == "cloud" else ".")).strip()
+            payload["mode"] = mode
+            payload["path"] = (path or ("/" if mode == "cloud" else "."))[:2048]
+            tabs_in = source.get("tabs") if isinstance(source.get("tabs"), list) else []
+            tabs = [tab for tab in (cls._normalize_finder_session_tab(item) for item in tabs_in[:16]) if tab]
+            if tabs:
+                payload["tabs"] = tabs
+                tab_ids = [tab["id"] for tab in tabs]
+                raw_order = source.get("tabOrder") if isinstance(source.get("tabOrder"), list) else []
+                tab_order = [str(tab_id) for tab_id in raw_order if str(tab_id) in tab_ids]
+                for tab_id in tab_ids:
+                    if tab_id not in tab_order:
+                        tab_order.append(tab_id)
+                active_tab_id = str(source.get("activeTabId") or tab_order[0])
+                payload["tabOrder"] = tab_order
+                payload["activeTabId"] = active_tab_id if active_tab_id in tab_order else tab_order[0]
+            return payload
+
+        for key in ("app_id", "appId", "kind"):
+            if key in source:
+                payload[key] = str(source.get(key) or "").strip()[:96]
+        launch_payload = source.get("launchPayload") or source.get("launch_payload")
+        if isinstance(launch_payload, dict):
+            safe_launch_payload: dict = {}
+            for key, value in list(launch_payload.items())[:24]:
+                safe_key = str(key)[:96]
+                if isinstance(value, (str, int, float, bool)) or value is None:
+                    safe_launch_payload[safe_key] = value if not isinstance(value, str) else value[:2048]
+            if safe_launch_payload:
+                payload["launchPayload"] = safe_launch_payload
+        return payload
+
+    @classmethod
+    def _normalize_desktop_window_record(cls, raw: dict | None, *, index: int = 0) -> dict | None:
+        if not isinstance(raw, dict):
+            return None
+        raw_kind = str(raw.get("kind") or "").strip().lower()
+        app_id = str(raw.get("app_id") or raw.get("appId") or "").strip()
+        if raw_kind == "app":
+            raw_kind = "generic"
+        if not raw_kind:
+            raw_kind = "finder" if app_id == "finder" else ("pdf-tools" if app_id == "pdf-tools" else "generic")
+        if raw_kind not in {"finder", "pdf-tools", "generic"}:
+            raw_kind = "generic"
+        if not app_id:
+            app_id = "finder" if raw_kind == "finder" else ("pdf-tools" if raw_kind == "pdf-tools" else "")
+        if app_id:
+            try:
+                app_id = cls._normalize_window_layout_id(app_id[:96], field_name="app_id")
+            except ValueError:
+                app_id = ""
+
+        raw_window_id = str(raw.get("window_id") or raw.get("windowId") or raw.get("id") or "").strip()
+        if not raw_window_id:
+            raw_window_id = f"desktop-window-{uuid.uuid4()}"
+        try:
+            window_id = cls._normalize_window_layout_id(raw_window_id[:96], field_name="window_id")
+        except ValueError:
+            window_id = f"desktop-window-{uuid.uuid4()}"
+
+        status = str(raw.get("status") or "normal").strip().lower()
+        if status not in {"normal", "maximized", "snapped", "minimized"}:
+            status = "normal"
+        snap_side = str(raw.get("snapSide") or raw.get("snap_side") or "").strip().lower()
+        if snap_side not in {"left", "right", "top", "bottom", "top-left", "top-right", "bottom-left", "bottom-right"}:
+            snap_side = ""
+        if status != "snapped":
+            snap_side = ""
+
+        rect = cls._normalize_window_layout_rect(raw.get("rect"), fallback={
+            "x": 24 + (index * 28),
+            "y": 24 + (index * 28),
+            "width": 1040,
+            "height": 680,
+        })
+        restore_rect = cls._normalize_window_layout_rect(raw.get("restoreRect") or raw.get("restore_rect"), fallback=rect)
+        viewport = cls._normalize_window_layout_viewport(raw.get("viewport"))
+        try:
+            z_order = max(0, min(10000, int(raw.get("z_order") or raw.get("zIndex") or index)))
+        except (TypeError, ValueError):
+            z_order = index
+
+        return {
+            "window_id": window_id,
+            "kind": raw_kind,
+            "app_id": app_id,
+            "title": str(raw.get("title") or "").strip()[:160],
+            "status": status,
+            "snapSide": snap_side or None,
+            "minimized": bool(raw.get("minimized", status == "minimized")),
+            "rect": rect,
+            "restoreRect": restore_rect,
+            "viewport": viewport,
+            "z_order": z_order,
+            "payload": cls._normalize_desktop_window_payload(raw.get("payload"), kind=raw_kind),
+            "updated_at": str(raw.get("updated_at") or "").strip()[:64],
+        }
+
+    @classmethod
+    def _normalize_desktop_window_session_payload(cls, payload: dict | None) -> dict:
+        source = payload if isinstance(payload, dict) else {}
+        windows_in = source.get("windows") if isinstance(source.get("windows"), list) else []
+        windows: list[dict] = []
+        seen_ids: set[str] = set()
+        for index, raw_window in enumerate(windows_in[:24]):
+            window = cls._normalize_desktop_window_record(raw_window, index=index)
+            if not window or window["window_id"] in seen_ids:
+                continue
+            seen_ids.add(window["window_id"])
+            windows.append(window)
+
+        active_window_id = str(source.get("active_window_id") or source.get("activeWindowId") or "").strip()
+        if active_window_id not in seen_ids:
+            active_window_id = windows[-1]["window_id"] if windows else ""
+        return {
+            "schema_version": 2,
+            "active_window_id": active_window_id,
+            "windows": windows,
+        }
+
+    async def _legacy_desktop_window_session(self, owner_id: str) -> dict | None:
+        layouts_payload = await self.list_window_layouts(owner_id)
+        raw_layouts = list((layouts_payload.get("layouts") or {}).values())
+        windows: list[dict] = []
+        seen_ids: set[str] = set()
+
+        for index, layout in enumerate(raw_layouts):
+            window_id = str(layout.get("window_id") or "").strip()
+            if not window_id or window_id in seen_ids:
+                continue
+            app_id = str(layout.get("app_id") or "").strip()
+            kind = "finder" if app_id == "finder" or window_id.startswith("finder-") else ("pdf-tools" if app_id == "pdf-tools" or window_id == "app-viewer" else "generic")
+            window = self._normalize_desktop_window_record({
+                **layout,
+                "window_id": window_id,
+                "kind": kind,
+                "app_id": app_id,
+                "z_order": index,
+            }, index=index)
+            if window:
+                windows.append(window)
+                seen_ids.add(window_id)
+
+        finder_session = await self.get_finder_session(owner_id)
+        if finder_session:
+            for saved in list(finder_session.get("finderWindows") or [])[:4]:
+                window_id = str(saved.get("id") or f"finder-window-{uuid.uuid4()}").strip()
+                if window_id in seen_ids:
+                    continue
+                window = self._normalize_desktop_window_record({
+                    "window_id": window_id,
+                    "kind": "finder",
+                    "app_id": "finder",
+                    "title": "Finder",
+                    "payload": {
+                        "path": saved.get("path") or "/",
+                        "mode": saved.get("mode") or "cloud",
+                    },
+                    "z_order": len(windows),
+                }, index=len(windows))
+                if window:
+                    windows.append(window)
+                    seen_ids.add(window["window_id"])
+
+        app_session = await self.get_app_session(owner_id)
+        if app_session:
+            for saved in list(app_session.get("apps") or [])[:12]:
+                window_id = str(saved.get("window_id") or saved.get("windowId") or "").strip()
+                if not window_id or window_id in seen_ids:
+                    continue
+                app_id = str(saved.get("app_id") or saved.get("appId") or "").strip()
+                kind = "pdf-tools" if app_id == "pdf-tools" else "generic"
+                window = self._normalize_desktop_window_record({
+                    "window_id": window_id,
+                    "kind": kind,
+                    "app_id": app_id,
+                    "title": app_id,
+                    "payload": {"app_id": app_id, "kind": kind},
+                    "z_order": len(windows),
+                }, index=len(windows))
+                if window:
+                    windows.append(window)
+                    seen_ids.add(window["window_id"])
+
+        if not windows:
+            return None
+        return {
+            "schema_version": 2,
+            "active_window_id": windows[-1]["window_id"],
+            "windows": windows,
+            "updated_at": layouts_payload.get("updated_at"),
+            "source": "legacy",
+        }
+
+    async def get_desktop_window_session(self, owner_id: str) -> dict | None:
+        owner_id = str(owner_id or "owner:default").strip() or "owner:default"
+        doc = await self._desktop_window_sessions.find_one({"owner_id": owner_id})
+        serialized = self._serialize_pdf_reader_doc(doc)
+        if serialized and serialized.get("session"):
+            return serialized.get("session")
+        return await self._legacy_desktop_window_session(owner_id)
+
+    async def save_desktop_window_session(self, owner_id: str, payload: dict) -> dict:
+        owner_id = str(owner_id or "owner:default").strip() or "owner:default"
+        payload = dict(payload or {})
+        now = datetime.now(timezone.utc)
+        session = self._normalize_desktop_window_session_payload(payload)
+        last_device_id = str(payload.get("last_device_id") or payload.get("device_id") or "").strip()[:128]
+        incoming_updated_at = self._parse_pdf_reader_timestamp(payload.get("updated_at"))
+
+        existing = await self._desktop_window_sessions.find_one({"owner_id": owner_id})
+        existing_updated_at = self._parse_pdf_reader_timestamp((existing or {}).get("updated_at"))
+        existing_device_id = str((existing or {}).get("last_device_id") or "").strip()
+        if (
+            existing
+            and incoming_updated_at
+            and existing_updated_at
+            and incoming_updated_at < existing_updated_at
+            and last_device_id
+            and existing_device_id
+            and last_device_id != existing_device_id
+        ):
+            serialized = self._serialize_pdf_reader_doc(existing) or {}
+            return {"session": serialized.get("session"), "conflict": True}
+
+        session["updated_at"] = now.isoformat()
+        doc = await self._desktop_window_sessions.find_one_and_update(
+            {"owner_id": owner_id},
+            {
+                "$set": {
+                    "owner_id": owner_id,
+                    "schema_version": 2,
+                    "session": session,
+                    "last_device_id": last_device_id,
+                    "updated_at": now,
+                },
+                "$setOnInsert": {"created_at": now},
+            },
+            upsert=True,
+            return_document=ReturnDocument.AFTER,
+        )
+        serialized = self._serialize_pdf_reader_doc(doc) or {}
+        return {"session": serialized.get("session"), "conflict": False}
+
+    async def delete_desktop_window_session(self, owner_id: str) -> bool:
+        owner_id = str(owner_id or "owner:default").strip() or "owner:default"
+        result = await self._desktop_window_sessions.delete_one({"owner_id": owner_id})
+        return bool(getattr(result, "deleted_count", 0))
+
+    async def get_window_layout(self, owner_id: str, window_id: str) -> dict | None:
+        owner_id = str(owner_id or "owner:default").strip() or "owner:default"
+        window_id = self._normalize_window_layout_id(window_id)
+        doc = await self._window_layouts.find_one({"owner_id": owner_id, "window_id": window_id})
+        return self._serialize_window_layout_doc(doc)
+
+    async def list_window_layouts(self, owner_id: str) -> dict:
+        owner_id = str(owner_id or "owner:default").strip() or "owner:default"
+        layouts: dict[str, dict] = {}
+        latest_updated_at = None
+        cursor = self._window_layouts.find({"owner_id": owner_id}).sort("updated_at", -1)
+        async for doc in cursor:
+            serialized = self._serialize_window_layout_doc(doc)
+            if not serialized:
+                continue
+            window_id = str(serialized.get("window_id") or "").strip()
+            if not window_id:
+                continue
+            layouts[window_id] = serialized
+            if latest_updated_at is None:
+                latest_updated_at = serialized.get("updated_at")
+        return {"layouts": layouts, "updated_at": latest_updated_at}
+
+    async def save_window_layout(self, owner_id: str, window_id: str, payload: dict) -> dict:
+        owner_id = str(owner_id or "owner:default").strip() or "owner:default"
+        window_id = self._normalize_window_layout_id(window_id)
+        payload = dict(payload or {})
+        now = datetime.now(timezone.utc)
+
+        status = str(payload.get("status") or "normal").strip().lower()
+        if status not in {"normal", "maximized", "snapped"}:
+            raise ValueError("status de janela invalido")
+
+        snap_side = str(payload.get("snapSide") or payload.get("snap_side") or "").strip().lower()
+        allowed_snap_sides = {
+            "",
+            "left",
+            "right",
+            "top",
+            "bottom",
+            "top-left",
+            "top-right",
+            "bottom-left",
+            "bottom-right",
+        }
+        if snap_side not in allowed_snap_sides:
+            raise ValueError("snapSide invalido")
+        if status != "snapped":
+            snap_side = ""
+
+        app_id = str(payload.get("app_id") or payload.get("appId") or "").strip()
+        if app_id:
+            app_id = self._normalize_window_layout_id(app_id, field_name="app_id")
+
+        rect = self._normalize_window_layout_rect(payload.get("rect"))
+        restore_rect = self._normalize_window_layout_rect(payload.get("restoreRect") or payload.get("restore_rect"), fallback=rect)
+        viewport = self._normalize_window_layout_viewport(payload.get("viewport"))
+        last_reason = str(payload.get("last_reason") or payload.get("reason") or "").strip()[:64]
+        last_device_id = str(payload.get("last_device_id") or payload.get("device_id") or "").strip()[:128]
+        incoming_updated_at = self._parse_pdf_reader_timestamp(payload.get("updated_at"))
+
+        existing = await self._window_layouts.find_one({"owner_id": owner_id, "window_id": window_id})
+        existing_updated_at = self._parse_pdf_reader_timestamp((existing or {}).get("updated_at"))
+        existing_device_id = str((existing or {}).get("last_device_id") or "").strip()
+        if (
+            existing
+            and incoming_updated_at
+            and existing_updated_at
+            and incoming_updated_at < existing_updated_at
+            and last_device_id
+            and existing_device_id
+            and last_device_id != existing_device_id
+        ):
+            return {"layout": self._serialize_window_layout_doc(existing), "conflict": True}
+
+        update_payload = {
+            "owner_id": owner_id,
+            "window_id": window_id,
+            "app_id": app_id,
+            "schema_version": 1,
+            "status": status,
+            "snapSide": snap_side or None,
+            "rect": rect,
+            "restoreRect": restore_rect,
+            "viewport": viewport,
+            "last_reason": last_reason,
+            "last_device_id": last_device_id,
+            "updated_at": now,
+        }
+        doc = await self._window_layouts.find_one_and_update(
+            {"owner_id": owner_id, "window_id": window_id},
+            {"$set": update_payload, "$setOnInsert": {"created_at": now}},
+            upsert=True,
+            return_document=ReturnDocument.AFTER,
+        )
+        logger.debug(
+            "window_layout.save owner=%s window=%s status=%s reason=%s",
+            owner_id,
+            window_id,
+            status,
+            last_reason,
+        )
+        return {"layout": self._serialize_window_layout_doc(doc), "conflict": False}
+
+    async def delete_window_layout(self, owner_id: str, window_id: str) -> bool:
+        owner_id = str(owner_id or "owner:default").strip() or "owner:default"
+        window_id = self._normalize_window_layout_id(window_id)
+        result = await self._window_layouts.delete_one({"owner_id": owner_id, "window_id": window_id})
+        return bool(getattr(result, "deleted_count", 0))
+
+    @staticmethod
+    def _normalize_finder_session_tab(raw: dict | None) -> dict | None:
+        if not isinstance(raw, dict):
+            return None
+        tab_id = str(raw.get("id") or "").strip()[:96]
+        mode = str(raw.get("mode") or "cloud").strip().lower()
+        if mode not in {"cloud", "local"}:
+            mode = "cloud"
+        path = str(raw.get("path") or ("/" if mode == "cloud" else ".")).strip()
+        if not path:
+            path = "/" if mode == "cloud" else "."
+        view = str(raw.get("view") or "grid").strip().lower()
+        if view not in {"grid", "list"}:
+            view = "grid"
+        sort = raw.get("sort") if isinstance(raw.get("sort"), dict) else {}
+        sort_key = str(sort.get("key") or "type").strip().lower()
+        if sort_key not in {"type", "name", "size", "date", "path"}:
+            sort_key = "type"
+        title = str(raw.get("title") or path.split("/")[-1] or "TCloud").strip()[:160]
+        return {
+            "id": tab_id or f"file-tab-{abs(hash((mode, path, title))) % 100000000}",
+            "title": title,
+            "mode": mode,
+            "path": path[:2048],
+            "view": view,
+            "sort": {"key": sort_key, "asc": bool(sort.get("asc", True))},
+            "searchQuery": str(raw.get("searchQuery") or "")[:256],
+        }
+
+    @classmethod
+    def _normalize_finder_session_payload(cls, payload: dict | None) -> dict:
+        source = payload if isinstance(payload, dict) else {}
+        windows_in = source.get("windows") if isinstance(source.get("windows"), list) else []
+        windows: list[dict] = []
+        for raw_window in windows_in[:8]:
+            if not isinstance(raw_window, dict):
+                continue
+            window_id = str(raw_window.get("id") or "finder-window-main").strip()[:96] or "finder-window-main"
+            tabs_in = raw_window.get("tabs") if isinstance(raw_window.get("tabs"), list) else []
+            tabs = [tab for tab in (cls._normalize_finder_session_tab(item) for item in tabs_in[:16]) if tab]
+            if not tabs:
+                tabs = [cls._normalize_finder_session_tab({"mode": "cloud", "path": "/"})]
+            tab_ids = [tab["id"] for tab in tabs]
+            raw_order = raw_window.get("tabOrder") if isinstance(raw_window.get("tabOrder"), list) else []
+            tab_order = [str(tab_id) for tab_id in raw_order if str(tab_id) in tab_ids]
+            for tab_id in tab_ids:
+                if tab_id not in tab_order:
+                    tab_order.append(tab_id)
+            active_tab_id = str(raw_window.get("activeTabId") or tab_order[0])
+            if active_tab_id not in tab_order:
+                active_tab_id = tab_order[0]
+            windows.append({
+                "id": window_id,
+                "activeTabId": active_tab_id,
+                "tabOrder": tab_order,
+                "tabs": tabs,
+                "isPrimary": bool(raw_window.get("isPrimary", window_id == "finder-window-main")),
+            })
+        if not windows:
+            windows = [{
+                "id": "finder-window-main",
+                "activeTabId": "file-tab-root",
+                "tabOrder": ["file-tab-root"],
+                "tabs": [cls._normalize_finder_session_tab({"id": "file-tab-root", "mode": "cloud", "path": "/"})],
+                "isPrimary": True,
+            }]
+        active_window_id = str(source.get("activeWindowId") or windows[0]["id"]).strip()
+        if active_window_id not in {item["id"] for item in windows}:
+            active_window_id = windows[0]["id"]
+        finder_windows: list[dict] = []
+        raw_finder_windows = source.get("finderWindows") if isinstance(source.get("finderWindows"), list) else []
+        for raw_window in raw_finder_windows[:4]:
+            if not isinstance(raw_window, dict):
+                continue
+            mode = str(raw_window.get("mode") or "cloud").strip().lower()
+            if mode not in {"cloud", "local"}:
+                mode = "cloud"
+            path = str(raw_window.get("path") or ("/" if mode == "cloud" else ".")).strip()
+            if not path:
+                path = "/" if mode == "cloud" else "."
+            finder_windows.append({
+                "id": str(raw_window.get("id") or "")[:96],
+                "path": path[:2048],
+                "mode": mode,
+            })
+        return {
+            "version": 1,
+            "activeWindowId": active_window_id,
+            "windows": windows,
+            "finderWindows": finder_windows,
+        }
+
+    async def get_finder_session(self, owner_id: str) -> dict | None:
+        owner_id = str(owner_id or "owner:default").strip() or "owner:default"
+        doc = await self._finder_sessions.find_one({"owner_id": owner_id})
+        serialized = self._serialize_pdf_reader_doc(doc)
+        return serialized.get("session") if serialized else None
+
+    async def save_finder_session(self, owner_id: str, payload: dict) -> dict:
+        owner_id = str(owner_id or "owner:default").strip() or "owner:default"
+        now = datetime.now(timezone.utc)
+        session = self._normalize_finder_session_payload(payload)
+        doc = await self._finder_sessions.find_one_and_update(
+            {"owner_id": owner_id},
+            {
+                "$set": {
+                    "owner_id": owner_id,
+                    "schema_version": 1,
+                    "session": session,
+                    "updated_at": now,
+                },
+                "$setOnInsert": {"created_at": now},
+            },
+            upsert=True,
+            return_document=ReturnDocument.AFTER,
+        )
+        serialized = self._serialize_pdf_reader_doc(doc) or {}
+        return {"session": serialized.get("session"), "updated_at": serialized.get("updated_at")}
+
+    async def delete_finder_session(self, owner_id: str) -> bool:
+        owner_id = str(owner_id or "owner:default").strip() or "owner:default"
+        result = await self._finder_sessions.delete_one({"owner_id": owner_id})
+        return bool(getattr(result, "deleted_count", 0))
+
+    @classmethod
+    def _normalize_app_session_entry(cls, raw: dict | None) -> dict | None:
+        if not isinstance(raw, dict):
+            return None
+        app_id = str(raw.get("app_id") or raw.get("appId") or "").strip()
+        if not app_id:
+            return None
+        app_id = cls._normalize_window_layout_id(app_id[:96], field_name="app_id")
+        kind = str(raw.get("kind") or ("pdf-tools" if app_id == "pdf-tools" else "generic")).strip().lower()
+        if kind not in {"generic", "pdf-tools"}:
+            kind = "pdf-tools" if app_id == "pdf-tools" else "generic"
+        window_id = str(raw.get("window_id") or raw.get("windowId") or "").strip()
+        if not window_id:
+            window_id = "app-viewer" if app_id == "pdf-tools" else f"tcloud-app-window-{app_id}"
+        window_id = cls._normalize_window_layout_id(window_id[:96], field_name="window_id")
+        return {
+            "app_id": app_id,
+            "kind": kind,
+            "window_id": window_id,
+        }
+
+    @classmethod
+    def _normalize_app_session_payload(cls, payload: dict | None) -> dict:
+        source = payload if isinstance(payload, dict) else {}
+        apps_in = source.get("apps") if isinstance(source.get("apps"), list) else []
+        apps: list[dict] = []
+        seen_app_ids: set[str] = set()
+        for raw_app in apps_in[:12]:
+            app = cls._normalize_app_session_entry(raw_app)
+            if not app or app["app_id"] in seen_app_ids:
+                continue
+            seen_app_ids.add(app["app_id"])
+            apps.append(app)
+        active_app_id = str(source.get("activeAppId") or source.get("active_app_id") or "").strip()
+        if active_app_id not in seen_app_ids:
+            active_app_id = apps[-1]["app_id"] if apps else ""
+        return {
+            "version": 1,
+            "activeAppId": active_app_id,
+            "apps": apps,
+        }
+
+    async def get_app_session(self, owner_id: str) -> dict | None:
+        owner_id = str(owner_id or "owner:default").strip() or "owner:default"
+        doc = await self._app_sessions.find_one({"owner_id": owner_id})
+        serialized = self._serialize_pdf_reader_doc(doc)
+        return serialized.get("session") if serialized else None
+
+    async def save_app_session(self, owner_id: str, payload: dict) -> dict:
+        owner_id = str(owner_id or "owner:default").strip() or "owner:default"
+        now = datetime.now(timezone.utc)
+        session = self._normalize_app_session_payload(payload)
+        doc = await self._app_sessions.find_one_and_update(
+            {"owner_id": owner_id},
+            {
+                "$set": {
+                    "owner_id": owner_id,
+                    "schema_version": 1,
+                    "session": session,
+                    "updated_at": now,
+                },
+                "$setOnInsert": {"created_at": now},
+            },
+            upsert=True,
+            return_document=ReturnDocument.AFTER,
+        )
+        serialized = self._serialize_pdf_reader_doc(doc) or {}
+        return {"session": serialized.get("session"), "updated_at": serialized.get("updated_at")}
+
+    async def delete_app_session(self, owner_id: str) -> bool:
+        owner_id = str(owner_id or "owner:default").strip() or "owner:default"
+        result = await self._app_sessions.delete_one({"owner_id": owner_id})
+        return bool(getattr(result, "deleted_count", 0))
+
+    async def get_pdf_reader_state(self, owner_id: str, document_key: str) -> dict | None:
+        owner_id = str(owner_id or "owner:default").strip() or "owner:default"
+        document_key = str(document_key or "").strip()
+        if not document_key:
+            return None
+        doc = await self._pdf_reader_progress.find_one(
+            {"owner_id": owner_id, "document_key": document_key}
+        )
+        return self._serialize_pdf_reader_doc(doc)
+
+    async def save_pdf_reader_state(self, owner_id: str, document_key: str, payload: dict) -> dict:
+        owner_id = str(owner_id or "owner:default").strip() or "owner:default"
+        document_key = str(document_key or "").strip()
+        if not document_key:
+            raise ValueError("document_key ausente")
+
+        payload = dict(payload or {})
+        now = datetime.now(timezone.utc)
+        incoming_updated_at = self._parse_pdf_reader_timestamp(payload.get("updated_at"))
+        last_device_id = str(payload.get("last_device_id") or payload.get("device_id") or "").strip()
+
+        existing = await self._pdf_reader_progress.find_one(
+            {"owner_id": owner_id, "document_key": document_key}
+        )
+        existing_updated_at = self._parse_pdf_reader_timestamp((existing or {}).get("updated_at"))
+        existing_device_id = str((existing or {}).get("last_device_id") or "").strip()
+        if (
+            existing
+            and incoming_updated_at
+            and existing_updated_at
+            and incoming_updated_at < existing_updated_at
+            and last_device_id
+            and existing_device_id
+            and last_device_id != existing_device_id
+        ):
+            return {"state": self._serialize_pdf_reader_doc(existing), "conflict": True}
+
+        update_payload = {
+            "owner_id": owner_id,
+            "document_key": document_key,
+            "path": str(payload.get("path") or "").strip(),
+            "name": str(payload.get("name") or "").strip(),
+            "storage_id_masked": str(payload.get("storage_id_masked") or "").strip(),
+            "size_bytes": max(0, int(payload.get("size_bytes") or 0)),
+            "modified_at": str(payload.get("modified_at") or "").strip(),
+            "page": max(1, int(payload.get("page") or 1)),
+            "total_pages": max(0, int(payload.get("total_pages") or 0)),
+            "zoom": max(0.25, min(4.0, float(payload.get("zoom") or 1.0))),
+            "scroll_ratio": max(0.0, min(1.0, float(payload.get("scroll_ratio") or 0.0))),
+            "sidebar_open": bool(payload.get("sidebar_open", True)),
+            "last_device_id": last_device_id,
+            "updated_at": now,
+        }
+        if "page_rotations" in payload:
+            update_payload["page_rotations"] = self._normalize_pdf_page_rotations(payload.get("page_rotations"))
+        doc = await self._pdf_reader_progress.find_one_and_update(
+            {"owner_id": owner_id, "document_key": document_key},
+            {"$set": update_payload, "$setOnInsert": {"created_at": now}},
+            upsert=True,
+            return_document=ReturnDocument.AFTER,
+        )
+        return {"state": self._serialize_pdf_reader_doc(doc), "conflict": False}
+
+    async def get_pdf_reader_tabs(self, owner_id: str, app_id: str = "pdf-tools") -> dict:
+        owner_id = str(owner_id or "owner:default").strip() or "owner:default"
+        app_id = str(app_id or "pdf-tools").strip() or "pdf-tools"
+        doc = await self._pdf_reader_tabs.find_one({"owner_id": owner_id, "app_id": app_id})
+        serialized = self._serialize_pdf_reader_doc(doc) or {}
+        return {
+            "app_id": app_id,
+            "active_document_key": str(serialized.get("active_document_key") or ""),
+            "tabs": list(serialized.get("tabs") or []),
+            "recent_pdfs": list(serialized.get("recent_pdfs") or []),
+            "updated_at": serialized.get("updated_at"),
+        }
+
+    @staticmethod
+    def _normalize_pdf_reader_recent(raw_recent: dict) -> dict | None:
+        recent = dict(raw_recent or {})
+        path = str(recent.get("path") or "").strip()
+        if not path:
+            return None
+        name = str(recent.get("name") or path.rsplit("/", 1)[-1] or "PDF").strip()
+        opened_at = str(recent.get("opened_at") or recent.get("updated_at") or "").strip()
+        return {
+            "document_key": str(recent.get("document_key") or "").strip(),
+            "path": path,
+            "name": name,
+            "opened_at": opened_at,
+        }
+
+    @classmethod
+    def _normalize_pdf_reader_recents(cls, raw_recents: list, limit: int = 12) -> list[dict]:
+        normalized = []
+        seen = set()
+        for raw_recent in list(raw_recents or [])[:50]:
+            recent = cls._normalize_pdf_reader_recent(raw_recent)
+            if not recent:
+                continue
+            key = recent["path"].lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            normalized.append(recent)
+            if len(normalized) >= limit:
+                break
+        return normalized
+
+    async def save_pdf_reader_tabs(self, owner_id: str, app_id: str, payload: dict) -> dict:
+        owner_id = str(owner_id or "owner:default").strip() or "owner:default"
+        app_id = str(app_id or "pdf-tools").strip() or "pdf-tools"
+        payload = dict(payload or {})
+        tabs = []
+        for raw_tab in list(payload.get("tabs") or [])[:12]:
+            tab = dict(raw_tab or {})
+            document_key = str(tab.get("document_key") or "").strip()
+            path = str(tab.get("path") or "").strip()
+            if not document_key or not path:
+                continue
+            tabs.append(
+                {
+                    "document_key": document_key,
+                    "path": path,
+                    "name": str(tab.get("name") or path.rsplit("/", 1)[-1] or "PDF").strip(),
+                    "pinned": bool(tab.get("pinned", False)),
+                    "opened_at": str(tab.get("opened_at") or "").strip(),
+                    "updated_at": str(tab.get("updated_at") or "").strip(),
+                }
+            )
+
+        active_document_key = str(payload.get("active_document_key") or "").strip()
+        if tabs and active_document_key not in {tab["document_key"] for tab in tabs}:
+            active_document_key = tabs[0]["document_key"]
+        if not tabs:
+            active_document_key = ""
+
+        now = datetime.now(timezone.utc)
+        doc = await self._pdf_reader_tabs.find_one_and_update(
+            {"owner_id": owner_id, "app_id": app_id},
+            {
+                "$set": {
+                    "owner_id": owner_id,
+                    "app_id": app_id,
+                    "active_document_key": active_document_key,
+                    "tabs": tabs,
+                    "updated_at": now,
+                },
+                "$setOnInsert": {"created_at": now},
+            },
+            upsert=True,
+            return_document=ReturnDocument.AFTER,
+        )
+        return self._serialize_pdf_reader_doc(doc) or {"app_id": app_id, "tabs": []}
+
+    async def get_pdf_reader_recents(self, owner_id: str, app_id: str = "pdf-tools", limit: int = 3) -> dict:
+        owner_id = str(owner_id or "owner:default").strip() or "owner:default"
+        app_id = str(app_id or "pdf-tools").strip() or "pdf-tools"
+        safe_limit = max(1, min(int(limit or 3), 12))
+        doc = await self._pdf_reader_tabs.find_one({"owner_id": owner_id, "app_id": app_id})
+        recents = self._normalize_pdf_reader_recents((doc or {}).get("recent_pdfs") or [], safe_limit)
+        return {
+            "app_id": app_id,
+            "recent_pdfs": recents,
+            "updated_at": self._serialize_pdf_reader_doc(doc or {}).get("updated_at") if doc else None,
+        }
+
+    async def record_pdf_reader_recent(self, owner_id: str, app_id: str, payload: dict) -> dict:
+        owner_id = str(owner_id or "owner:default").strip() or "owner:default"
+        app_id = str(app_id or "pdf-tools").strip() or "pdf-tools"
+        payload = dict(payload or {})
+        path = str(payload.get("path") or "").strip()
+        if not path:
+            raise ValueError("path ausente")
+        now = datetime.now(timezone.utc)
+        recent = self._normalize_pdf_reader_recent(
+            {
+                "document_key": str(payload.get("document_key") or "").strip(),
+                "path": path,
+                "name": str(payload.get("name") or path.rsplit("/", 1)[-1] or "PDF").strip(),
+                "opened_at": now.isoformat(),
+            }
+        )
+        if not recent:
+            raise ValueError("PDF recente invalido")
+
+        existing = await self._pdf_reader_tabs.find_one({"owner_id": owner_id, "app_id": app_id})
+        existing_recents = (existing or {}).get("recent_pdfs") or []
+        recent_pdfs = self._normalize_pdf_reader_recents([recent, *existing_recents], 12)
+        doc = await self._pdf_reader_tabs.find_one_and_update(
+            {"owner_id": owner_id, "app_id": app_id},
+            {
+                "$set": {
+                    "owner_id": owner_id,
+                    "app_id": app_id,
+                    "recent_pdfs": recent_pdfs,
+                    "updated_at": now,
+                },
+                "$setOnInsert": {
+                    "created_at": now,
+                    "active_document_key": "",
+                    "tabs": [],
+                },
+            },
+            upsert=True,
+            return_document=ReturnDocument.AFTER,
+        )
+        serialized = self._serialize_pdf_reader_doc(doc) or {}
+        return {
+            "app_id": app_id,
+            "recent_pdfs": self._normalize_pdf_reader_recents(serialized.get("recent_pdfs") or [], 3),
+            "updated_at": serialized.get("updated_at"),
+        }
+
+    async def list_shared_entries(self, limit: int = 500) -> list[tuple[str, dict]]:
+        """List owner-visible entries that have a direct public share id."""
+        safe_limit = max(1, min(int(limit or 500), 1000))
+        shared_query = {"sharing.public_id": {"$exists": True, "$nin": ["", None]}}
+        entries: list[tuple[str, dict]] = []
+
+        file_projection = {
+            "path": 1,
+            "filename": 1,
+            "size": 1,
+            "meta": 1,
+            "chunks": 1,
+            "created_at": 1,
+            "modified_at": 1,
+            "sharing": 1,
+            "is_favorite": 1,
+            "is_offline": 1,
+        }
+        async for doc in self._files.find(self._visible_files_filter(shared_query), file_projection).sort("modified_at", -1).limit(safe_limit + 1):
+            entries.append(("file", doc))
+
+        remaining = max(0, safe_limit + 1 - len(entries))
+        if remaining:
+            directory_projection = {
+                "path": 1,
+                "parent": 1,
+                "created_at": 1,
+                "modified_at": 1,
+                "sharing": 1,
+                "is_favorite": 1,
+                "is_offline": 1,
+            }
+            async for doc in self._directories.find(shared_query, directory_projection).sort("modified_at", -1).limit(remaining):
+                if doc.get("path") == "/":
+                    continue
+                entries.append(("directory", doc))
+
+        def sort_key(entry: tuple[str, dict]) -> datetime:
+            value = entry[1].get("modified_at") or entry[1].get("created_at")
+            return value if isinstance(value, datetime) else datetime.min.replace(tzinfo=timezone.utc)
+
+        entries.sort(key=sort_key, reverse=True)
+        return entries[: safe_limit + 1]
 
     async def set_sharing(self, path: str, sharing: dict) -> tuple[str | None, dict | None]:
         normalized = self._normalize_path(path)

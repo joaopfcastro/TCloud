@@ -1,0 +1,1030 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TCloud - Compartilhamento</title>
+    <link rel="icon" type="image/png" sizes="16x16" href="/static/icons/favicon-16x16.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/icons/favicon-32x32.png">
+    <link rel="shortcut icon" href="/favicon.ico">
+    <meta name="theme-color" content="#111827">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <style>
+        :root {
+            --bg: #09111f;
+            --bg-soft: rgba(8, 17, 31, 0.78);
+            --panel: rgba(11, 25, 44, 0.72);
+            --panel-strong: rgba(15, 33, 59, 0.88);
+            --border: rgba(167, 193, 255, 0.14);
+            --text: #f4f7fb;
+            --muted: rgba(230, 238, 252, 0.72);
+            --accent: #41c7b9;
+            --accent-strong: #27b2d6;
+            --danger: #ff6b6b;
+            --warn: #ffb84d;
+            --shadow: 0 28px 80px rgba(0, 0, 0, 0.42);
+            --radius: 24px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: 'Manrope', sans-serif;
+            color: var(--text);
+            background:
+                radial-gradient(circle at top left, rgba(65, 199, 185, 0.22), transparent 34%),
+                radial-gradient(circle at top right, rgba(39, 178, 214, 0.18), transparent 28%),
+                linear-gradient(160deg, #08101c 0%, #0d1728 48%, #101d30 100%);
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            background-image:
+                linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+            background-size: 28px 28px;
+            opacity: 0.24;
+        }
+
+        .page {
+            position: relative;
+            min-height: 100vh;
+            padding: 32px 18px 48px;
+        }
+
+        .shell {
+            width: min(1120px, 100%);
+            margin: 0 auto;
+            display: grid;
+            gap: 18px;
+        }
+
+        .hero,
+        .panel {
+            border: 1px solid var(--border);
+            background: var(--panel);
+            backdrop-filter: blur(22px) saturate(145%);
+            -webkit-backdrop-filter: blur(22px) saturate(145%);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+        }
+
+        .hero {
+            padding: 24px;
+            display: grid;
+            gap: 14px;
+        }
+
+        .hero-top {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 18px;
+        }
+
+        .brand {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 13px;
+            color: var(--muted);
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+
+        .brand-mark {
+            width: 36px;
+            height: 36px;
+            border-radius: 12px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, rgba(65, 199, 185, 0.22), rgba(39, 178, 214, 0.28));
+            color: var(--text);
+            font-size: 18px;
+        }
+
+        .hero-title {
+            margin: 0;
+            font-size: clamp(28px, 5vw, 46px);
+            line-height: 1.05;
+            letter-spacing: -0.03em;
+        }
+
+        .hero-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 9px 12px;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text);
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .hero-copy {
+            color: var(--muted);
+            font-size: 15px;
+            line-height: 1.65;
+            max-width: 720px;
+        }
+
+        .layout {
+            display: grid;
+            grid-template-columns: minmax(0, 1.55fr) minmax(320px, 0.95fr);
+            gap: 18px;
+        }
+
+        .panel {
+            padding: 20px;
+        }
+
+        .panel h2 {
+            margin: 0 0 14px;
+            font-size: 18px;
+            letter-spacing: -0.02em;
+        }
+
+        .status {
+            display: none;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 14px;
+            border-radius: 16px;
+            margin-bottom: 14px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .status.visible {
+            display: flex;
+        }
+
+        .status.info {
+            background: rgba(39, 178, 214, 0.12);
+            border: 1px solid rgba(39, 178, 214, 0.22);
+        }
+
+        .status.error {
+            background: rgba(255, 107, 107, 0.12);
+            border: 1px solid rgba(255, 107, 107, 0.25);
+        }
+
+        .status.success {
+            background: rgba(65, 199, 185, 0.12);
+            border: 1px solid rgba(65, 199, 185, 0.22);
+        }
+
+        .unlock-card {
+            display: none;
+            gap: 12px;
+        }
+
+        .unlock-card.visible {
+            display: grid;
+        }
+
+        .unlock-card p {
+            margin: 0;
+            color: var(--muted);
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .field {
+            display: grid;
+            gap: 8px;
+        }
+
+        .field label {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--muted);
+            font-weight: 700;
+        }
+
+        .input,
+        .button,
+        .link-button {
+            border-radius: 16px;
+            border: 1px solid transparent;
+            font: inherit;
+        }
+
+        .input {
+            width: 100%;
+            padding: 14px 16px;
+            background: rgba(4, 12, 22, 0.74);
+            border-color: rgba(255, 255, 255, 0.08);
+            color: var(--text);
+            outline: none;
+        }
+
+        .input:focus {
+            border-color: rgba(65, 199, 185, 0.44);
+            box-shadow: 0 0 0 4px rgba(65, 199, 185, 0.12);
+        }
+
+        .button-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .button,
+        .link-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-height: 46px;
+            padding: 0 16px;
+            cursor: pointer;
+            text-decoration: none;
+            font-weight: 700;
+            transition: transform 0.18s ease, filter 0.18s ease, background 0.18s ease;
+        }
+
+        .button:hover,
+        .link-button:hover {
+            transform: translateY(-1px);
+            filter: brightness(1.05);
+        }
+
+        .button.primary,
+        .link-button.primary {
+            background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+            color: #04131d;
+        }
+
+        .button.ghost,
+        .link-button.ghost {
+            background: rgba(255, 255, 255, 0.06);
+            border-color: rgba(255, 255, 255, 0.1);
+            color: var(--text);
+        }
+
+        .empty-state,
+        .terminal {
+            display: grid;
+            gap: 12px;
+            place-items: center;
+            text-align: center;
+            padding: 34px 18px;
+            min-height: 220px;
+            border: 1px dashed rgba(255, 255, 255, 0.12);
+            border-radius: 22px;
+            background: rgba(2, 10, 19, 0.32);
+        }
+
+        .empty-state i,
+        .terminal i {
+            font-size: 40px;
+            color: var(--accent);
+        }
+
+        .terminal i {
+            color: var(--warn);
+        }
+
+        .directory-toolbar {
+            display: none;
+            gap: 12px;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 14px;
+            flex-wrap: wrap;
+        }
+
+        .directory-toolbar.visible {
+            display: flex;
+        }
+
+        .breadcrumbs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+            color: var(--muted);
+            font-size: 13px;
+            min-height: 34px;
+        }
+
+        .crumb {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 10px;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.05);
+            color: inherit;
+            cursor: pointer;
+        }
+
+        .crumb.current {
+            background: rgba(65, 199, 185, 0.13);
+            color: var(--text);
+            cursor: default;
+        }
+
+        .directory-list {
+            display: grid;
+            gap: 10px;
+        }
+
+        .directory-item {
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr) auto;
+            gap: 12px;
+            align-items: center;
+            padding: 14px;
+            border-radius: 18px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .directory-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 14px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.06);
+            font-size: 20px;
+            color: var(--text);
+        }
+
+        .directory-meta {
+            min-width: 0;
+            display: grid;
+            gap: 4px;
+        }
+
+        .directory-name {
+            font-size: 15px;
+            font-weight: 700;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .directory-subtitle {
+            font-size: 12px;
+            color: var(--muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .directory-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        .mini-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            min-height: 38px;
+            padding: 0 12px;
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.09);
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text);
+            font: inherit;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .viewer {
+            min-height: 420px;
+            display: grid;
+            gap: 16px;
+            align-content: start;
+        }
+
+        .viewer-frame {
+            min-height: 280px;
+            border-radius: 22px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(2, 10, 19, 0.46);
+            display: grid;
+            place-items: center;
+        }
+
+        .viewer-frame img,
+        .viewer-frame video,
+        .viewer-frame audio,
+        .viewer-frame iframe {
+            width: 100%;
+            display: block;
+        }
+
+        .viewer-frame img,
+        .viewer-frame iframe {
+            min-height: 320px;
+            object-fit: contain;
+            background: rgba(0, 0, 0, 0.28);
+        }
+
+        .viewer-frame video {
+            aspect-ratio: 16 / 9;
+            background: #000;
+        }
+
+        .viewer-placeholder {
+            padding: 22px;
+            text-align: center;
+            display: grid;
+            gap: 12px;
+            justify-items: center;
+        }
+
+        .viewer-placeholder i {
+            font-size: 44px;
+            color: var(--accent);
+        }
+
+        .viewer-caption {
+            display: grid;
+            gap: 8px;
+        }
+
+        .viewer-caption h3 {
+            margin: 0;
+            font-size: 18px;
+        }
+
+        .viewer-caption p {
+            margin: 0;
+            color: var(--muted);
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .facts {
+            display: grid;
+            gap: 10px;
+        }
+
+        .fact {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .fact i {
+            color: var(--accent);
+        }
+
+        @media (max-width: 920px) {
+            .layout {
+                grid-template-columns: 1fr;
+            }
+
+            .viewer {
+                min-height: unset;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="page">
+        <div class="shell">
+            <section class="hero">
+                <div class="hero-top">
+                    <div>
+                        <div class="brand">
+                            <span class="brand-mark"><i class="ph ph-share-network"></i></span>
+                            <span>Compartilhamento TCloud</span>
+                        </div>
+                        <h1 class="hero-title" id="hero-title">Carregando item compartilhado...</h1>
+                    </div>
+                </div>
+                <div class="hero-meta" id="hero-meta"></div>
+                <div class="hero-copy" id="hero-copy">
+                    Preparando a visualização segura do compartilhamento externo.
+                </div>
+            </section>
+
+            <div class="layout">
+                <section class="panel">
+                    <div class="status info visible" id="public-status">
+                        <i class="ph ph-spinner-gap ph-spin"></i>
+                        <span>Carregando link público...</span>
+                    </div>
+
+                    <div class="unlock-card" id="unlock-card">
+                        <h2>Link protegido</h2>
+                        <p>Este compartilhamento exige senha. Digite a senha definida pelo dono do link para continuar.</p>
+                        <div class="field">
+                            <label for="unlock-password">Senha do compartilhamento</label>
+                            <input class="input" type="password" id="unlock-password" placeholder="Digite a senha">
+                        </div>
+                        <div class="button-row">
+                            <button class="button primary" id="unlock-button" type="button">
+                                <i class="ph ph-key"></i>
+                                <span>Desbloquear</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="directory-toolbar" id="directory-toolbar">
+                        <div class="breadcrumbs" id="directory-breadcrumbs"></div>
+                        <div class="button-row">
+                            <button class="button ghost" type="button" id="refresh-directory-button">
+                                <i class="ph ph-arrow-clockwise"></i>
+                                <span>Atualizar</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="directory-content" class="directory-list"></div>
+                    <div id="terminal-content" class="terminal" style="display:none;"></div>
+                </section>
+
+                <aside class="panel">
+                    <div class="viewer" id="viewer">
+                        <h2>Visualização</h2>
+                        <div class="viewer-frame" id="viewer-frame">
+                            <div class="viewer-placeholder">
+                                <i class="ph ph-eye"></i>
+                                <div class="viewer-caption">
+                                    <h3>Pronto para abrir</h3>
+                                    <p>Arquivos compartilhados aparecem aqui. Se for uma pasta, escolha um item na lista para visualizar ou baixar.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="button-row" id="viewer-actions"></div>
+                        <div class="facts" id="viewer-facts"></div>
+                    </div>
+                </aside>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const PUBLIC_SHARE_ID = __PUBLIC_SHARE_ID__;
+        const SHARE_TOKEN_KEY = `tcloud_public_share_${PUBLIC_SHARE_ID}`;
+        const state = {
+            summary: null,
+            shareToken: sessionStorage.getItem(SHARE_TOKEN_KEY) || '',
+            currentPath: '',
+            currentItems: [],
+            currentFile: null,
+        };
+
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function setStatus(message, type = 'info', icon = 'ph-info') {
+            const status = document.getElementById('public-status');
+            status.className = `status ${type} visible`;
+            status.innerHTML = `<i class="ph ${icon}"></i><span>${escapeHtml(message)}</span>`;
+        }
+
+        function hideStatus() {
+            document.getElementById('public-status').classList.remove('visible');
+        }
+
+        function setShareToken(token) {
+            state.shareToken = token || '';
+            if (state.shareToken) {
+                sessionStorage.setItem(SHARE_TOKEN_KEY, state.shareToken);
+            } else {
+                sessionStorage.removeItem(SHARE_TOKEN_KEY);
+            }
+        }
+
+        function formatDateTime(value) {
+            if (!value) return 'Sem data';
+            const date = new Date(value);
+            if (Number.isNaN(date.getTime())) return value;
+            return date.toLocaleString('pt-BR', {
+                dateStyle: 'medium',
+                timeStyle: 'short',
+            });
+        }
+
+        function formatSize(size) {
+            const value = Number(size || 0);
+            if (!Number.isFinite(value) || value <= 0) return 'Tamanho não informado';
+            const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+            let current = value;
+            let index = 0;
+            while (current >= 1024 && index < units.length - 1) {
+                current /= 1024;
+                index += 1;
+            }
+            return `${current.toFixed(current >= 10 || index === 0 ? 0 : 1)} ${units[index]}`;
+        }
+
+        function iconForItem(item) {
+            if (item.is_directory) return 'ph-folder-open';
+            const kind = String(item.preview_kind || '').toLowerCase();
+            if (kind === 'image') return 'ph-image';
+            if (kind === 'video') return 'ph-film-strip';
+            if (kind === 'audio') return 'ph-speaker-high';
+            if (kind === 'pdf') return 'ph-file-pdf';
+            return 'ph-file';
+        }
+
+        function buildFilePayloadFromSummary() {
+            const summary = state.summary;
+            if (!summary || summary.is_directory || !state.shareToken) return null;
+            const token = encodeURIComponent(state.shareToken);
+            const base = `/stream/shared/${encodeURIComponent(PUBLIC_SHARE_ID)}`;
+            return {
+                name: summary.name,
+                is_directory: false,
+                preview_kind: summary.preview_kind,
+                stream_url: `${base}?token=${token}`,
+                download_url: `${base}?download=true&token=${token}`,
+                mime_type: '',
+                size: 0,
+                modified_at: '',
+                relative_path: '',
+            };
+        }
+
+        async function fetchJson(url, options = {}) {
+            const config = { ...options, headers: { ...(options.headers || {}) } };
+            if (state.shareToken) {
+                config.headers.Authorization = `Bearer ${state.shareToken}`;
+            }
+            const response = await fetch(url, config);
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                const error = new Error(data.error || `Erro ${response.status}`);
+                error.status = response.status;
+                error.code = data.code || '';
+                throw error;
+            }
+            return data;
+        }
+
+        function renderHero(summary) {
+            document.getElementById('hero-title').innerText = summary?.name || 'Link público';
+            const meta = [];
+            meta.push(`<span class="pill"><i class="ph ${summary?.is_directory ? 'ph-folder-open' : 'ph-file'}"></i>${summary?.is_directory ? 'Pasta compartilhada' : 'Arquivo compartilhado'}</span>`);
+            if (summary?.requires_password) {
+                meta.push('<span class="pill"><i class="ph ph-lock-key"></i>Protegido por senha</span>');
+            }
+            if (summary?.expires_at) {
+                meta.push(`<span class="pill"><i class="ph ph-clock"></i>Expira em ${escapeHtml(formatDateTime(summary.expires_at))}</span>`);
+            }
+            if (summary?.max_access) {
+                meta.push(`<span class="pill"><i class="ph ph-chart-line-up"></i>${escapeHtml(String(summary.access_count || 0))}/${escapeHtml(String(summary.max_access))} acessos</span>`);
+            }
+            document.getElementById('hero-meta').innerHTML = meta.join('');
+            document.getElementById('hero-copy').innerText = summary?.is_directory
+                ? 'Esta pasta foi compartilhada em modo somente leitura. Você pode navegar pelos itens abaixo sem acessar o restante do TCloud.'
+                : 'Este arquivo foi compartilhado externamente. A visualização abaixo respeita senha, expiração e limite de acessos configurados pelo dono do link.';
+        }
+
+        function renderTerminal(message, icon = 'ph-warning-circle') {
+            document.getElementById('unlock-card').classList.remove('visible');
+            document.getElementById('directory-toolbar').classList.remove('visible');
+            document.getElementById('directory-content').innerHTML = '';
+            document.getElementById('terminal-content').style.display = 'grid';
+            document.getElementById('terminal-content').innerHTML = `
+                <i class="ph ${icon}"></i>
+                <div class="viewer-caption">
+                    <h3>Compartilhamento indisponível</h3>
+                    <p>${escapeHtml(message)}</p>
+                </div>
+            `;
+            document.getElementById('viewer-frame').innerHTML = `
+                <div class="viewer-placeholder">
+                    <i class="ph ph-lock-laminated"></i>
+                    <div class="viewer-caption">
+                        <h3>Nada para exibir</h3>
+                        <p>Este link não pode mais servir dados.</p>
+                    </div>
+                </div>
+            `;
+            document.getElementById('viewer-actions').innerHTML = '';
+            document.getElementById('viewer-facts').innerHTML = '';
+            setStatus(message, 'error', icon);
+        }
+
+        function renderUnlockCard(summary) {
+            document.getElementById('terminal-content').style.display = 'none';
+            document.getElementById('unlock-card').classList.add('visible');
+            document.getElementById('directory-toolbar').classList.remove('visible');
+            document.getElementById('directory-content').innerHTML = '';
+            document.getElementById('viewer-frame').innerHTML = `
+                <div class="viewer-placeholder">
+                    <i class="ph ph-lock-key-open"></i>
+                    <div class="viewer-caption">
+                        <h3>Senha necessária</h3>
+                        <p>Digite a senha do compartilhamento para desbloquear ${summary.is_directory ? 'esta pasta' : 'este arquivo'}.</p>
+                    </div>
+                </div>
+            `;
+            document.getElementById('viewer-actions').innerHTML = '';
+            document.getElementById('viewer-facts').innerHTML = '';
+            hideStatus();
+        }
+
+        function renderViewerFacts(item) {
+            const facts = [];
+            if (item?.modified_at) {
+                facts.push(`<div class="fact"><i class="ph ph-clock"></i><span>Atualizado em ${escapeHtml(formatDateTime(item.modified_at))}</span></div>`);
+            }
+            if (!item?.is_directory && item?.size) {
+                facts.push(`<div class="fact"><i class="ph ph-hard-drives"></i><span>${escapeHtml(formatSize(item.size))}</span></div>`);
+            }
+            if (state.summary?.expires_at) {
+                facts.push(`<div class="fact"><i class="ph ph-timer"></i><span>Expiração: ${escapeHtml(formatDateTime(state.summary.expires_at))}</span></div>`);
+            }
+            document.getElementById('viewer-facts').innerHTML = facts.join('');
+        }
+
+        function renderViewerActions(item) {
+            const actions = [];
+            if (item?.stream_url) {
+                actions.push(`<a class="link-button primary" href="${escapeHtml(item.stream_url)}" target="_blank" rel="noreferrer"><i class="ph ph-arrow-square-out"></i><span>Abrir</span></a>`);
+            }
+            if (item?.download_url) {
+                actions.push(`<a class="link-button ghost" href="${escapeHtml(item.download_url)}" target="_blank" rel="noreferrer"><i class="ph ph-download-simple"></i><span>Baixar</span></a>`);
+            }
+            document.getElementById('viewer-actions').innerHTML = actions.join('');
+        }
+
+        function renderFileViewer(item) {
+            state.currentFile = item;
+            const kind = String(item?.preview_kind || '').toLowerCase();
+            let frameHtml = '';
+            if (kind === 'image' && item.stream_url) {
+                frameHtml = `<img src="${escapeHtml(item.stream_url)}" alt="${escapeHtml(item.name)}">`;
+            } else if (kind === 'video' && item.stream_url) {
+                frameHtml = `<video src="${escapeHtml(item.stream_url)}" controls playsinline></video>`;
+            } else if (kind === 'audio' && item.stream_url) {
+                frameHtml = `
+                    <div class="viewer-placeholder">
+                        <i class="ph ph-speaker-high"></i>
+                        <div class="viewer-caption">
+                            <h3>${escapeHtml(item.name || 'Arquivo de áudio')}</h3>
+                            <p>Use o player abaixo para ouvir o conteúdo compartilhado.</p>
+                        </div>
+                        <audio src="${escapeHtml(item.stream_url)}" controls></audio>
+                    </div>
+                `;
+            } else if (kind === 'pdf' && item.stream_url) {
+                frameHtml = `<iframe src="${escapeHtml(item.stream_url)}" title="${escapeHtml(item.name || 'PDF compartilhado')}"></iframe>`;
+            } else {
+                frameHtml = `
+                    <div class="viewer-placeholder">
+                        <i class="ph ${iconForItem(item)}"></i>
+                        <div class="viewer-caption">
+                            <h3>${escapeHtml(item.name || 'Arquivo compartilhado')}</h3>
+                            <p>Este formato pode ser aberto em uma nova aba ou baixado diretamente.</p>
+                        </div>
+                    </div>
+                `;
+            }
+            document.getElementById('viewer-frame').innerHTML = frameHtml;
+            renderViewerActions(item);
+            renderViewerFacts(item);
+            hideStatus();
+        }
+
+        function renderDirectory(directoryData) {
+            document.getElementById('unlock-card').classList.remove('visible');
+            document.getElementById('terminal-content').style.display = 'none';
+            document.getElementById('directory-toolbar').classList.add('visible');
+            state.currentPath = directoryData.path || '';
+            state.currentItems = directoryData.items || [];
+
+            const crumbs = [];
+            crumbs.push(`<button class="crumb${!state.currentPath ? ' current' : ''}" type="button" onclick="browsePath('')"><i class="ph ph-folder-open"></i><span>${escapeHtml(directoryData.root_name || state.summary?.name || 'Raiz compartilhada')}</span></button>`);
+            if (state.currentPath) {
+                const parts = state.currentPath.split('/').filter(Boolean);
+                let acc = '';
+                parts.forEach((part, index) => {
+                    acc += (acc ? '/' : '') + part;
+                    crumbs.push(`<button class="crumb${index === parts.length - 1 ? ' current' : ''}" type="button" ${index === parts.length - 1 ? 'disabled' : `onclick="browsePath('${encodeURIComponent(acc)}', true)"`}><i class="ph ph-caret-right"></i><span>${escapeHtml(part)}</span></button>`);
+                });
+            }
+            document.getElementById('directory-breadcrumbs').innerHTML = crumbs.join('');
+
+            if (!state.currentItems.length) {
+                document.getElementById('directory-content').innerHTML = `
+                    <div class="empty-state">
+                        <i class="ph ph-folder-open"></i>
+                        <div class="viewer-caption">
+                            <h3>Pasta vazia</h3>
+                            <p>Não existem itens visíveis neste nível do compartilhamento.</p>
+                        </div>
+                    </div>
+                `;
+            } else {
+                document.getElementById('directory-content').innerHTML = state.currentItems.map((item) => {
+                    const itemPath = encodeURIComponent(item.relative_path || '');
+                    const openAction = item.is_directory
+                        ? `onclick="browsePath('${itemPath}', true)"`
+                        : `onclick="openDirectoryFile('${itemPath}')"`
+                    ;
+                    const secondaryAction = item.is_directory
+                        ? `<button class="mini-button" type="button" ${openAction}><i class="ph ph-arrow-right"></i> Entrar</button>`
+                        : `<a class="mini-button" href="${escapeHtml(item.download_url)}" target="_blank" rel="noreferrer"><i class="ph ph-download-simple"></i> Baixar</a>`;
+                    return `
+                        <div class="directory-item">
+                            <div class="directory-icon"><i class="ph ${iconForItem(item)}"></i></div>
+                            <div class="directory-meta">
+                                <div class="directory-name">${escapeHtml(item.name || 'Sem nome')}</div>
+                                <div class="directory-subtitle">${item.is_directory ? 'Pasta compartilhada' : `${escapeHtml(formatSize(item.size))} • ${escapeHtml(formatDateTime(item.modified_at))}`}</div>
+                            </div>
+                            <div class="directory-actions">
+                                <button class="mini-button" type="button" ${openAction}>
+                                    <i class="ph ${item.is_directory ? 'ph-folder-open' : 'ph-eye'}"></i>
+                                    ${item.is_directory ? 'Abrir' : 'Visualizar'}
+                                </button>
+                                ${secondaryAction}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            document.getElementById('viewer-frame').innerHTML = `
+                <div class="viewer-placeholder">
+                    <i class="ph ph-folders"></i>
+                    <div class="viewer-caption">
+                        <h3>Navegue pelo compartilhamento</h3>
+                        <p>Escolha uma pasta para continuar navegando ou um arquivo para abrir a visualização segura no painel ao lado.</p>
+                    </div>
+                </div>
+            `;
+            document.getElementById('viewer-actions').innerHTML = '';
+            renderViewerFacts({
+                is_directory: true,
+                modified_at: '',
+            });
+            hideStatus();
+        }
+
+        async function browsePath(path = '', encoded = false) {
+            if (!state.shareToken) {
+                if (state.summary?.requires_password) {
+                    renderUnlockCard(state.summary);
+                    return;
+                }
+                await unlockShare('');
+                return;
+            }
+            const relativePath = encoded ? decodeURIComponent(path) : path;
+            setStatus('Carregando pasta compartilhada...', 'info', 'ph-spinner-gap ph-spin');
+            try {
+                const data = await fetchJson(`/api/shared_item/${encodeURIComponent(PUBLIC_SHARE_ID)}/browse?path=${encodeURIComponent(relativePath)}`);
+                renderDirectory(data);
+            } catch (error) {
+                if (error.status === 401 || error.status === 403) {
+                    setShareToken('');
+                    if (state.summary?.requires_password) {
+                        renderUnlockCard(state.summary);
+                        return;
+                    }
+                    await unlockShare('');
+                    return;
+                }
+                if (error.status === 410 || error.status === 404) {
+                    renderTerminal(error.message || 'Este compartilhamento não está mais disponível.');
+                    return;
+                }
+                setStatus(error.message || 'Falha ao navegar pela pasta compartilhada.', 'error', 'ph-warning-circle');
+            }
+        }
+
+        function openDirectoryFile(encodedPath) {
+            const relativePath = decodeURIComponent(encodedPath || '');
+            const item = state.currentItems.find((candidate) => String(candidate.relative_path || '') === relativePath);
+            if (!item) return;
+            renderFileViewer(item);
+        }
+
+        async function unlockShare(password = '') {
+            setStatus('Validando acesso ao compartilhamento...', 'info', 'ph-spinner-gap ph-spin');
+            const button = document.getElementById('unlock-button');
+            const previousHtml = button.innerHTML;
+            button.disabled = true;
+            button.innerHTML = '<i class="ph ph-spinner-gap ph-spin"></i><span>Validando...</span>';
+            try {
+                const data = await fetchJson(`/api/shared_item/${encodeURIComponent(PUBLIC_SHARE_ID)}/access`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(password ? { password } : {}),
+                });
+                setShareToken(data.share_token || '');
+                document.getElementById('unlock-password').value = '';
+                if (data.item?.is_directory) {
+                    await browsePath('');
+                } else {
+                    renderFileViewer(data.item || buildFilePayloadFromSummary());
+                }
+                setStatus('Compartilhamento desbloqueado com sucesso.', 'success', 'ph-check-circle');
+                setTimeout(() => hideStatus(), 1200);
+            } catch (error) {
+                if (error.status === 403) {
+                    setStatus(error.message || 'Senha incorreta.', 'error', 'ph-warning-circle');
+                    return;
+                }
+                if (error.status === 404 || error.status === 410) {
+                    renderTerminal(error.message || 'Este compartilhamento não está mais disponível.');
+                    return;
+                }
+                setStatus(error.message || 'Falha ao liberar o acesso ao compartilhamento.', 'error', 'ph-warning-circle');
+            } finally {
+                button.disabled = false;
+                button.innerHTML = previousHtml;
+            }
+        }
+
+        async function bootstrapShare() {
+            setStatus('Carregando link público...', 'info', 'ph-spinner-gap ph-spin');
+            try {
+                const summary = await fetchJson(`/api/shared_item/${encodeURIComponent(PUBLIC_SHARE_ID)}`);
+                state.summary = summary;
+                renderHero(summary);
+
+                if (state.shareToken) {
+                    if (summary.is_directory) {
+                        await browsePath(state.currentPath || '');
+                    } else {
+                        const payload = buildFilePayloadFromSummary();
+                        if (payload) {
+                            renderFileViewer(payload);
+                            hideStatus();
+                        }
+                    }
+                    return;
+                }
+
+                if (summary.requires_password) {
+                    renderUnlockCard(summary);
+                    return;
+                }
+
+                await unlockShare('');
+            } catch (error) {
+                renderTerminal(error.message || 'Não foi possível carregar este compartilhamento.', 'ph-link-break');
+            }
+        }
+
+        document.getElementById('unlock-button').addEventListener('click', () => {
+            unlockShare(document.getElementById('unlock-password').value || '');
+        });
+
+        document.getElementById('unlock-password').addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                unlockShare(document.getElementById('unlock-password').value || '');
+            }
+        });
+
+        document.getElementById('refresh-directory-button').addEventListener('click', () => {
+            browsePath(state.currentPath || '');
+        });
+
+        bootstrapShare();
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PDF Tools</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="picker" id="picker">
+      <div class="picker-panel" role="dialog" aria-modal="true" aria-label="Abrir PDF">
+        <header class="picker-header">
+          <strong>Abrir PDF</strong>
+          <div class="picker-actions">
+            <button class="btn btn-cancel icon-button" id="refresh-list" title="Atualizar lista" type="button">↻</button>
+            <button class="btn btn-cancel icon-button" id="close-picker" title="Fechar" type="button">×</button>
+          </div>
+        </header>
+        <div class="search-row">
+          <input id="pdf-search" type="search" placeholder="Buscar PDFs" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-form-type="search" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-protonpass-ignore="true">
+        </div>
+        <div class="path-row">
+          <button class="btn btn-cancel" id="go-root" type="button">Raiz</button>
+          <span id="current-path">/</span>
+        </div>
+        <div class="file-list" id="file-list"></div>
+      </div>
+    </aside>
+
+    <main class="viewer">
+      <div class="tabs" id="tabs"></div>
+      <div class="toolbar" id="pdf-toolbar">
+        <div class="toolbar-home-group">
+          <button class="btn btn-primary" id="open-picker" title="Abrir PDF" type="button">Abrir PDF</button>
+          <div class="recent-pdfs-strip" id="recent-pdfs-strip" aria-label="Ultimos PDFs abertos"></div>
+          <button class="btn btn-cancel icon-button pdf-settings-toggle" id="pdf-settings-toggle-home" title="Configuracoes do PDF" type="button">⚙</button>
+        </div>
+        <div class="toolbar-reader-group">
+          <button class="btn btn-primary" id="open-picker-reader" title="Abrir outro PDF" type="button">Abrir PDF</button>
+          <button class="btn btn-cancel icon-button" id="first-page" title="Primeira pagina" type="button">«</button>
+          <button class="btn btn-cancel icon-button" id="prev-page" title="Pagina anterior" type="button">‹</button>
+          <label class="page-control">
+            <span id="page-input" class="page-control-editor" role="spinbutton" tabindex="0" contenteditable="plaintext-only" inputmode="numeric" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-protonpass-ignore="true" aria-label="Página atual">1</span>
+            <span id="page-total">/ 0</span>
+          </label>
+          <button class="btn btn-cancel icon-button" id="next-page" title="Proxima pagina" type="button">›</button>
+          <button class="btn btn-cancel icon-button" id="last-page" title="Ultima pagina" type="button">»</button>
+          <span class="divider"></span>
+          <button class="btn btn-cancel toolbar-button" id="fit-page" title="Ver pagina inteira" type="button">Página</button>
+          <button class="btn btn-cancel toolbar-button" id="fit-width" title="Ajustar a largura" type="button">Largura</button>
+          <button class="btn btn-cancel icon-button" id="zoom-out" title="Diminuir zoom" type="button">−</button>
+          <button class="btn btn-cancel zoom-label" id="zoom-reset" title="Restaurar zoom" type="button">100%</button>
+          <button class="btn btn-cancel icon-button" id="zoom-in" title="Aumentar zoom" type="button">+</button>
+          <button class="btn btn-cancel toolbar-button" id="presentation-mode" title="Modo apresentacao" type="button">Apresentar</button>
+          <button class="btn btn-cancel icon-button pdf-settings-toggle" id="pdf-settings-toggle" title="Configuracoes do PDF" type="button">⚙</button>
+          <span class="sync-state" id="sync-state">Pronto</span>
+        </div>
+      </div>
+      <div class="pdf-settings-panel" id="pdf-settings-panel" role="dialog" aria-label="Configuracoes do PDF" aria-hidden="true">
+        <header class="pdf-settings-header">
+          <strong>Configuracoes</strong>
+          <button class="btn btn-cancel icon-button" id="pdf-settings-close" title="Fechar configuracoes" type="button">×</button>
+        </header>
+        <section class="pdf-settings-section">
+          <span class="pdf-settings-label">Visualizacao</span>
+          <div class="pdf-settings-options" data-preference="pageSpread">
+            <button class="pdf-settings-option" type="button" data-value="single">1 pagina</button>
+            <button class="pdf-settings-option" type="button" data-value="double">2 paginas</button>
+          </div>
+        </section>
+        <section class="pdf-settings-section">
+          <span class="pdf-settings-label">Rolagem</span>
+          <div class="pdf-settings-options" data-preference="scrollMode">
+            <button class="pdf-settings-option" type="button" data-value="continuous">Continua</button>
+            <button class="pdf-settings-option" type="button" data-value="paged">Pagina a pagina</button>
+          </div>
+        </section>
+        <section class="pdf-settings-section">
+          <span class="pdf-settings-label">Ajuste padrao</span>
+          <div class="pdf-settings-options" data-preference="defaultFitMode">
+            <button class="pdf-settings-option" type="button" data-value="page">Pagina</button>
+            <button class="pdf-settings-option" type="button" data-value="width">Largura</button>
+            <button class="pdf-settings-option" type="button" data-value="custom">Ultimo usado</button>
+          </div>
+        </section>
+        <section class="pdf-settings-section">
+          <span class="pdf-settings-label">Miniaturas</span>
+          <div class="pdf-settings-options" data-preference="thumbsCollapsed">
+            <button class="pdf-settings-option" type="button" data-value="false">Abertas</button>
+            <button class="pdf-settings-option" type="button" data-value="true">Recolhidas</button>
+          </div>
+        </section>
+        <section class="pdf-settings-section">
+          <span class="pdf-settings-label">Ao abrir PDF</span>
+          <div class="pdf-settings-options" data-preference="openBehavior">
+            <button class="pdf-settings-option" type="button" data-value="new_tab">Nova aba</button>
+            <button class="pdf-settings-option" type="button" data-value="replace_current">Substituir atual</button>
+          </div>
+        </section>
+      </div>
+      <div class="pdf-find-panel" id="pdf-find-panel" role="search" aria-label="Pesquisar no PDF">
+        <div class="pdf-find-input-wrap">
+          <span class="pdf-find-icon" aria-hidden="true">⌕</span>
+          <span id="pdf-find-input" class="pdf-find-input" role="searchbox" tabindex="0" contenteditable="plaintext-only" inputmode="search" spellcheck="false" data-placeholder="Pesquisar no PDF" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-protonpass-ignore="true" aria-label="Pesquisar no PDF"></span>
+        </div>
+        <span class="pdf-find-counter" id="pdf-find-counter">0 / 0</span>
+        <button class="btn btn-cancel icon-button pdf-find-nav" id="pdf-find-prev" title="Resultado anterior" type="button">‹</button>
+        <button class="btn btn-cancel icon-button pdf-find-nav" id="pdf-find-next" title="Próximo resultado" type="button">›</button>
+        <button class="btn btn-cancel icon-button pdf-find-close" id="pdf-find-close" title="Fechar pesquisa" type="button">×</button>
+        <span class="pdf-find-status" id="pdf-find-status">Digite para pesquisar</span>
+      </div>
+      <div class="workspace">
+        <nav class="thumbs" id="thumbs" tabindex="0" aria-label="Miniaturas das paginas"></nav>
+        <section class="page-stage" id="page-stage" tabindex="0">
+          <div class="empty-state" id="empty-state">
+            <h1>Abra um PDF</h1>
+            <p>Escolha um documento na lista ou abra pela acao contextual do TCloud.</p>
+            <button class="btn btn-primary empty-action" id="empty-open-picker" type="button">Abrir PDF</button>
+          </div>
+          <div class="document-host" id="document-host"></div>
+        </section>
+      </div>
+    </main>
+    <div class="presentation-hud" id="presentation-hud">
+      <span id="presentation-page">1 / 1</span>
+      <span>Esc para sair</span>
+    </div>
+  </div>
+
+  <script src="/static/tcloud-app-runtime.js"></script>
+  <script type="module" src="./script.js"></script>
+</body>
+</html>

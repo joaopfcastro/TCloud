@@ -1139,12 +1139,11 @@ class TCloudHTTPServer:
         self._public_share_metrics_cache: dict[tuple[str, str, str], dict] = {}
         self._public_share_metrics_tasks: dict[tuple[str, str, str], asyncio.Task] = {}
         self._public_share_metrics_ttl_seconds = max(
-            10,
-            int(os.getenv("PUBLIC_SHARE_METRICS_TTL_SECONDS", "60")),
+            5,
+            int(getattr(Config, "PUBLIC_SHARE_METRICS_TTL_SECONDS", 60)),
         )
-        self._public_share_metrics_semaphore = asyncio.Semaphore(
-            max(1, int(os.getenv("PUBLIC_SHARE_METRICS_CONCURRENCY", "2")))
-        )
+        self._public_share_metrics_concurrency = max(1, int(getattr(Config, "PUBLIC_SHARE_METRICS_CONCURRENCY", 2)))
+        self._public_share_metrics_semaphore = asyncio.Semaphore(self._public_share_metrics_concurrency)
         self._app_manager = AppManager(runtime_dir=Config.RUNTIME_DIR)
         self._app_install_service = AppInstallService(
             bundled_apps_dir=Path(__file__).parent / "apps",
@@ -1231,6 +1230,8 @@ class TCloudHTTPServer:
         self._app.router.add_get("/api/usage", self._handle_api_usage)
         self._app.router.add_get("/api/thumbnail", self._handle_api_thumbnail)
         self._app.router.add_get("/api/file_info", self._handle_api_file_info)
+        self._app.router.add_get("/api/shared", self._handle_api_shared_owner_items)
+        self._app.router.add_get("/api/share/policy", self._handle_api_share_policy)
         self._app.router.add_post("/api/share", self._handle_api_share)
         self._app.router.add_delete("/api/share", self._handle_api_share_delete)
         self._app.router.add_post("/api/favorite", self._handle_api_favorite)
@@ -1271,6 +1272,20 @@ class TCloudHTTPServer:
         self._app.router.add_get("/api/apps/{app_id}/audit", self._handle_api_apps_audit)
         self._app.router.add_post("/api/apps/{app_id}/runtime/session", self._handle_api_app_runtime_session)
         self._app.router.add_post("/api/apps/runtime/execute", self._handle_api_apps_runtime_execute)
+        self._app.router.add_get("/api/apps/runtime/file", self._handle_api_apps_runtime_file)
+        self._app.router.add_get("/api/window_layouts", self._handle_api_window_layouts)
+        self._app.router.add_get("/api/window_layouts/{window_id}", self._handle_api_window_layout_get)
+        self._app.router.add_put("/api/window_layouts/{window_id}", self._handle_api_window_layout_put)
+        self._app.router.add_delete("/api/window_layouts/{window_id}", self._handle_api_window_layout_delete)
+        self._app.router.add_get("/api/desktop_windows/session", self._handle_api_desktop_window_session_get)
+        self._app.router.add_put("/api/desktop_windows/session", self._handle_api_desktop_window_session_put)
+        self._app.router.add_delete("/api/desktop_windows/session", self._handle_api_desktop_window_session_delete)
+        self._app.router.add_get("/api/finder_session", self._handle_api_finder_session_get)
+        self._app.router.add_put("/api/finder_session", self._handle_api_finder_session_put)
+        self._app.router.add_delete("/api/finder_session", self._handle_api_finder_session_delete)
+        self._app.router.add_get("/api/app_session", self._handle_api_app_session_get)
+        self._app.router.add_put("/api/app_session", self._handle_api_app_session_put)
+        self._app.router.add_delete("/api/app_session", self._handle_api_app_session_delete)
         self._app.router.add_get("/api/settings/schema", self._handle_api_settings_schema)
         self._app.router.add_get("/api/settings", self._handle_api_settings)
         self._app.router.add_get("/api/settings/secret/{key}", self._handle_api_settings_secret)
@@ -1312,6 +1327,7 @@ class TCloudHTTPServer:
         self._app.router.add_post("/api/shared_item/{public_id}/selection_summary", self._handle_api_shared_item_selection_summary)
         self._app.router.add_post("/api/shared_item/{public_id}/download_zip_selection", self._handle_api_shared_item_download_zip_selection)
         self._app.router.add_get("/api/shared_item/{public_id}/media_tracks", self._handle_api_shared_media_tracks)
+        self._app.router.add_get("/api/shared_item/{public_id}/subtitle_candidates", self._handle_api_shared_subtitle_candidates)
         self._app.router.add_get("/api/shared_item/{public_id}/subtitle", self._handle_api_shared_subtitle)
         self._app.router.add_post("/api/shared_item/{public_id}/web_playback/session", self._handle_api_shared_web_playback_session_create)
         self._app.router.add_get("/api/shared_item/{public_id}/web_playback/session/{session_id}/master.m3u8", self._handle_api_shared_web_playback_master_playlist)
@@ -2461,6 +2477,64 @@ except Exception as e:
             logger.error(f"Error getting file info for {raw_path}: {exc}", exc_info=True)
             return web.json_response({"error": str(exc)}, status=500)
 
+    def _public_share_policy_payload(self) -> dict:
+        return {
+            "enabled": bool(getattr(Config, "PUBLIC_SHARE_ENABLED", True)),
+            "allow_file_sharing": bool(getattr(Config, "PUBLIC_SHARE_ALLOW_FILE_SHARING", True)),
+            "allow_folder_sharing": bool(getattr(Config, "PUBLIC_SHARE_ALLOW_FOLDER_SHARING", True)),
+            "require_password_by_default": bool(getattr(Config, "PUBLIC_SHARE_REQUIRE_PASSWORD_BY_DEFAULT", False)),
+            "default_expiry_hours": max(0, int(getattr(Config, "PUBLIC_SHARE_DEFAULT_EXPIRY_HOURS", 0))),
+            "max_expiry_hours": max(0, int(getattr(Config, "PUBLIC_SHARE_MAX_EXPIRY_HOURS", 0))),
+            "default_max_access": max(0, int(getattr(Config, "PUBLIC_SHARE_DEFAULT_MAX_ACCESS", 0))),
+            "max_access_limit": max(0, int(getattr(Config, "PUBLIC_SHARE_MAX_ACCESS_LIMIT", 100000))),
+            "allow_zip_download": bool(getattr(Config, "PUBLIC_SHARE_ALLOW_ZIP_DOWNLOAD", True)),
+            "session_ttl_seconds": max(60, int(getattr(Config, "PUBLIC_SHARE_SESSION_TTL_SECONDS", 1800))),
+            "metrics_ttl_seconds": max(5, int(getattr(Config, "PUBLIC_SHARE_METRICS_TTL_SECONDS", 60))),
+            "metrics_concurrency": max(1, int(getattr(Config, "PUBLIC_SHARE_METRICS_CONCURRENCY", 2))),
+            "show_media_preview": bool(getattr(Config, "PUBLIC_SHARE_SHOW_MEDIA_PREVIEW", True)),
+            "audit_log_enabled": bool(getattr(Config, "PUBLIC_SHARE_AUDIT_LOG_ENABLED", True)),
+        }
+
+    async def _handle_api_share_policy(self, request):
+        return web.json_response({"policy": self._public_share_policy_payload()})
+
+    async def _handle_api_shared_owner_items(self, request):
+        try:
+            status = str(request.query.get("status") or "all").strip()
+            kind = str(request.query.get("kind") or "all").strip()
+            query = str(request.query.get("q") or "").strip()
+            try:
+                limit = int(request.query.get("limit") or 500)
+            except (TypeError, ValueError):
+                limit = 500
+            payload = await self._file_manager.list_shared_items(
+                status=status,
+                kind=kind,
+                query=query,
+                limit=limit,
+            )
+            serialized_items = []
+            for item in payload.get("items") or []:
+                serialized = await self._serialize_browser_item(
+                    request,
+                    item,
+                    share_state=item.get("sharing_state"),
+                )
+                owner_status = (item.get("sharing_state") or {}).get("owner_status")
+                serialized["share_status"] = owner_status or "active"
+                serialized_items.append(serialized)
+            return web.json_response(
+                {
+                    "items": serialized_items,
+                    "summary": payload.get("summary") or {},
+                    "filters": payload.get("filters") or {},
+                    "policy": self._public_share_policy_payload(),
+                }
+            )
+        except Exception as exc:
+            logger.error("Error listing owner shared items: %s", exc, exc_info=True)
+            return web.json_response({"error": "Falha ao listar compartilhados"}, status=500)
+
     async def _handle_api_share(self, request):
         try:
             data = await request.json()
@@ -2473,12 +2547,36 @@ except Exception as e:
         if raw_path == "/":
             return web.json_response({"error": "Não é permitido compartilhar a raiz do TCloud"}, status=400)
 
+        if not getattr(Config, "PUBLIC_SHARE_ENABLED", True):
+            return web.json_response({"error": "Compartilhamento público está desabilitado nas Configurações"}, status=403)
+
         try:
             expires_at = self._parse_public_share_expires_at(data.get("expires_at"))
         except ValueError as exc:
             return web.json_response({"error": str(exc)}, status=400)
 
         try:
+            entry_kind, entry_doc = await self._file_manager._db.get_entry(raw_path)
+            if not entry_kind or not entry_doc:
+                raise FileNotFoundError(f"Item not found: {raw_path}")
+            if entry_kind == "file" and not getattr(Config, "PUBLIC_SHARE_ALLOW_FILE_SHARING", True):
+                return web.json_response({"error": "Compartilhamento de arquivos está desabilitado nas Configurações"}, status=403)
+            if entry_kind == "directory" and not getattr(Config, "PUBLIC_SHARE_ALLOW_FOLDER_SHARING", True):
+                return web.json_response({"error": "Compartilhamento de pastas está desabilitado nas Configurações"}, status=403)
+            max_expiry_hours = max(0, int(getattr(Config, "PUBLIC_SHARE_MAX_EXPIRY_HOURS", 0)))
+            if expires_at is not None and max_expiry_hours > 0:
+                expires_normalized = expires_at if expires_at.tzinfo else expires_at.replace(tzinfo=timezone.utc)
+                max_expires = datetime.now(timezone.utc) + timedelta(hours=max_expiry_hours)
+                if expires_normalized > max_expires:
+                    return web.json_response({"error": f"Expiração máxima permitida: {max_expiry_hours} hora(s)"}, status=400)
+            max_access_limit = max(0, int(getattr(Config, "PUBLIC_SHARE_MAX_ACCESS_LIMIT", 100000)))
+            max_access_raw = data.get("max_access")
+            if max_access_limit > 0 and max_access_raw not in (None, "", False):
+                try:
+                    if int(max_access_raw) > max_access_limit:
+                        return web.json_response({"error": f"Limite máximo permitido: {max_access_limit} acessos"}, status=400)
+                except (TypeError, ValueError):
+                    return web.json_response({"error": "max_access must be an integer"}, status=400)
             inheritance_override = str(data.get("inheritance_override") or "").strip().lower()
             if inheritance_override not in {"", "inherit", "hidden"}:
                 return web.json_response({"error": "inheritance_override inválido"}, status=400)
@@ -2505,9 +2603,6 @@ except Exception as e:
                     reset_access_count=bool(data.get("reset_access_count")),
                 )
             if not target_kind or not target_doc:
-                entry_kind, entry_doc = await self._file_manager._db.get_entry(raw_path)
-                if not entry_kind or not entry_doc:
-                    raise FileNotFoundError(f"Item not found: {raw_path}")
                 target_kind, target_doc = entry_kind, entry_doc
             sharing_state = self._serialize_owner_sharing_state(
                 request,
@@ -2561,6 +2656,14 @@ except Exception as e:
 
     async def _handle_api_shared_item(self, request):
         public_id = str(request.match_info.get("public_id") or "").strip()
+        if not getattr(Config, "PUBLIC_SHARE_ENABLED", True):
+            payload, status = self._public_share_error_payload(
+                public_id,
+                code="share_disabled",
+                message="Compartilhamento público está desabilitado.",
+                status=403,
+            )
+            return web.json_response(payload, status=status)
         if not public_id:
             payload, status = self._public_share_error_payload(
                 public_id,
@@ -2606,21 +2709,61 @@ except Exception as e:
 
     async def _handle_api_shared_item_access(self, request):
         public_id = str(request.match_info.get("public_id") or "").strip()
+        if not getattr(Config, "PUBLIC_SHARE_ENABLED", True):
+            payload, status = self._public_share_error_payload(
+                public_id,
+                code="share_disabled",
+                message="Compartilhamento público está desabilitado.",
+                status=403,
+            )
+            return web.json_response(payload, status=status)
         try:
             data = await request.json()
         except Exception:
             data = {}
 
         password = str((data or {}).get("password") or "")
+        session_ttl_seconds = max(60, int(getattr(Config, "PUBLIC_SHARE_SESSION_TTL_SECONDS", 1800)))
+        refreshed_existing_session = False
         try:
-            target_kind, target_doc = await self._file_manager.grant_public_share_access(public_id, password=password)
-            session_expires_at = datetime.now(timezone.utc) + timedelta(seconds=1800)
+            existing_token = self._request_bearer_token(request)
+            refresh_payload = (
+                verify_public_share_token(existing_token, Config.JWT_SECRET, allow_expired=True)
+                if existing_token and not password
+                else None
+            )
+            if refresh_payload and str(refresh_payload.get("public_id") or "").strip() == public_id:
+                target_kind, target_doc = await self._file_manager.get_shared_target(public_id)
+                token_path = str(refresh_payload.get("path") or "").strip()
+                current_path = str(target_doc.get("path") or "").strip()
+                token_is_directory = bool(refresh_payload.get("is_directory"))
+                current_is_directory = target_kind == "directory"
+                if token_path != current_path or token_is_directory != current_is_directory:
+                    raise PublicShareError("share_session_stale", "Este compartilhamento foi alterado ou revogado.", status=410)
+
+                sharing = dict(target_doc.get("sharing") or {})
+                expires_at = sharing.get("expires_at")
+                if isinstance(expires_at, datetime):
+                    normalized_expires = expires_at if expires_at.tzinfo else expires_at.replace(tzinfo=timezone.utc)
+                    if normalized_expires <= datetime.now(timezone.utc):
+                        raise PublicShareError("share_expired", "Este link público expirou.", status=410)
+                max_access = sharing.get("max_access")
+                if max_access not in (None, "", False):
+                    try:
+                        if int(sharing.get("access_count") or 0) > int(max_access):
+                            raise PublicShareError("share_access_exhausted", "Este link público atingiu o limite de acessos.", status=410)
+                    except (TypeError, ValueError):
+                        raise PublicShareError("share_access_exhausted", "Este link público atingiu o limite de acessos.", status=410)
+                refreshed_existing_session = True
+            else:
+                target_kind, target_doc = await self._file_manager.grant_public_share_access(public_id, password=password)
+            session_expires_at = datetime.now(timezone.utc) + timedelta(seconds=session_ttl_seconds)
             share_token = create_public_share_token(
                 public_id=public_id,
                 path=str(target_doc.get("path") or ""),
                 is_directory=target_kind == "directory",
                 secret=Config.JWT_SECRET,
-                expiry_seconds=1800,
+                expiry_seconds=session_ttl_seconds,
             )
         except PublicShareError as exc:
             payload, status = self._public_share_error_payload(public_id, code=exc.code, message=exc.message, status=exc.status)
@@ -2652,6 +2795,8 @@ except Exception as e:
             "public_id": public_id,
             "share_token": share_token,
             "session_expires_at": session_expires_at.isoformat(),
+            "session_ttl_seconds": session_ttl_seconds,
+            "session_refreshed": refreshed_existing_session,
             "item": item_payload,
         })
 
@@ -2757,6 +2902,8 @@ except Exception as e:
             self._public_share_metrics_ttl_seconds = 60
         if not hasattr(self, "_public_share_metrics_semaphore"):
             self._public_share_metrics_semaphore = asyncio.Semaphore(2)
+        if not hasattr(self, "_public_share_metrics_concurrency"):
+            self._public_share_metrics_concurrency = 2
 
     async def _compute_public_share_metrics(self, cache_key: tuple[str, str, str], public_id: str, root_path: str, current_path: str) -> None:
         self._ensure_public_share_metrics_state()
@@ -3005,6 +3152,8 @@ except Exception as e:
     async def _handle_api_shared_item_selection_summary(self, request):
         public_id = str(request.match_info.get("public_id") or "").strip()
         try:
+            if not getattr(Config, "PUBLIC_SHARE_ALLOW_ZIP_DOWNLOAD", True):
+                return web.json_response({"error": "Download ZIP público está desabilitado nas Configurações", "code": "share_zip_disabled"}, status=403)
             _payload, _root_path, _target_doc, _paths, manifest = await self._public_selection_manifest_from_request(request, public_id)
             return web.json_response({
                 "public_id": public_id,
@@ -3030,6 +3179,8 @@ except Exception as e:
     async def _handle_api_shared_item_download_zip_selection(self, request):
         public_id = str(request.match_info.get("public_id") or "").strip()
         try:
+            if not getattr(Config, "PUBLIC_SHARE_ALLOW_ZIP_DOWNLOAD", True):
+                return web.Response(text="Download ZIP público está desabilitado nas Configurações", status=403)
             payload, _root_path, target_doc, paths, manifest = await self._public_selection_manifest_from_request(request, public_id)
             zip_filename = self._public_selection_zip_filename(payload, target_doc, paths, manifest)
             archive_root = zip_filename[:-4] or "selecionados"
@@ -3062,6 +3213,8 @@ except Exception as e:
         public_id = str(request.match_info.get("public_id") or "").strip()
         relative_path = str(request.query.get("path") or "").strip()
         try:
+            if not getattr(Config, "PUBLIC_SHARE_ALLOW_ZIP_DOWNLOAD", True):
+                return web.Response(text="Download ZIP público está desabilitado nas Configurações", status=403)
             _token_payload, target_kind, target_doc = await self._resolve_public_share_session(request, public_id)
             if target_kind != "directory":
                 return web.Response(text="Este link público não aponta para uma pasta", status=400)
@@ -3885,6 +4038,11 @@ except Exception as e:
                         process.kill()
                 except Exception:
                     pass
+                finally:
+                    try:
+                        await asyncio.wait_for(process.wait(), timeout=2.0)
+                    except Exception:
+                        pass
             
             # Cleanup temp concat file if it was created
             if temp_concat_path and os.path.exists(temp_concat_path):
@@ -3940,21 +4098,34 @@ except Exception as e:
 
     def _rewrite_web_playback_media_playlist(self, playlist_text: str, request) -> str:
         token = self._extract_request_token(request)
-        if not token:
-            return playlist_text
 
+        lines = str(playlist_text or "").splitlines()
         rewritten_lines: list[str] = []
-        for raw_line in str(playlist_text or "").splitlines():
+
+        # Inject #EXT-X-START:TIME-OFFSET=0 if it's an EVENT or LIVE playlist to prevent jumping to live edge
+        has_start_tag = any(line.startswith("#EXT-X-START") for line in lines)
+        is_vod = any(line.startswith("#EXT-X-PLAYLIST-TYPE:VOD") for line in lines)
+
+        for raw_line in lines:
             line = raw_line.strip()
-            if line.startswith("#EXT-X-MAP:") and 'URI="' in line:
-                line = re.sub(
-                    r'URI="([^"]+)"',
-                    lambda match: f'URI="{self._append_token_to_playlist_path(match.group(1), token)}"',
-                    line,
-                )
-            elif line and not line.startswith("#"):
-                line = self._append_token_to_playlist_path(line, token)
+
+            if line.startswith("#EXTM3U") and not has_start_tag and not is_vod:
+                rewritten_lines.append(line)
+                rewritten_lines.append("#EXT-X-START:TIME-OFFSET=0")
+                continue
+
+            if token:
+                if line.startswith("#EXT-X-MAP:") and 'URI="' in line:
+                    line = re.sub(
+                        r'URI="([^"]+)"',
+                        lambda match: f'URI="{self._append_token_to_playlist_path(match.group(1), token)}"',
+                        line,
+                    )
+                elif line and not line.startswith("#"):
+                    line = self._append_token_to_playlist_path(line, token)
+
             rewritten_lines.append(line)
+
         return "\n".join(rewritten_lines) + "\n"
 
     def _build_web_playback_subtitle_playlist_path(self, session_id: str, track_id: str) -> str:
@@ -3965,6 +4136,166 @@ except Exception as e:
             f"/api/shared_item/{quote(public_id, safe='')}/web_playback/session/"
             f"{quote(session_id, safe='')}/subtitles/{quote(track_id, safe='')}/playlist.m3u8"
         )
+
+    def _web_playback_subtitle_response_headers(self, session: dict, track: dict | None = None) -> dict:
+        return {
+            "X-TCloud-Playback-Session": str(session.get("id") or session.get("session_id") or ""),
+            "X-TCloud-Subtitle-Timebase": str((track or {}).get("subtitle_timebase") or "session"),
+            "X-TCloud-Timeline-Offset": str(float(session.get("start_seconds") or 0.0)),
+        }
+
+    def _public_subtitle_label_needs_rebuild(self, label: str) -> bool:
+        clean_label = _shared_clean_track_value(label)
+        if not clean_label:
+            return True
+        folded = _strip_accents(clean_label).replace("_", " ")
+        collapsed = re.sub(r"[\s._-]+", " ", folded).strip()
+        if re.fullmatch(r"(legenda|subtitle|subtitles?|caption|captions?)(\s+\d+)?", collapsed):
+            return True
+        return _looks_like_technical_track_label(clean_label) or _is_probably_subtitle_filename(clean_label)
+
+    def _build_public_subtitle_canonical_key(
+        self,
+        item: dict,
+        *,
+        sidecar_relative_path: str = "",
+        track_id: str = "",
+        source_mode: str = "",
+    ) -> str:
+        source = str(item.get("source") or "").strip().lower()
+        language = _normalize_language_code(item.get("language", ""))
+        source_track_index = item.get("source_track_index")
+        if source_track_index is None:
+            source_track_index = item.get("track_index")
+        if source_track_index is None:
+            filename = str(
+                item.get("name")
+                or item.get("filename")
+                or item.get("path")
+                or item.get("src")
+                or ""
+            )
+            generated_match = re.search(r"\.tcloud\.embedded\.(\d+)(?:\.|$)", filename, flags=re.IGNORECASE)
+            if generated_match:
+                source_track_index = generated_match.group(1)
+        if source_track_index is not None and str(source_track_index).strip() != "":
+            return ":".join([
+                "generated" if source == "sidecar" else (source or "subtitle"),
+                str(source_track_index).strip(),
+                language or "und",
+                "forced" if item.get("forced") else "normal",
+                "default" if item.get("default") else "nodefault",
+            ])
+        if sidecar_relative_path:
+            return f"sidecar:{sidecar_relative_path}"
+        if track_id:
+            return f"track:{track_id}"
+        return f"{source or 'subtitle'}:{item.get('id') or item.get('url') or item.get('src') or ''}"
+
+    def _normalize_public_subtitle_payload(
+        self,
+        item: dict,
+        *,
+        public_url: str,
+        source_mode: str,
+        subtitle_timebase: str,
+        track_id: str = "",
+        sidecar_relative_path: str = "",
+        timeline_offset_seconds: float = 0.0,
+        session_id: str = "",
+    ) -> dict:
+        filename = str(
+            item.get("name")
+            or item.get("filename")
+            or Path(str(item.get("path") or item.get("src") or "")).name
+            or ""
+        ).strip()
+        language = _normalize_language_code(item.get("language", ""))
+        title = _shared_clean_track_value(item.get("title", ""))
+        if title and _looks_like_technical_track_label(title):
+            title = ""
+        forced = bool(item.get("forced"))
+        default = bool(item.get("default"))
+        hearing_impaired = bool(item.get("hearing_impaired"))
+        comment = bool(item.get("comment"))
+        captions = bool(item.get("captions"))
+        label = _shared_clean_track_value(item.get("label", ""))
+        if self._public_subtitle_label_needs_rebuild(label):
+            label = _build_subtitle_label(
+                language=language,
+                title=title,
+                index=int(item.get("track_index") or item.get("source_track_index") or 0),
+                filename=filename,
+                src=filename or public_url,
+                forced=forced,
+                default=default,
+                hearing_impaired=hearing_impaired,
+                comment=comment,
+                captions=captions,
+            )
+        track_id = str(track_id or item.get("track_id") or item.get("id") or "").strip()
+        canonical_key = self._build_public_subtitle_canonical_key(
+            {
+                **item,
+                "language": language,
+                "forced": forced,
+                "default": default,
+            },
+            sidecar_relative_path=sidecar_relative_path,
+            track_id=track_id,
+            source_mode=source_mode,
+        )
+        payload = {
+            "id": item.get("id") or (f"sidecar:{sidecar_relative_path}" if sidecar_relative_path else track_id),
+            "canonical_key": canonical_key,
+            "track_id": track_id,
+            "source": item.get("source") or ("sidecar" if sidecar_relative_path else "embedded"),
+            "source_track_index": item.get("source_track_index"),
+            "track_index": item.get("track_index"),
+            "stream_index": item.get("stream_index"),
+            "source_codec": item.get("source_codec") or item.get("codec") or "",
+            "codec": item.get("codec") or Path(filename).suffix.lower().lstrip("."),
+            "name": filename,
+            "filename": filename,
+            "label": label,
+            "language": language,
+            "srclang": language,
+            "title": title,
+            "forced": forced,
+            "default": default,
+            "hearing_impaired": hearing_impaired,
+            "comment": comment,
+            "captions": captions,
+            "flags": _subtitle_flags(
+                forced=forced,
+                default=default,
+                hearing_impaired=hearing_impaired,
+                comment=comment,
+                captions=captions,
+            ),
+            "scope_kind": item.get("scope_kind") or "",
+            "match_reason": item.get("match_reason") or "",
+            "subtitle_timebase": subtitle_timebase,
+            "subtitleTimebase": subtitle_timebase,
+            "subtitleSourceMode": source_mode,
+            "timeline_offset_seconds": float(timeline_offset_seconds or 0.0),
+            "timebase": subtitle_timebase,
+            "url": public_url,
+            "src": public_url,
+        }
+        if sidecar_relative_path:
+            payload["sidecar_relative_path"] = sidecar_relative_path
+            payload["legacy_url"] = public_url
+        if source_mode == "hls_session":
+            payload.update({
+                "session_id": session_id,
+                "delivery": "hls_session",
+                "hls_playlist_url": public_url,
+                "playlist_url": public_url,
+                "legacy_url": "",
+                "source_timebase": "media_zero",
+            })
+        return payload
 
     def _publicize_web_playback_subtitle_tracks(
         self,
@@ -3983,18 +4314,17 @@ except Exception as e:
             if token_query:
                 playlist_url = f"{playlist_url}{token_query}"
             public_track = dict(track)
-            public_track.update({
-                "track_id": track_id,
-                "delivery": "hls_session",
-                "subtitleSourceMode": "hls_session",
-                "subtitle_timebase": "session",
-                "timebase": "session",
-                "hls_playlist_url": playlist_url,
-                "playlist_url": playlist_url,
-                "src": playlist_url,
-                "url": playlist_url,
-                "legacy_url": "",
-            })
+            public_track.update(self._normalize_public_subtitle_payload(
+                track,
+                public_url=playlist_url,
+                source_mode="hls_session",
+                subtitle_timebase="session",
+                track_id=track_id,
+                timeline_offset_seconds=float(session.get("start_seconds") or 0.0),
+                session_id=session_id,
+            ))
+            for private_key in ("path", "media_path"):
+                public_track.pop(private_key, None)
             public_tracks.append(public_track)
         return public_tracks
 
@@ -4321,6 +4651,20 @@ except Exception as e:
                     process.kill()
             except Exception:
                 pass
+            finally:
+                # Colher o processo zombie e fechar pipes (stdin/stdout/stderr)
+                # para evitar vazamento de file descriptors que esgota o SO.
+                try:
+                    await asyncio.wait_for(process.wait(), timeout=2.0)
+                except Exception:
+                    pass
+        elif process and process.returncode is not None:
+            # Processo já morreu sozinho mas pipes podem estar abertas;
+            # wait() garante que o asyncio transport seja encerrado.
+            try:
+                await asyncio.wait_for(process.wait(), timeout=1.0)
+            except Exception:
+                pass
 
         feed_task = session.get("feed_task")
         if feed_task and not feed_task.done():
@@ -4436,7 +4780,11 @@ except Exception as e:
         input_mode = str(input_plan["input_mode"] or "local-file")
         probe_input = input_plan.get("probe_input")
         source_video_codec = await self._probe_web_hls_source_video_codec(probe_input, raw_path)
-        prefer_video_copy = segment_type == "mpegts" and source_video_codec in ("h264", "h264_qsv", "h264_nvenc")
+        prefer_video_copy = self._should_use_web_hls_video_copy(
+            segment_type=segment_type,
+            start_seconds=start_seconds,
+            source_video_codec=source_video_codec,
+        )
         startup_timeout_seconds = float(getattr(self, "_web_playback_hls_startup_timeout_seconds", 45.0) or 45.0)
 
         logger.info(
@@ -4465,6 +4813,7 @@ except Exception as e:
                     "-pix_fmt", "yuv420p",
                     "-profile:v", "main",
                     "-level:v", "4.1",
+                    "-vf", "fps=fps=24:start_time=0,setpts=PTS-STARTPTS",
                 ]
 
             output_args = [
@@ -4484,6 +4833,7 @@ except Exception as e:
                 ])
 
             output_args.extend([
+                "-async", "1",
                 "-c:a", "aac",
                 "-ar", "48000",
                 "-ac", "2",
@@ -4492,6 +4842,7 @@ except Exception as e:
                 "-hls_time", "4",
                 "-hls_list_size", "0",
                 "-hls_flags", "independent_segments+temp_file",
+                "-hls_playlist_type", "event",
             ])
 
             if segment_type == "fmp4":
@@ -4845,7 +5196,7 @@ except Exception as e:
         session_id = request.match_info.get("session_id", "")
         track_id = request.match_info.get("track_id", "")
         try:
-            session, _track, playlist_path = await self._ensure_web_playback_subtitle_track_ready(session_id, track_id)
+            session, track, playlist_path = await self._ensure_web_playback_subtitle_track_ready(session_id, track_id)
         except FileNotFoundError:
             return web.Response(text="Subtitle track not found", status=404)
         except Exception as exc:
@@ -4861,6 +5212,7 @@ except Exception as e:
             headers={
                 "Cache-Control": "no-store",
                 "Access-Control-Allow-Origin": "*",
+                **self._web_playback_subtitle_response_headers(session, track),
             },
         )
 
@@ -4869,7 +5221,7 @@ except Exception as e:
         track_id = request.match_info.get("track_id", "")
         asset_name = request.match_info.get("asset_name", "")
         try:
-            session, _track, _playlist_path = await self._ensure_web_playback_subtitle_track_ready(session_id, track_id)
+            session, track, _playlist_path = await self._ensure_web_playback_subtitle_track_ready(session_id, track_id)
         except FileNotFoundError:
             return web.Response(text="Subtitle track not found", status=404)
         except Exception as exc:
@@ -4890,6 +5242,7 @@ except Exception as e:
                 "Content-Type": self._guess_web_playback_content_type(asset_name),
                 "Cache-Control": "no-store",
                 "Access-Control-Allow-Origin": "*",
+                **self._web_playback_subtitle_response_headers(session, track),
             },
         )
 
@@ -5039,7 +5392,18 @@ except Exception as e:
 
         if target_kind == "file":
             if normalized_relative:
-                raise PublicShareError("share_file_not_found", "Arquivo compartilhado não encontrado.", status=404)
+                requested_name = self._normalize_filename_for_resolution(Path(normalized_relative).name)
+                root_name = self._normalize_filename_for_resolution(Path(root_path).name)
+                hinted_name = self._normalize_filename_for_resolution(filename_hint)
+                if requested_name not in {name for name in (root_name, hinted_name) if name}:
+                    raise PublicShareError("share_file_not_found", "Arquivo compartilhado não encontrado.", status=404)
+                logger.info(
+                    "🎬 Public direct-file playback ignored stale relative_path: public_id=%s relative_path=%s filename_hint=%s",
+                    public_id,
+                    normalized_relative,
+                    filename_hint or "",
+                )
+                normalized_relative = ""
             target_path = root_path
             file_meta = await self._file_manager.get_file_meta(target_path)
             if not file_meta:
@@ -5190,8 +5554,18 @@ except Exception as e:
                     comment = disposition.get("comment", 0) == 1
                     captions = disposition.get("captions", 0) == 1
                     src = f"{public_subtitle_base}&index={sub_idx}{token_query}"
-                    subtitle_tracks.append({
+                    subtitle_track = {
+                        "id": f"embedded:{sub_idx}",
+                        "track_id": _build_subtitle_track_id(
+                            source="embedded",
+                            track_index=sub_idx,
+                            stream_index=stream.get("index"),
+                            path=target_path,
+                            filename=Path(target_path).name,
+                        ),
+                        "source": "embedded",
                         "index": sub_idx,
+                        "track_index": sub_idx,
                         "stream_index": stream.get("index"),
                         "codec": stream.get("codec_name", ""),
                         "src": src,
@@ -5214,7 +5588,15 @@ except Exception as e:
                         "hearing_impaired": hearing_impaired,
                         "comment": comment,
                         "captions": captions,
-                    })
+                    }
+                    subtitle_track.update(self._normalize_public_subtitle_payload(
+                        subtitle_track,
+                        public_url=src,
+                        source_mode="legacy_vtt",
+                        subtitle_timebase="media_zero",
+                        track_id=subtitle_track["track_id"],
+                    ))
+                    subtitle_tracks.append(subtitle_track)
                     sub_idx += 1
 
             if is_concat:
@@ -5253,6 +5635,141 @@ except Exception as e:
         except Exception as exc:
             logger.error("Public media tracks error for %s/%s: %s", public_id, relative_path, exc, exc_info=True)
             return web.json_response({"error": "Falha ao carregar trilhas públicas"}, status=500)
+
+    async def _handle_api_shared_subtitle_candidates(self, request):
+        public_id = str(request.match_info.get("public_id") or "").strip()
+        relative_path = str(request.query.get("relative_path", request.query.get("path", "")) or "").strip()
+        probe_started_at = time.time()
+
+        try:
+            target_path, _file_meta, root_path, target_kind = await self._resolve_public_share_file_for_playback(
+                request,
+                public_id,
+                relative_path,
+            )
+            items, probe_input_kind = await self._gather_subtitle_candidates(target_path, False)
+            if target_kind != "file":
+                try:
+                    normalized_root_for_scan = _normalize_cloud_path_variant(root_path)
+                    target_parent = _normalize_cloud_path_variant(str(Path(target_path).parent))
+                    if target_parent in {"", "."}:
+                        target_parent = "/"
+                    scanned_items = await self._file_manager.list_public_directory(normalized_root_for_scan, target_parent)
+                    known_paths = {
+                        _normalize_cloud_path_variant(item.get("path") or item.get("src") or "")
+                        for item in (items or [])
+                    }
+                    fallback_sidecars = []
+                    for scanned_item in scanned_items or []:
+                        if scanned_item.get("is_directory"):
+                            continue
+                        scanned_path = _normalize_cloud_path_variant(scanned_item.get("path") or "")
+                        if not scanned_path or scanned_path == _normalize_cloud_path_variant(target_path) or scanned_path in known_paths:
+                            continue
+                        scanned_name = str(scanned_item.get("filename") or scanned_item.get("name") or Path(scanned_path).name)
+                        if Path(scanned_name).suffix.lower() not in SUBTITLE_EXTENSIONS:
+                            continue
+                        metadata = _parse_sidecar_metadata(Path(target_path).name, scanned_name)
+                        if not metadata:
+                            continue
+                        fallback_sidecars.append({
+                            **metadata,
+                            "id": f"sidecar:fallback:{len(fallback_sidecars)}:{scanned_name}",
+                            "track_id": _build_subtitle_track_id(
+                                source="sidecar",
+                                track_index=len(fallback_sidecars),
+                                path=scanned_path,
+                                filename=scanned_name,
+                            ),
+                            "source": "sidecar",
+                            "path": scanned_path,
+                            "src": scanned_path,
+                            "name": scanned_name,
+                            "filename": scanned_name,
+                            "codec": Path(scanned_name).suffix.lower().lstrip("."),
+                            "source_track_index": _extract_generated_sidecar_track_index(target_path, scanned_name),
+                            "scope_kind": metadata.get("scope_kind") or "same_dir",
+                            "match_reason": metadata.get("match_reason") or "public_directory_fallback",
+                        })
+                    if fallback_sidecars:
+                        items = [*(items or []), *fallback_sidecars]
+                        probe_input_kind = f"{probe_input_kind}+public_directory_fallback"
+                except Exception as scan_exc:
+                    logger.info(
+                        "Public subtitle candidate directory fallback skipped: public_id=%s path=%s error=%s",
+                        public_id,
+                        target_path,
+                        scan_exc,
+                    )
+            token = self._request_bearer_token(request)
+            token_query = f"&token={quote(token, safe='')}" if token else ""
+            normalized_root = _normalize_cloud_path_variant(root_path)
+            root_prefix = normalized_root.rstrip("/")
+            public_items: list[dict] = []
+            seen_relative_paths: set[str] = set()
+
+            for item in items or []:
+                if str(item.get("source") or "").lower() != "sidecar":
+                    continue
+                sidecar_path = _normalize_cloud_path_variant(item.get("path") or item.get("src") or "")
+                if not sidecar_path:
+                    continue
+                if target_kind == "file":
+                    # Direct file shares do not implicitly expose sibling files.
+                    continue
+                if sidecar_path != normalized_root and not sidecar_path.startswith(f"{root_prefix}/"):
+                    continue
+                sidecar_relative_path = sidecar_path[len(root_prefix):].lstrip("/") if root_prefix else sidecar_path.lstrip("/")
+                try:
+                    resolved_sidecar_path, _sidecar_meta, _root_path, _sidecar_kind = await self._resolve_public_share_file_for_playback(
+                        request,
+                        public_id,
+                        sidecar_relative_path,
+                    )
+                except PublicShareError:
+                    continue
+                if _normalize_cloud_path_variant(resolved_sidecar_path) != sidecar_path:
+                    continue
+                if sidecar_relative_path in seen_relative_paths:
+                    continue
+                seen_relative_paths.add(sidecar_relative_path)
+
+                subtitle_url = (
+                    f"/api/shared_item/{quote(public_id, safe='')}/subtitle"
+                    f"?sidecar_relative_path={quote(sidecar_relative_path, safe='')}{token_query}"
+                )
+                public_items.append(self._normalize_public_subtitle_payload(
+                    {
+                        **item,
+                        "id": f"sidecar:{sidecar_relative_path}",
+                        "track_id": item.get("track_id") or f"sidecar:{sidecar_relative_path}",
+                        "source": "sidecar",
+                        "name": item.get("name") or Path(sidecar_path).name,
+                        "filename": item.get("name") or Path(sidecar_path).name,
+                    },
+                    public_url=subtitle_url,
+                    source_mode="legacy_vtt",
+                    subtitle_timebase="media_zero",
+                    track_id=item.get("track_id") or f"sidecar:{sidecar_relative_path}",
+                    sidecar_relative_path=sidecar_relative_path,
+                ))
+
+            logger.info(
+                "🎬 Public subtitle candidates result: public_id=%s path=%s items=%s input=%s elapsed_ms=%s",
+                public_id,
+                target_path,
+                len(public_items),
+                probe_input_kind,
+                max(0, int((time.time() - probe_started_at) * 1000)),
+            )
+            return web.json_response({"items": public_items})
+        except PublicShareError as exc:
+            return web.json_response({"error": exc.message, "code": exc.code}, status=exc.status)
+        except asyncio.TimeoutError:
+            return web.json_response({"items": []})
+        except Exception as exc:
+            logger.error("Public subtitle candidates error for %s/%s: %s", public_id, relative_path, exc, exc_info=True)
+            return web.json_response({"items": []})
 
     async def _handle_api_shared_subtitle(self, request):
         public_id = str(request.match_info.get("public_id") or "").strip()
@@ -5318,6 +5835,30 @@ except Exception as e:
 
     async def _handle_api_shared_web_playback_session_create(self, request):
         public_id = str(request.match_info.get("public_id") or "").strip()
+        started_at = time.perf_counter()
+
+        def short_hash(value: str | None) -> str:
+            normalized = str(value or "").strip()
+            if not normalized:
+                return ""
+            return hashlib.sha1(normalized.encode("utf-8", errors="ignore")).hexdigest()[:10]
+
+        def sanitize_resolution_attempts(attempts) -> list[dict]:
+            sanitized = []
+            for attempt in list(attempts or [])[:8]:
+                if not isinstance(attempt, dict):
+                    continue
+                clean_attempt = dict(attempt)
+                for key in ("path", "resolved_path"):
+                    if clean_attempt.get(key):
+                        clean_attempt[f"{key}_hash"] = short_hash(clean_attempt.get(key))
+                        clean_attempt.pop(key, None)
+                if clean_attempt.get("matches"):
+                    clean_attempt["match_hashes"] = [short_hash(match) for match in list(clean_attempt.get("matches") or [])[:5]]
+                    clean_attempt.pop("matches", None)
+                sanitized.append(clean_attempt)
+            return sanitized
+
         try:
             data = await request.json()
         except Exception:
@@ -5336,7 +5877,22 @@ except Exception as e:
                 filename_hint=filename_hint,
             )
         except PublicShareError as exc:
-            return web.json_response({"error": exc.message, "code": exc.code}, status=exc.status)
+            elapsed_ms = max(0, int((time.perf_counter() - started_at) * 1000))
+            logger.warning(
+                "🎬 Public share playback session create failed: public_id=%s stage=%s code=%s status=%s relative_path=%s filename_hint=%s elapsed_ms=%s",
+                public_id,
+                "public_share_file_resolution",
+                exc.code,
+                exc.status,
+                relative_path,
+                filename_hint,
+                elapsed_ms,
+            )
+            return web.json_response({
+                "error": exc.message,
+                "code": exc.code,
+                "stage": "public_share_file_resolution",
+            }, status=exc.status)
         except web.HTTPException:
             raise
         except Exception as exc:
@@ -5354,17 +5910,27 @@ except Exception as e:
         bootstrap_reason = str(data.get("bootstrap_reason", data.get("reason", "public-share-open")) or "public-share-open").strip().lower() or "public-share-open"
         replace_session_id = str(data.get("replace_session_id", data.get("replaceSessionId", "")) or "").strip()
 
+        resolved_cloud_request = {}
+        effective_path = target_path
         try:
             try:
                 resolved_cloud_request = await self._resolve_cloud_file_request(target_path, filename_hint=filename_hint)
             except FileNotFoundError:
                 resolved_cloud_request = {}
             if not resolved_cloud_request.get("file_meta"):
+                resolved_path_from_meta = _normalize_cloud_path_variant(file_meta.get("path") or target_path)
                 resolved_cloud_request = {
-                    "resolved_path": target_path,
-                    "normalized_path": target_path,
+                    "requested_path": target_path,
+                    "resolved_path": resolved_path_from_meta,
+                    "normalized_path": resolved_path_from_meta,
                     "file_meta": file_meta,
-                    "resolver_source": "public-share",
+                    "resolver_source": "public-share-file-meta-fallback",
+                    "attempts": [{
+                        "source": "public-share-file-meta-fallback",
+                        "path": target_path,
+                        "resolved_path": resolved_path_from_meta,
+                        "found": True,
+                    }],
                 }
             effective_path = str(
                 resolved_cloud_request.get("resolved_path")
@@ -5372,11 +5938,11 @@ except Exception as e:
                 or target_path
             ).strip()
             logger.info(
-                "🎬 Public share playback target resolved: public_id=%s target_kind=%s relative_path=%s target_path=%s resolver_source=%s",
+                "🎬 Public share playback target resolved: public_id=%s target_kind=%s relative_path=%s target_hash=%s resolver_source=%s",
                 public_id,
                 target_kind,
                 self._file_manager.normalize_public_share_relative_path(relative_path),
-                target_path,
+                short_hash(target_path),
                 resolved_cloud_request.get("resolver_source", ""),
             )
             if replace_session_id:
@@ -5398,10 +5964,30 @@ except Exception as e:
             session["public_target_kind"] = target_kind
             session["public_target_path"] = effective_path
             session["public_relative_path"] = self._file_manager.normalize_public_share_relative_path(relative_path)
-        except FileNotFoundError:
+        except FileNotFoundError as exc:
+            retry_resolution = {}
+            try:
+                retry_resolution = await self._resolve_cloud_file_request(target_path, filename_hint=filename_hint)
+            except Exception as resolution_exc:
+                retry_resolution = {"attempts": [{"source": "hls_source_resolution_retry", "found": False, "error": str(resolution_exc)}]}
+            elapsed_ms = max(0, int((time.perf_counter() - started_at) * 1000))
+            logger.warning(
+                "🎬 Public share playback session create failed: public_id=%s stage=%s code=%s target_hash=%s effective_hash=%s relative_path=%s filename_hint=%s attempts=%s elapsed_ms=%s error=%s",
+                public_id,
+                "hls_source_resolution",
+                    "hls_source_file_not_found",
+                short_hash(target_path),
+                short_hash(effective_path),
+                self._file_manager.normalize_public_share_relative_path(relative_path),
+                filename_hint,
+                sanitize_resolution_attempts(retry_resolution.get("attempts", [])),
+                elapsed_ms,
+                exc,
+            )
             return web.json_response({
-                "error": "Arquivo compartilhado não encontrado",
-                "code": "share_file_not_found",
+                "error": "Fonte do arquivo compartilhado não encontrada",
+                "code": "hls_source_file_not_found",
+                "stage": "hls_source_resolution",
             }, status=404)
         except TimeoutError:
             return web.json_response({
@@ -5476,6 +6062,31 @@ except Exception as e:
             raise web.HTTPGone(text="Compartilhamento alterado")
         return session
 
+    def _public_web_playback_session_not_found_response(
+        self,
+        public_id: str,
+        session_id: str,
+        *,
+        asset_name: str = "",
+    ) -> web.Response:
+        logger.info(
+            "🎬 Public share HLS session not found: public_id=%s session=%s asset=%s",
+            public_id,
+            session_id,
+            asset_name or "",
+        )
+        return web.Response(
+            text="public_session_not_found",
+            status=404,
+            headers={
+                "Cache-Control": "no-store",
+                "Access-Control-Allow-Origin": "*",
+                "X-TCloud-Playback-Error": "public_session_not_found",
+                "X-TCloud-Playback-Session": session_id,
+                "X-TCloud-Public-Share": public_id,
+            },
+        )
+
     def _build_public_web_playback_master_playlist(self, session: dict, request) -> str:
         media_playlist_name = session.get("media_playlist_name") or "media.m3u8"
         token = self._extract_request_token(request)
@@ -5529,7 +6140,11 @@ except Exception as e:
         except web.HTTPException:
             raise
         if not session:
-            return web.Response(text="Session not found", status=404)
+            return self._public_web_playback_session_not_found_response(
+                public_id,
+                session_id,
+                asset_name="master.m3u8",
+            )
         session["last_access_at"] = time.time()
         return web.Response(
             text=self._build_public_web_playback_master_playlist(session, request),
@@ -5547,7 +6162,11 @@ except Exception as e:
         except web.HTTPException:
             raise
         if not session:
-            return web.Response(text="Session not found", status=404)
+            return self._public_web_playback_session_not_found_response(
+                public_id,
+                session_id,
+                asset_name=asset_name,
+            )
 
         temp_dir = session.get("temp_dir")
         if not temp_dir:
@@ -5587,9 +6206,13 @@ except Exception as e:
         except web.HTTPException:
             raise
         if not session:
-            return web.Response(text="Session not found", status=404)
+            return self._public_web_playback_session_not_found_response(
+                public_id,
+                session_id,
+                asset_name=f"subtitles/{track_id}/playlist.m3u8",
+            )
         try:
-            session, _track, playlist_path = await self._ensure_web_playback_subtitle_track_ready(session_id, track_id)
+            session, track, playlist_path = await self._ensure_web_playback_subtitle_track_ready(session_id, track_id)
         except FileNotFoundError:
             return web.Response(text="Subtitle track not found", status=404)
         except Exception as exc:
@@ -5614,7 +6237,11 @@ except Exception as e:
             text=self._rewrite_web_playback_media_playlist(playlist_text, request),
             content_type="application/x-mpegURL",
             charset="utf-8",
-            headers={"Cache-Control": "no-store", "Access-Control-Allow-Origin": "*"},
+            headers={
+                "Cache-Control": "no-store",
+                "Access-Control-Allow-Origin": "*",
+                **self._web_playback_subtitle_response_headers(session, track),
+            },
         )
 
     async def _handle_api_shared_web_playback_subtitle_asset(self, request):
@@ -5627,9 +6254,13 @@ except Exception as e:
         except web.HTTPException:
             raise
         if not session:
-            return web.Response(text="Session not found", status=404)
+            return self._public_web_playback_session_not_found_response(
+                public_id,
+                session_id,
+                asset_name=f"subtitles/{track_id}/{asset_name}",
+            )
         try:
-            session, _track, _playlist_path = await self._ensure_web_playback_subtitle_track_ready(session_id, track_id)
+            session, track, _playlist_path = await self._ensure_web_playback_subtitle_track_ready(session_id, track_id)
         except FileNotFoundError:
             return web.Response(text="Subtitle track not found", status=404)
         except Exception as exc:
@@ -5656,6 +6287,7 @@ except Exception as e:
                 "Content-Type": self._guess_web_playback_content_type(asset_name),
                 "Cache-Control": "no-store",
                 "Access-Control-Allow-Origin": "*",
+                **self._web_playback_subtitle_response_headers(session, track),
             },
         )
 
@@ -7393,6 +8025,10 @@ except Exception as e:
             "playback_kind": playback_kind,
             "can_preview": bool(can_preview),
         }
+        if not getattr(Config, "PUBLIC_SHARE_SHOW_MEDIA_PREVIEW", True) and not is_directory:
+            payload["preview_kind"] = "file"
+            payload["playback_kind"] = "file"
+            payload["can_preview"] = False
         for source_key, output_key in (
             ("duration", "duration"),
             ("duration_seconds", "duration"),
@@ -7520,6 +8156,11 @@ except Exception as e:
         return payload
 
     async def _resolve_public_share_session(self, request, public_id: str) -> tuple[dict, str, dict]:
+        if not getattr(Config, "PUBLIC_SHARE_ENABLED", True):
+            raise web.HTTPForbidden(
+                text=json.dumps({"error": "Compartilhamento público está desabilitado.", "code": "SHARE_DISABLED"}),
+                content_type="application/json",
+            )
         payload = self._verify_public_share_request_token(request, public_id)
         target_kind, target_doc = await self._file_manager.get_shared_target(public_id)
         token_path = str(payload.get("path") or "").strip()
@@ -7624,6 +8265,54 @@ except Exception as e:
             )
         return result
 
+    def _runtime_owner_id(self, session_payload: dict) -> str:
+        user = str((session_payload or {}).get("sub") or "").strip()
+        if user and user.lower() != "anonymous":
+            return f"owner:{user}"
+        return "owner:default"
+
+    def _request_owner_id(self, request) -> str:
+        user = str(request.get("user", "anonymous") or "").strip()
+        if user and user.lower() != "anonymous":
+            return f"owner:{user}"
+        return "owner:default"
+
+    def _authorize_runtime_permission_path(
+        self,
+        app: dict,
+        session_payload: dict,
+        permission_id: str,
+        path: str,
+    ) -> tuple[bool, str]:
+        if permission_id not in set(session_payload.get("permissions") or []):
+            return False, f"permissao ausente na sessao: {permission_id}"
+        if permission_id not in set(app.get("granted_permissions") or []):
+            return False, f"permissao nao concedida ao app: {permission_id}"
+
+        policy = (app.get("permission_policies") or {}).get(permission_id) or {}
+        grant_mode = policy.get("grant_mode", "deny")
+        if grant_mode == "deny":
+            return False, "permissao negada"
+        if grant_mode == "ask_each_time":
+            return False, "approval_required"
+        if not is_path_allowed(policy, path):
+            return False, "caminho fora do escopo permitido"
+        if not is_file_type_allowed(policy, path):
+            return False, "tipo de arquivo fora do escopo permitido"
+        return True, ""
+
+    async def _build_runtime_pdf_info(self, path: str) -> dict:
+        if not path:
+            raise ValueError("path ausente")
+        info = await self._build_file_info_payload(path, False)
+        mime_type = str(info.get("mime_type") or "").lower()
+        extension = str(info.get("extension") or Path(path).suffix or "").lower()
+        if info.get("is_directory"):
+            raise ValueError("o caminho informado e um diretorio")
+        if mime_type != "application/pdf" and extension != ".pdf":
+            raise ValueError("somente arquivos PDF podem ser abertos no PDF Tools")
+        return info
+
     async def _handle_api_app_runtime_session(self, request):
         app_id = str(request.match_info.get("app_id") or "").strip()
         app = self._app_manager.get_app(app_id, include_details=True)
@@ -7677,7 +8366,7 @@ except Exception as e:
                 return False, f"tipo de arquivo fora do escopo permitido: {key}"
         return True, ""
 
-    async def _dispatch_runtime_function(self, app: dict, function_id: str, payload: dict):
+    async def _dispatch_runtime_function(self, app: dict, function_id: str, payload: dict, session_payload: dict):
         if function_id == "apps.list":
             return {"apps": self._app_manager.get_apps(include_disabled=False, include_details=False)}
 
@@ -7700,6 +8389,29 @@ except Exception as e:
             if not path:
                 raise ValueError("path ausente")
             return await self._build_file_info_payload(path, False)
+
+        if function_id == "files.getStreamUrl":
+            path = str(payload.get("path") or "").strip()
+            if not path:
+                raise ValueError("path ausente")
+            allowed, reason = self._authorize_runtime_permission_path(app, session_payload, "files.read", path)
+            if not allowed:
+                raise PermissionError(reason)
+            info = await self._build_runtime_pdf_info(path)
+            return {
+                "url": f"/api/apps/runtime/file?kind=pdf&path={quote(path, safe='')}",
+                "headers": {
+                    "Authorization": f"Bearer {str(payload.get('runtime_token') or '').strip()}",
+                },
+                "contentType": "application/pdf",
+                "supportsRange": True,
+                "file": {
+                    "name": info.get("name"),
+                    "path": info.get("path"),
+                    "size_bytes": info.get("size_bytes"),
+                    "modified_at": info.get("modified_at"),
+                },
+            }
 
         if function_id == "search.query":
             query = str(payload.get("query") or payload.get("q") or "").strip().lower()
@@ -7731,6 +8443,91 @@ except Exception as e:
             items = await self._file_manager.get_recents()
             return {"items": self._normalize_file_listing_items(items)}
 
+        if function_id == "pdf.getState":
+            path = str(payload.get("path") or "").strip()
+            document_key = str(payload.get("document_key") or "").strip()
+            if path:
+                allowed, reason = self._authorize_runtime_permission_path(app, session_payload, "metadata.read", path)
+                if not allowed:
+                    raise PermissionError(reason)
+                await self._build_runtime_pdf_info(path)
+            if not document_key:
+                raise ValueError("document_key ausente")
+            state = await self._file_manager._db.get_pdf_reader_state(
+                self._runtime_owner_id(session_payload),
+                document_key,
+            )
+            return {"state": state}
+
+        if function_id == "pdf.saveState":
+            path = str(payload.get("path") or "").strip()
+            document_key = str(payload.get("document_key") or "").strip()
+            if not path:
+                raise ValueError("path ausente")
+            if not document_key:
+                raise ValueError("document_key ausente")
+            allowed, reason = self._authorize_runtime_permission_path(app, session_payload, "files.read", path)
+            if not allowed:
+                raise PermissionError(reason)
+            info = await self._build_runtime_pdf_info(path)
+            save_payload = dict(payload or {})
+            save_payload["path"] = info.get("path") or path
+            save_payload["name"] = info.get("name") or save_payload.get("name") or Path(path).name
+            save_payload["size_bytes"] = info.get("size_bytes") or save_payload.get("size_bytes") or 0
+            save_payload["modified_at"] = info.get("modified_at") or save_payload.get("modified_at") or ""
+            storage = info.get("storage") if isinstance(info.get("storage"), dict) else {}
+            save_payload["storage_id_masked"] = storage.get("storage_id_masked") or save_payload.get("storage_id_masked") or ""
+            return await self._file_manager._db.save_pdf_reader_state(
+                self._runtime_owner_id(session_payload),
+                document_key,
+                save_payload,
+            )
+
+        if function_id == "pdf.getTabs":
+            return await self._file_manager._db.get_pdf_reader_tabs(
+                self._runtime_owner_id(session_payload),
+                app_id=str(payload.get("app_id") or app.get("id") or "pdf-tools"),
+            )
+
+        if function_id == "pdf.getRecentPdfs":
+            return await self._file_manager._db.get_pdf_reader_recents(
+                self._runtime_owner_id(session_payload),
+                app_id=str(payload.get("app_id") or app.get("id") or "pdf-tools"),
+                limit=3,
+            )
+
+        if function_id == "pdf.recordRecentPdf":
+            path = str(payload.get("path") or "").strip()
+            if not path:
+                raise ValueError("path ausente")
+            allowed, reason = self._authorize_runtime_permission_path(app, session_payload, "files.read", path)
+            if not allowed:
+                raise PermissionError(reason)
+            info = await self._build_runtime_pdf_info(path)
+            save_payload = dict(payload or {})
+            save_payload["path"] = info.get("path") or path
+            save_payload["name"] = info.get("name") or save_payload.get("name") or Path(path).name
+            return await self._file_manager._db.record_pdf_reader_recent(
+                self._runtime_owner_id(session_payload),
+                str(payload.get("app_id") or app.get("id") or "pdf-tools"),
+                save_payload,
+            )
+
+        if function_id == "pdf.saveTabs":
+            for tab in list(payload.get("tabs") or [])[:12]:
+                path = str((tab or {}).get("path") or "").strip()
+                if not path:
+                    continue
+                allowed, reason = self._authorize_runtime_permission_path(app, session_payload, "files.read", path)
+                if not allowed:
+                    raise PermissionError(reason)
+                await self._build_runtime_pdf_info(path)
+            return await self._file_manager._db.save_pdf_reader_tabs(
+                self._runtime_owner_id(session_payload),
+                str(payload.get("app_id") or app.get("id") or "pdf-tools"),
+                payload,
+            )
+
         if function_id == "storage.pinOffline":
             path = str(payload.get("path") or "").strip()
             if not path:
@@ -7753,6 +8550,55 @@ except Exception as e:
             return {"status": "ok", "path": path}
 
         raise NotImplementedError("funcao ainda nao implementada no runtime")
+
+    async def _handle_api_apps_runtime_file(self, request):
+        token = self._request_bearer_token(request)
+        if not token:
+            return web.Response(text="runtime token ausente", status=401)
+
+        session_payload = verify_app_runtime_token(token, Config.JWT_SECRET)
+        if not session_payload:
+            return web.Response(text="runtime token invalido", status=401)
+
+        app_id = str(session_payload.get("app_id") or "").strip()
+        app = self._app_manager.get_app(app_id, include_details=True)
+        if not app:
+            return web.Response(text="app nao encontrado", status=404)
+        if not app.get("enabled", True):
+            return web.Response(text="app desabilitado", status=403)
+
+        path = str(request.query.get("path") or "").strip()
+        kind = str(request.query.get("kind") or "").strip().lower()
+        if not path:
+            return web.Response(text="path ausente", status=400)
+        if kind and kind != "pdf":
+            return web.Response(text="kind nao suportado", status=400)
+
+        allowed, reason = self._authorize_runtime_function(app, session_payload, "files.getStreamUrl", {"path": path})
+        if not allowed:
+            status = 409 if reason == "approval_required" else 403
+            return web.Response(text=reason, status=status)
+        allowed, reason = self._authorize_runtime_permission_path(app, session_payload, "files.read", path)
+        if not allowed:
+            status = 409 if reason == "approval_required" else 403
+            return web.Response(text=reason, status=status)
+
+        try:
+            await self._build_runtime_pdf_info(path)
+            append_audit_event(
+                Config.RUNTIME_DIR,
+                "runtime_file_allowed",
+                app_id=app_id,
+                details={"kind": "pdf", "range": bool(request.headers.get("Range"))},
+            )
+            return await self._serve_cloud_stream_request(request, path, is_download=False)
+        except FileNotFoundError as exc:
+            return web.Response(text=str(exc), status=404)
+        except ValueError as exc:
+            return web.Response(text=str(exc), status=400)
+        except Exception as exc:
+            logger.error(f"Runtime file stream failed for {app_id}:{path}: {exc}", exc_info=True)
+            return web.Response(text="falha ao abrir arquivo", status=500)
 
     async def _handle_api_apps_runtime_execute(self, request):
         token = self._request_bearer_token(request)
@@ -7789,7 +8635,9 @@ except Exception as e:
             return web.json_response({"error": reason, "code": reason.upper()}, status=status)
 
         try:
-            result = await self._dispatch_runtime_function(app, function_id, payload)
+            if function_id == "files.getStreamUrl":
+                payload = {**payload, "runtime_token": token}
+            result = await self._dispatch_runtime_function(app, function_id, payload, session_payload)
             append_audit_event(
                 Config.RUNTIME_DIR,
                 "runtime_call_allowed",
@@ -7815,6 +8663,154 @@ except Exception as e:
 
     async def _handle_api_settings_schema(self, request):
         return web.json_response(Config.settings_schema())
+
+    async def _handle_api_window_layouts(self, request):
+        try:
+            payload = await self._file_manager._db.list_window_layouts(self._request_owner_id(request))
+            return web.json_response(payload)
+        except Exception as exc:
+            logger.error("Failed to list window layouts: %s", exc, exc_info=True)
+            return web.json_response({"error": "Falha ao carregar layout das janelas"}, status=500)
+
+    async def _handle_api_window_layout_get(self, request):
+        window_id = str(request.match_info.get("window_id") or "").strip()
+        try:
+            layout = await self._file_manager._db.get_window_layout(self._request_owner_id(request), window_id)
+            return web.json_response({"layout": layout})
+        except ValueError as exc:
+            return web.json_response({"error": str(exc)}, status=400)
+        except Exception as exc:
+            logger.error("Failed to get window layout %s: %s", window_id, exc, exc_info=True)
+            return web.json_response({"error": "Falha ao carregar layout da janela"}, status=500)
+
+    async def _handle_api_window_layout_put(self, request):
+        window_id = str(request.match_info.get("window_id") or "").strip()
+        try:
+            payload = await request.json()
+        except Exception:
+            return web.json_response({"error": "JSON invalido"}, status=400)
+        try:
+            result = await self._file_manager._db.save_window_layout(
+                self._request_owner_id(request),
+                window_id,
+                payload,
+            )
+            return web.json_response(result)
+        except ValueError as exc:
+            return web.json_response({"error": str(exc)}, status=400)
+        except Exception as exc:
+            logger.error("Failed to save window layout %s: %s", window_id, exc, exc_info=True)
+            return web.json_response({"error": "Falha ao salvar layout da janela"}, status=500)
+
+    async def _handle_api_window_layout_delete(self, request):
+        window_id = str(request.match_info.get("window_id") or "").strip()
+        try:
+            deleted = await self._file_manager._db.delete_window_layout(self._request_owner_id(request), window_id)
+            return web.json_response({"deleted": deleted})
+        except ValueError as exc:
+            return web.json_response({"error": str(exc)}, status=400)
+        except Exception as exc:
+            logger.error("Failed to delete window layout %s: %s", window_id, exc, exc_info=True)
+            return web.json_response({"error": "Falha ao redefinir layout da janela"}, status=500)
+
+    async def _handle_api_desktop_window_session_get(self, request):
+        try:
+            session = await self._file_manager._db.get_desktop_window_session(self._request_owner_id(request))
+            return web.json_response({"session": session})
+        except Exception as exc:
+            logger.error("Failed to load desktop window session: %s", exc, exc_info=True)
+            return web.json_response({"error": "Falha ao carregar sessão das janelas"}, status=500)
+
+    async def _handle_api_desktop_window_session_put(self, request):
+        try:
+            payload = await request.json()
+        except Exception:
+            return web.json_response({"error": "JSON invalido"}, status=400)
+        try:
+            result = await self._file_manager._db.save_desktop_window_session(
+                self._request_owner_id(request),
+                payload,
+            )
+            return web.json_response(result)
+        except ValueError as exc:
+            return web.json_response({"error": str(exc)}, status=400)
+        except Exception as exc:
+            logger.error("Failed to save desktop window session: %s", exc, exc_info=True)
+            return web.json_response({"error": "Falha ao salvar sessão das janelas"}, status=500)
+
+    async def _handle_api_desktop_window_session_delete(self, request):
+        try:
+            deleted = await self._file_manager._db.delete_desktop_window_session(self._request_owner_id(request))
+            return web.json_response({"deleted": deleted})
+        except Exception as exc:
+            logger.error("Failed to delete desktop window session: %s", exc, exc_info=True)
+            return web.json_response({"error": "Falha ao redefinir sessão das janelas"}, status=500)
+
+    async def _handle_api_finder_session_get(self, request):
+        try:
+            session = await self._file_manager._db.get_finder_session(self._request_owner_id(request))
+            return web.json_response({"session": session})
+        except Exception as exc:
+            logger.error("Failed to load finder session: %s", exc, exc_info=True)
+            return web.json_response({"error": "Falha ao carregar sessão do Finder"}, status=500)
+
+    async def _handle_api_finder_session_put(self, request):
+        try:
+            payload = await request.json()
+        except Exception:
+            return web.json_response({"error": "JSON invalido"}, status=400)
+        try:
+            result = await self._file_manager._db.save_finder_session(
+                self._request_owner_id(request),
+                payload,
+            )
+            return web.json_response(result)
+        except ValueError as exc:
+            return web.json_response({"error": str(exc)}, status=400)
+        except Exception as exc:
+            logger.error("Failed to save finder session: %s", exc, exc_info=True)
+            return web.json_response({"error": "Falha ao salvar sessão do Finder"}, status=500)
+
+    async def _handle_api_finder_session_delete(self, request):
+        try:
+            deleted = await self._file_manager._db.delete_finder_session(self._request_owner_id(request))
+            return web.json_response({"deleted": deleted})
+        except Exception as exc:
+            logger.error("Failed to delete finder session: %s", exc, exc_info=True)
+            return web.json_response({"error": "Falha ao redefinir sessão do Finder"}, status=500)
+
+    async def _handle_api_app_session_get(self, request):
+        try:
+            session = await self._file_manager._db.get_app_session(self._request_owner_id(request))
+            return web.json_response({"session": session})
+        except Exception as exc:
+            logger.error("Failed to load app session: %s", exc, exc_info=True)
+            return web.json_response({"error": "Falha ao carregar sessão dos aplicativos"}, status=500)
+
+    async def _handle_api_app_session_put(self, request):
+        try:
+            payload = await request.json()
+        except Exception:
+            return web.json_response({"error": "JSON invalido"}, status=400)
+        try:
+            result = await self._file_manager._db.save_app_session(
+                self._request_owner_id(request),
+                payload,
+            )
+            return web.json_response(result)
+        except ValueError as exc:
+            return web.json_response({"error": str(exc)}, status=400)
+        except Exception as exc:
+            logger.error("Failed to save app session: %s", exc, exc_info=True)
+            return web.json_response({"error": "Falha ao salvar sessão dos aplicativos"}, status=500)
+
+    async def _handle_api_app_session_delete(self, request):
+        try:
+            deleted = await self._file_manager._db.delete_app_session(self._request_owner_id(request))
+            return web.json_response({"deleted": deleted})
+        except Exception as exc:
+            logger.error("Failed to delete app session: %s", exc, exc_info=True)
+            return web.json_response({"error": "Falha ao redefinir sessão dos aplicativos"}, status=500)
 
     async def _handle_api_settings(self, request):
         return web.json_response(Config.settings_payload())
@@ -8076,6 +9072,14 @@ except Exception as e:
             15.0,
             float(getattr(Config, "WEB_PLAYBACK_HLS_STARTUP_TIMEOUT_SECONDS", self._web_playback_hls_startup_timeout_seconds)),
         )
+        self._public_share_metrics_ttl_seconds = max(
+            5,
+            int(getattr(Config, "PUBLIC_SHARE_METRICS_TTL_SECONDS", self._public_share_metrics_ttl_seconds)),
+        )
+        desired_limit = max(1, int(getattr(Config, "PUBLIC_SHARE_METRICS_CONCURRENCY", 2)))
+        if getattr(self, "_public_share_metrics_concurrency", 2) != desired_limit:
+            self._public_share_metrics_concurrency = desired_limit
+            self._public_share_metrics_semaphore = asyncio.Semaphore(desired_limit)
 
     @staticmethod
     def _measure_directory_bytes(path: Path) -> int:
@@ -8169,8 +9173,8 @@ except Exception as e:
         is_fully_cached = False
         cloud_input_mode = str(getattr(self, "_web_playback_hls_cloud_input_mode", "http_range") or "http_range").strip().lower()
 
-        if start_seconds > 0:
-            input_args.extend(["-ss", str(start_seconds)])
+        if start_seconds >= 0:
+            input_args.extend(["-ss", str(max(0.0, start_seconds))])
 
         if source.get("is_local"):
             file_path = source["file_path"]
@@ -8236,6 +9240,21 @@ except Exception as e:
         except Exception as exc:
             logger.debug("HLS codec probe failed for %s: %s", raw_path, exc)
             return None
+
+    def _should_use_web_hls_video_copy(
+        self,
+        *,
+        segment_type: str,
+        start_seconds: float,
+        source_video_codec: str | None,
+    ) -> bool:
+        """Decide whether the browser HLS session may remux video without transcoding."""
+        # MKV/H.264 remux into MPEG-TS can keep source PTS/keyframe timing such
+        # that Chrome renders the first visible frame tens of seconds into the
+        # file while the public player clock is rebased to 00:00. Transcoding
+        # rebases timestamps and forces deterministic keyframes for initial
+        # playback, server seeks, and audio-track switches.
+        return False
 
     def _should_retry_web_hls_startup_with_transcode(self, exc: Exception, startup_attempt: str) -> bool:
         if startup_attempt != "copy":
@@ -8691,7 +9710,7 @@ except Exception as e:
                 sub_index,
                 "concat" if is_concat else ("url" if input_path.startswith("http") else "path"),
                 err,
-                ['ffmpeg', *input_cmd, '-map', f'0:s:{sub_index}', '-vn', '-an', '-dn', '-c:s', 'webvtt', '-f', 'webvtt', 'pipe:1']
+                ['ffmpeg', '-hide_banner', '-loglevel', 'warning', '-nostdin', *input_args, '-map', f'0:s:{sub_index}', '-vn', '-an', '-dn', '-c:s', 'webvtt', '-f', 'webvtt', 'pipe:1']
             )
             raise RuntimeError(f"Subtitle extraction failed: {err}")
 
@@ -9110,7 +10129,14 @@ except Exception as e:
         return {
             **candidate,
             "track_id": track_id,
+            "session_id": session_id,
             "delivery": "hls_session",
+            "subtitleSourceMode": "hls_session",
+            "subtitle_timebase": "session",
+            "subtitleTimebase": "session",
+            "timebase": "session",
+            "timeline_offset_seconds": float(session.get("start_seconds") or 0.0),
+            "source_timebase": "media_zero",
             "legacy_url": legacy_url,
             "url": legacy_url,
             "src": legacy_url or candidate.get("src", ""),
@@ -9398,13 +10424,18 @@ except Exception as e:
 
             segment_payloads: dict[int, list[dict]] = {}
             last_relative_end = 0.0
+            discarded_before_offset = 0
+            first_relative_cue_start: float | None = None
             for cue in cues:
                 cue_start = float(cue.get("start") or 0.0) - start_seconds
                 cue_end = float(cue.get("end") or 0.0) - start_seconds
                 if cue_end <= 0:
+                    discarded_before_offset += 1
                     continue
                 cue_start = max(0.0, cue_start)
                 cue_end = max(cue_end, cue_start + 0.001)
+                if first_relative_cue_start is None:
+                    first_relative_cue_start = cue_start
                 last_relative_end = max(last_relative_end, cue_end)
                 first_segment_index = int(cue_start // segment_duration)
                 last_segment_index = int(max(cue_start, cue_end - 0.001) // segment_duration)
@@ -9457,14 +10488,20 @@ except Exception as e:
             track["segment_count"] = segment_count
             track["generated_at"] = time.time()
             track["first_segment_ready_ms"] = max(0, int((track["generated_at"] - generation_started_at) * 1000))
+            track["first_relative_cue_start"] = first_relative_cue_start
+            track["timeline_offset_seconds"] = start_seconds
+            track["subtitle_timebase"] = "session"
 
             logger.info(
-                "🎬 HLS subtitle track ready: session=%s track=%s source=%s mode=%s extraction=%s segments=%s first_segment_ready_ms=%s",
+                "🎬 HLS subtitle track ready: session=%s track=%s source=%s mode=%s extraction=%s start_seconds=%.3f discarded_before_offset=%s first_relative_cue_start=%s segments=%s first_segment_ready_ms=%s",
                 session_id,
                 track_id,
                 track.get("source", ""),
                 track.get("generation_mode", ""),
                 track.get("extraction_mode", ""),
+                start_seconds,
+                discarded_before_offset,
+                first_relative_cue_start,
                 segment_count,
                 track.get("first_segment_ready_ms", 0),
             )

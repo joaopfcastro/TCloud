@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PDF Tools</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="picker" id="picker">
+      <header class="picker-header">
+        <strong>PDF Tools</strong>
+        <button class="icon-button" id="refresh-list" title="Atualizar lista" type="button">↻</button>
+      </header>
+      <div class="search-row">
+        <input id="pdf-search" type="search" placeholder="Buscar PDFs" autocomplete="off">
+      </div>
+      <div class="path-row">
+        <button id="go-root" type="button">Raiz</button>
+        <span id="current-path">/</span>
+      </div>
+      <div class="file-list" id="file-list"></div>
+    </aside>
+
+    <main class="viewer">
+      <div class="tabs" id="tabs"></div>
+      <div class="toolbar">
+        <button class="icon-button" id="toggle-picker" title="Arquivos" type="button">☰</button>
+        <button class="icon-button" id="prev-page" title="Pagina anterior" type="button">‹</button>
+        <label class="page-control">
+          <input id="page-input" type="number" min="1" value="1">
+          <span id="page-total">/ 0</span>
+        </label>
+        <button class="icon-button" id="next-page" title="Proxima pagina" type="button">›</button>
+        <span class="divider"></span>
+        <button class="icon-button" id="zoom-out" title="Diminuir zoom" type="button">−</button>
+        <button class="zoom-label" id="zoom-reset" title="Restaurar zoom" type="button">100%</button>
+        <button class="icon-button" id="zoom-in" title="Aumentar zoom" type="button">+</button>
+        <span class="sync-state" id="sync-state">Pronto</span>
+      </div>
+      <div class="workspace">
+        <nav class="thumbs" id="thumbs"></nav>
+        <section class="page-stage" id="page-stage">
+          <div class="empty-state" id="empty-state">
+            <h1>Abra um PDF</h1>
+            <p>Escolha um documento na lista ou abra pela acao contextual do TCloud.</p>
+          </div>
+          <canvas id="pdf-canvas"></canvas>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <script src="/static/tcloud-app-runtime.js"></script>
+  <script type="module" src="./script.js"></script>
+</body>
+</html>

@@ -1164,18 +1164,77 @@
             }
         }
 
-        @media (max-width: 980px) {
+        @media (max-width: 1120px) {
             .page {
-                grid-template-columns: 1fr;
+                grid-template-columns: clamp(200px, 26vw, 230px) minmax(0, 1fr);
             }
 
             .sidebar {
-                border-right: none;
-                border-bottom: 1px solid var(--border);
+                border-right: 1px solid var(--border);
+                border-bottom: none;
+                padding: 14px 10px;
+                gap: 14px;
+                overflow-y: auto;
             }
 
             .content {
                 padding: 18px;
+                min-width: 0;
+                overflow-x: hidden;
+            }
+
+            .brand {
+                padding: 0 6px;
+            }
+
+            .brand-icon {
+                width: 34px;
+                height: 34px;
+                border-radius: 10px;
+                font-size: 17px;
+            }
+
+            .brand h1 {
+                font-size: 16px;
+            }
+
+            .brand p,
+            .sidebar-footer,
+            .nav-badge {
+                display: none;
+            }
+
+            .nav {
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+            }
+
+            .nav-group {
+                min-width: 0;
+                gap: 5px;
+            }
+
+            .nav-label {
+                padding: 0 4px 2px;
+                font-size: 10px;
+            }
+
+            .nav button {
+                min-height: 36px;
+                padding: 8px 9px;
+                gap: 8px;
+            }
+
+            .nav button i {
+                font-size: 15px;
+            }
+
+            .nav span {
+                min-width: 0;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
             }
 
             .hero {
@@ -1246,6 +1305,39 @@
                 min-width: 640px;
             }
         }
+
+        @media (max-width: 680px) {
+            .page {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                border-right: none;
+                border-bottom: 1px solid var(--border);
+                padding: 14px 16px;
+                gap: 12px;
+                overflow-y: visible;
+            }
+
+            .brand {
+                padding: 0;
+            }
+
+            .nav {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 10px;
+            }
+
+            .nav-group {
+                gap: 5px;
+            }
+
+            .nav button {
+                min-height: 34px;
+                padding: 7px 9px;
+            }
+        }
     </style>
 </head>
 
@@ -1274,6 +1366,10 @@
                     <button data-section="storage">
                         <i class="ph ph-hard-drives"></i>
                         <span>Armazenamento</span>
+                    </button>
+                    <button data-section="sharing">
+                        <i class="ph ph-share-network"></i>
+                        <span>Compartilhamento</span>
                     </button>
                     <button data-section="interface">
                         <i class="ph ph-desktop"></i>
@@ -1342,6 +1438,24 @@
                 </div>
             </section>
 
+            <section class="panel section" id="section-sharing">
+                <div class="hero">
+                    <div class="hero-copy">
+                        <h2>Compartilhamento</h2>
+                        <p>Políticas de links públicos, inventário de itens publicados e controles de acesso externo.</p>
+                    </div>
+                    <div class="hero-actions">
+                        <button class="button primary cta-primary icon-leading" onclick="loadSharingOnly()"><i class="ph ph-arrow-clockwise"></i><span class="button-label">Atualizar compartilhamento</span></button>
+                    </div>
+                </div>
+                <div id="sharing-banner" class="banner"></div>
+                <div class="cards-grid" id="sharing-summary-grid"></div>
+                <div class="groups section-stack">
+                    <div class="group-card" id="sharing-policy-wrap"></div>
+                    <div class="group-card" id="sharing-inventory-wrap"></div>
+                </div>
+            </section>
+
             <section class="panel section" id="section-interface">
                 <div class="hero">
                     <div class="hero-copy">
@@ -1400,6 +1514,7 @@
         </div>
     </div>
 
+    <script src="/static/tcloud-app-runtime.js"></script>
     <script>
         let _parentToken = '';
         let currentSectionId = 'overview';
@@ -1409,6 +1524,7 @@
         let appsPayload = null;
         let appsAdminPayload = null;
         let storagePayload = null;
+        let sharingPayload = null;
         let storageFilter = 'all';
         let dirtyFieldKeys = new Set();
         let secretVisibilityKeys = new Set();
@@ -1931,11 +2047,13 @@
         function renderOverview() {
             const status = statusPayload || {};
             const storageSummary = storagePayload?.summary || {};
+            const sharingSummary = sharingPayload?.summary || {};
             const persistence = persistencePayloadFrom(status);
             const overview = [
                 { label: 'Apps instalados', value: String(status.app_count || 0), meta: 'Inventário carregado pela shell de apps.' },
                 { label: 'App principal', value: status.default_app_id || 'nenhum', meta: 'App marcado como principal no manifesto.', small: true },
                 { label: 'Auth Web', value: boolText(status.auth_enabled), meta: 'Estado efetivo da autenticação na Web.' },
+                { label: 'Links públicos', value: String(sharingSummary.total || 0), meta: `${Number(sharingSummary.active || 0)} ativo(s), ${Number(sharingSummary.expired || 0)} expirado(s).` },
                 { label: 'Armazenamento total', value: formatBytes(storageSummary.total_bytes || 0), meta: 'Uso total registrado pelo TCloud.' },
                 { label: 'No Servidor', value: String(storageSummary.persistent_item_count || storageSummary.offline_item_count || 0), meta: 'Itens mantidos com retenção permanente no servidor.' },
                 { label: 'Cache em disco', value: formatBytes(storageSummary.cache_usage_bytes || 0), meta: 'Uso atual da pasta de cache local.' },
@@ -2409,6 +2527,96 @@
         function setStorageFilter(filter) {
             storageFilter = filter;
             renderStorage();
+        }
+
+        function renderSharing() {
+            const summary = sharingPayload?.summary || {};
+            const policy = sharingPayload?.policy || {};
+            const items = sharingPayload?.items || [];
+            const settings = settingsByKey();
+            const cards = [
+                { label: 'Links configurados', value: String(summary.total || 0), meta: `${Number(summary.files || 0)} arquivo(s) e ${Number(summary.directories || 0)} pasta(s).` },
+                { label: 'Ativos', value: String(summary.active || 0), meta: 'Links públicos aceitando acesso agora.' },
+                { label: 'Expirados', value: String(summary.expired || 0), meta: 'Links mantidos para auditoria, mas indisponíveis ao público.' },
+                { label: 'Limite esgotado', value: String(summary.exhausted || 0), meta: 'Links cujo contador atingiu o limite configurado.' },
+                { label: 'Com senha', value: String(summary.password || 0), meta: 'Links protegidos por senha pública.' },
+                { label: 'Compartilhamento', value: policy.enabled ? 'Ligado' : 'Desligado', meta: policy.enabled ? 'Criação e acesso público permitidos.' : 'Acesso público bloqueado sem apagar links.' },
+            ];
+            document.getElementById('sharing-summary-grid').innerHTML = cards.map((card) => renderMetricCard(card)).join('');
+
+            const policyRows = [
+                ['Arquivos', policy.allow_file_sharing ? 'permitido' : 'bloqueado'],
+                ['Pastas', policy.allow_folder_sharing ? 'permitido' : 'bloqueado'],
+                ['Senha padrão', policy.require_password_by_default ? 'habilitada' : 'desabilitada'],
+                ['Expiração padrão', Number(policy.default_expiry_hours || 0) > 0 ? `${policy.default_expiry_hours}h` : 'não expira'],
+                ['Expiração máxima', Number(policy.max_expiry_hours || 0) > 0 ? `${policy.max_expiry_hours}h` : 'sem teto'],
+                ['Acessos padrão', Number(policy.default_max_access || 0) > 0 ? String(policy.default_max_access) : 'ilimitado'],
+                ['Teto de acessos', Number(policy.max_access_limit || 0) > 0 ? String(policy.max_access_limit) : 'sem teto'],
+                ['ZIP público', policy.allow_zip_download ? 'permitido' : 'bloqueado'],
+                ['Sessão pública', `${policy.session_ttl_seconds || 0}s`],
+                ['Métricas públicas', `${policy.metrics_ttl_seconds || 0}s / ${policy.metrics_concurrency || 0} worker(s)`],
+            ];
+
+            document.getElementById('sharing-policy-wrap').innerHTML = `
+                <div class="group-head">
+                    <div>
+                        <h3>Política efetiva</h3>
+                        <p class="text-clamp-2" title="Resumo das chaves PUBLIC_SHARE_* aplicadas pelo runtime atual. Edite os campos no painel Sistema, grupo Compartilhamento.">Resumo das chaves <code>PUBLIC_SHARE_*</code> aplicadas pelo runtime atual.</p>
+                    </div>
+                    <div class="group-actions">
+                        <button class="button small action-small icon-leading" onclick="setSection('system')">${renderButtonContent('ph-sliders-horizontal', 'Editar no Sistema')}</button>
+                    </div>
+                </div>
+                <div class="paths-list">
+                    ${policyRows.map(([label, value]) => `
+                        <div class="path-row">
+                            <strong>${escapeHtml(label)}</strong>
+                            <span>${escapeHtml(value)}</span>
+                        </div>
+                    `).join('')}
+                </div>
+                <div class="meta text-clamp-3" style="margin-top:12px;" title="Chaves gerenciadas: ${escapeHtml(Object.keys(settings).filter((key) => key.startsWith('PUBLIC_SHARE_')).join(', ') || 'nenhuma')}">Chaves gerenciadas: ${escapeHtml(Object.keys(settings).filter((key) => key.startsWith('PUBLIC_SHARE_')).join(', ') || 'nenhuma')}</div>
+            `;
+
+            document.getElementById('sharing-inventory-wrap').innerHTML = `
+                <div class="group-head">
+                    <div>
+                        <h3>Inventário de links</h3>
+                        <p class="text-clamp-2" title="Somente itens com link público direto aparecem aqui; filhos herdados de pasta pública ficam fora deste inventário.">Somente itens com link público direto aparecem aqui.</p>
+                    </div>
+                    <div class="group-actions">
+                        <button class="button small action-small icon-leading" onclick="loadSharingOnly()">${renderButtonContent('ph-arrow-clockwise', 'Atualizar')}</button>
+                    </div>
+                </div>
+                <div class="inventory-list">
+                    ${items.length ? items.map((item) => {
+                        const sharing = item.sharing_state || {};
+                        const url = sharing.public_url || '';
+                        const status = item.share_status || sharing.owner_status || (sharing.active === false ? 'inativo' : 'ativo');
+                        return `
+                            <div class="inventory-card">
+                                <div class="inventory-head">
+                                    <div>
+                                        <h4 title="${escapeHtml(item.name || item.path)}">${escapeHtml(item.name || item.path)}</h4>
+                                        <div class="muted" title="${escapeHtml(item.path || '')}">${escapeHtml(item.path || '')}</div>
+                                    </div>
+                                    <div class="inventory-actions">
+                                        ${url ? `<a class="button small action-small ghost icon-leading" href="${escapeHtml(url)}" target="_blank" rel="noopener">${renderButtonContent('ph-arrow-square-out', 'Abrir link')}</a>` : ''}
+                                    </div>
+                                </div>
+                                <div class="inventory-meta">
+                                    <div><strong>Status</strong><span>${escapeHtml(status)}</span></div>
+                                    <div><strong>Tipo</strong><span>${item.is_directory ? 'Pasta' : 'Arquivo'}</span></div>
+                                    <div><strong>Senha</strong><span>${sharing.requires_password ? 'sim' : 'não'}</span></div>
+                                    <div><strong>Acessos</strong><span>${escapeHtml(`${sharing.access_count || 0}${sharing.max_access ? `/${sharing.max_access}` : ''}`)}</span></div>
+                                    <div><strong>Expira em</strong><span>${escapeHtml(formatDate(sharing.expires_at))}</span></div>
+                                    <div><strong>Modificado</strong><span>${escapeHtml(formatDate(item.modified_at))}</span></div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('') : '<div class="muted">Nenhum link público direto configurado.</div>'}
+                </div>
+            `;
         }
 
         async function inspectStorageItem(encodedPath, triggerButton = null) {
@@ -2944,12 +3152,13 @@
         }
 
         async function loadAll() {
-            const [schemaReq, settingsReq, statusReq, appsReq, storageReq] = await Promise.all([
+            const [schemaReq, settingsReq, statusReq, appsReq, storageReq, sharingReq] = await Promise.all([
                 apiJson('/api/settings/schema'),
                 apiJson('/api/settings'),
                 apiJson('/api/settings/status'),
                 apiJson('/api/apps/admin'),
                 apiJson('/api/settings/storage'),
+                apiJson('/api/shared'),
             ]);
 
             if (!schemaReq.res.ok || !settingsReq.res.ok || !statusReq.res.ok || !appsReq.res.ok) {
@@ -2966,13 +3175,16 @@
                 schema_version: appsAdminPayload.schema_version || 3,
             };
             storagePayload = storageReq.res.ok ? storageReq.data : { summary: {}, items: [], jobs: [] };
+            sharingPayload = sharingReq.res.ok ? sharingReq.data : { summary: {}, items: [], policy: {}, filters: {} };
 
             clearTransientSecretState();
             closeStorageDetailModal();
             showBanner('storage-banner', storageReq.res.ok ? '' : 'error', storageReq.res.ok ? '' : 'Nao foi possivel carregar o painel de armazenamento.');
+            showBanner('sharing-banner', sharingReq.res.ok ? '' : 'error', sharingReq.res.ok ? '' : 'Nao foi possivel carregar o painel de compartilhamento.');
             renderOverview();
             renderSettingsGroups();
             renderStorage();
+            renderSharing();
             renderAppsPanel();
             renderDiagnostics();
             localPreferenceCards();
@@ -2995,6 +3207,22 @@
                 showBanner('storage-banner', 'info', 'Painel de armazenamento atualizado.');
             } catch (error) {
                 showBanner('storage-banner', 'error', error.message || 'Falha ao atualizar armazenamento.');
+            }
+        }
+
+        async function loadSharingOnly() {
+            try {
+                const { res, data } = await apiJson('/api/shared');
+                if (!res.ok) {
+                    showBanner('sharing-banner', 'error', data.error || 'Falha ao atualizar compartilhamento.');
+                    return;
+                }
+                sharingPayload = data;
+                renderOverview();
+                renderSharing();
+                showBanner('sharing-banner', 'info', 'Painel de compartilhamento atualizado.');
+            } catch (error) {
+                showBanner('sharing-banner', 'error', error.message || 'Falha ao atualizar compartilhamento.');
             }
         }
 
