@@ -599,7 +599,9 @@
         }
         record.status = 'minimized';
         record.minimized = true;
+        setIframeShield(record, false);
         record.element.hidden = true;
+        scheduleApply(record);
         notifyStateChange(record, 'minimize');
         updateDock();
     }
@@ -1042,7 +1044,11 @@
 
     function wireWindowControls(record) {
         record.element.querySelectorAll('[data-window-action]').forEach((button) => {
-            button.addEventListener('pointerdown', (event) => event.stopPropagation());
+            button.addEventListener('pointerdown', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+            });
+            button.addEventListener('pointerup', (event) => event.stopPropagation());
             button.addEventListener('click', (event) => {
                 event.preventDefault();
                 event.stopPropagation();

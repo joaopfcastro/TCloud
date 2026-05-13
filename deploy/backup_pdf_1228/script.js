@@ -63,7 +63,6 @@ const els = {
   picker: document.getElementById("picker"),
   tabs: document.getElementById("tabs"),
   toolbar: document.getElementById("pdf-toolbar"),
-  toolbarWrapper: document.getElementById("pdf-toolbar-wrapper"),
   recentPdfsStrip: document.getElementById("recent-pdfs-strip"),
   settingsPanel: document.getElementById("pdf-settings-panel"),
   settingsToggle: document.getElementById("pdf-settings-toggle"),
@@ -530,35 +529,6 @@ function textStatusLabel(status, reason = "") {
   };
   const label = labels[status] || "Estado do texto desconhecido";
   return reason ? `${label}: ${reason}` : label;
-}
-
-function installToolbarRuntimeShield() {
-  if (!els.toolbar || !els.toolbarWrapper) return;
-
-  const applyToolbarGuard = () => {
-    if (els.shell.classList.contains("presentation") || els.shell.classList.contains("external-tabs")) return;
-    const rect = els.toolbar.getBoundingClientRect();
-    const visible = rect.width > 0 || els.toolbarWrapper.getBoundingClientRect().width > 0;
-    if (!visible || rect.height >= 40) return;
-
-    els.toolbarWrapper.style.setProperty("height", "52px", "important");
-    els.toolbarWrapper.style.setProperty("min-height", "52px", "important");
-    els.toolbarWrapper.style.setProperty("max-height", "52px", "important");
-    els.toolbar.style.setProperty("height", "52px", "important");
-    els.toolbar.style.setProperty("min-height", "52px", "important");
-    els.toolbar.style.setProperty("max-height", "52px", "important");
-    els.toolbar.style.setProperty("display", "flex", "important");
-    els.toolbar.style.setProperty("align-items", "center", "important");
-    markPdfPerf("toolbar:height-restored", { height: Math.round(rect.height) });
-  };
-
-  const scheduleGuard = () => requestAnimationFrame(applyToolbarGuard);
-  const observer = new MutationObserver(scheduleGuard);
-  observer.observe(els.toolbar, { attributes: true, attributeFilter: ["class", "style"] });
-  observer.observe(els.toolbarWrapper, { attributes: true, attributeFilter: ["class", "style"] });
-  observer.observe(document.head, { childList: true, subtree: true });
-  window.addEventListener("resize", scheduleGuard);
-  scheduleGuard();
 }
 
 function debugTextLayerEnabled() {
@@ -2096,7 +2066,6 @@ function publishState() {
       find_active_index: search?.activeIndex ?? -1,
       tabs: app.tabs.map((tab) => ({
         document_key: tab.document_key,
-        path: tab.path || "",
         name: tab.name,
         pinned: Boolean(tab.pinned),
       })),
@@ -3561,7 +3530,6 @@ async function consumeLaunches() {
 }
 
 async function start() {
-  installToolbarRuntimeShield();
   wireEvents();
   renderThumbsChrome();
   syncSettingsUi();

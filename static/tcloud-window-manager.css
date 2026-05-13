@@ -26,6 +26,23 @@
     contain: layout paint;
 }
 
+.tcloud-window .app-viewer-toolbar {
+    display: none;
+    flex: 0 0 auto;
+    min-width: 0;
+    min-height: 0;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(34, 34, 34, 0.96);
+    overflow: visible;
+}
+
+.tcloud-window.pdf-tools-viewer .app-viewer-toolbar {
+    display: flex;
+}
+
 .tcloud-window * {
     box-sizing: border-box;
 }
@@ -78,6 +95,8 @@
     left: 0;
     z-index: 900;
     background: var(--bg-content);
+    min-height: 0;
+    overflow: hidden;
 }
 
 .app-viewer-overlay.tcloud-window.active {
@@ -180,21 +199,46 @@
 
 .app-viewer-overlay.pdf-tools-viewer:not(.fullscreen) .app-viewer-header {
     --tcloud-window-titlebar-height: 46px;
-    height: var(--tcloud-window-titlebar-height) !important;
-    min-height: var(--tcloud-window-titlebar-height) !important;
+    height: var(--tcloud-window-titlebar-height, 46px) !important;
+    min-height: var(--tcloud-window-titlebar-height, 46px) !important;
     box-sizing: border-box !important;
     display: flex !important;
     align-items: center !important;
     padding-top: 0 !important;
     padding-bottom: 0 !important;
     background: #323232 !important;
-    overflow: visible;
+    overflow: hidden !important;
     z-index: 5;
 }
 
 .app-viewer-overlay.pdf-tools-viewer:not(.fullscreen) .app-viewer-header > * {
-    align-self: center;
+    align-self: center !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
     transform: none !important;
+}
+
+.app-viewer-overlay.pdf-tools-viewer:not(.fullscreen) .app-viewer-toolbar {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px;
+    min-height: 44px;
+    height: 44px;
+    padding: 6px 12px;
+    box-sizing: border-box;
+    overflow: visible;
+}
+
+.app-viewer-overlay.pdf-tools-viewer:not(.fullscreen).pdf-toolbar-compact .app-viewer-title,
+.app-viewer-overlay.pdf-tools-viewer:not(.fullscreen).pdf-toolbar-ultra-compact .app-viewer-title {
+    display: inline-flex !important;
+    min-width: 120px !important;
+    max-width: min(320px, 40vw) !important;
+}
+
+.app-viewer-overlay.pdf-tools-viewer:not(.fullscreen).pdf-toolbar-compact .app-viewer-title span,
+.app-viewer-overlay.pdf-tools-viewer:not(.fullscreen).pdf-toolbar-ultra-compact .app-viewer-title span {
+    display: inline !important;
 }
 
 .app-viewer-overlay.pdf-tools-viewer:not(.fullscreen) .app-viewer-actions.pdf-home-mode,
@@ -262,6 +306,24 @@
     justify-content: flex-start;
 }
 
+.app-viewer-overlay.pdf-tools-viewer:not(.fullscreen) .app-viewer-title {
+    height: 28px !important;
+    min-height: 28px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    line-height: 1 !important;
+}
+
+.app-viewer-overlay.pdf-tools-viewer:not(.fullscreen) .app-viewer-title i,
+.app-viewer-overlay.pdf-tools-viewer:not(.fullscreen) .app-viewer-action i,
+.app-viewer-overlay.pdf-tools-viewer:not(.fullscreen) .app-viewer-pdf-overflow-item i {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    line-height: 1 !important;
+}
+
 .app-viewer-overlay.pdf-tools-viewer:not(.fullscreen) .app-viewer-pdf-settings-action {
     position: static !important;
     top: auto !important;
@@ -297,6 +359,10 @@
 .app-viewer-window-controls,
 .app-viewer-window-controls * {
     pointer-events: auto;
+}
+
+.tcloud-window .app-viewer-frame {
+    min-height: 0;
 }
 
 .tcloud-window-layout-menu {

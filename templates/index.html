@@ -3505,6 +3505,8 @@
             z-index: 500;
             background: var(--bg-content);
             flex-direction: column;
+            min-height: 0;
+            overflow: hidden;
         }
 
         .app-viewer-overlay.active {
@@ -3554,6 +3556,23 @@
             gap: 18px;
             position: relative;
             overflow: hidden;
+        }
+
+        .app-viewer-toolbar {
+            display: none;
+            flex: 0 0 auto;
+            min-width: 0;
+            min-height: 0;
+            align-items: center;
+            gap: 10px;
+            padding: 6px 12px;
+            border-bottom: 1px solid var(--border);
+            background: rgba(34, 34, 34, 0.96);
+            overflow: visible;
+        }
+
+        .app-viewer-overlay.pdf-tools-viewer .app-viewer-toolbar {
+            display: flex;
         }
 
         .app-viewer-window-controls {
@@ -3635,6 +3654,7 @@
             display: none;
             align-items: center;
             align-self: center;
+            place-items: center stretch;
             gap: 4px;
             min-width: 0;
             flex: 1 1 420px;
@@ -3662,7 +3682,9 @@
             display: inline-grid;
             grid-template-columns: minmax(0, 1fr) auto;
             align-items: center;
+            align-self: center;
             gap: 4px;
+            line-height: 1;
         }
 
         .app-viewer-tabs.many-tabs .app-viewer-tab {
@@ -3691,12 +3713,14 @@
         .app-viewer-tab-main {
             min-width: 0;
             padding: 0 0 0 10px;
-            display: block;
+            display: inline-flex;
+            align-items: center;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
             text-align: left;
             font-size: 12px;
+            line-height: 1;
         }
 
         .app-viewer-tab-close {
@@ -3704,6 +3728,10 @@
             padding: 0;
             border-radius: 6px;
             color: var(--text-secondary);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
         }
 
         .app-viewer-tab-close:hover {
@@ -3892,6 +3920,8 @@
             font-size: 13px;
             font-weight: 500;
             white-space: nowrap;
+            line-height: 1;
+            vertical-align: middle;
         }
 
         .app-viewer-action:hover,
@@ -3948,6 +3978,9 @@
             color: var(--text-secondary);
             font-size: 12px;
             white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            line-height: 1;
         }
 
         .app-viewer-sync {
@@ -3982,7 +4015,7 @@
 
         .app-viewer-pdf-recent {
             max-width: 190px;
-            height: 30px;
+            height: 32px;
             border: 1px solid var(--border);
             border-radius: 8px;
             background: rgba(255, 255, 255, 0.05);
@@ -4196,11 +4229,35 @@
             padding-top: 0 !important;
             padding-bottom: 0 !important;
             background: #323232 !important;
+            overflow: hidden !important;
         }
 
         .app-viewer-overlay.pdf-tools-viewer:not(.fullscreen) .app-viewer-header > * {
-            align-self: center;
+            align-self: center !important;
             transform: none !important;
+        }
+
+        .app-viewer-overlay.pdf-tools-viewer:not(.fullscreen) .app-viewer-toolbar {
+            display: flex !important;
+            align-items: center !important;
+            gap: 8px;
+            min-height: 44px;
+            height: 44px;
+            padding: 6px 12px;
+            box-sizing: border-box;
+            overflow: visible;
+        }
+
+        .app-viewer-overlay.pdf-tools-viewer:not(.fullscreen).pdf-toolbar-compact .app-viewer-title,
+        .app-viewer-overlay.pdf-tools-viewer:not(.fullscreen).pdf-toolbar-ultra-compact .app-viewer-title {
+            display: inline-flex !important;
+            min-width: 120px !important;
+            max-width: min(320px, 40vw) !important;
+        }
+
+        .app-viewer-overlay.pdf-tools-viewer:not(.fullscreen).pdf-toolbar-compact .app-viewer-title span,
+        .app-viewer-overlay.pdf-tools-viewer:not(.fullscreen).pdf-toolbar-ultra-compact .app-viewer-title span {
+            display: inline !important;
         }
 
         .app-viewer-overlay.pdf-tools-viewer:not(.fullscreen) .app-viewer-actions.pdf-home-mode,
@@ -4230,8 +4287,8 @@
         .app-viewer-overlay.pdf-tools-viewer:not(.fullscreen) .app-viewer-pdf-overflow {
             align-items: center !important;
             align-self: center !important;
-            height: 28px !important;
-            min-height: 28px !important;
+            height: 32px !important;
+            min-height: 32px !important;
             box-sizing: border-box !important;
             line-height: 1 !important;
             transform: none !important;
@@ -4246,8 +4303,8 @@
         .app-viewer-overlay.pdf-tools-viewer:not(.fullscreen) .app-viewer-page-total,
         .app-viewer-overlay.pdf-tools-viewer:not(.fullscreen) .app-viewer-sync {
             align-items: center !important;
-            height: 28px !important;
-            min-height: 28px !important;
+            height: 32px !important;
+            min-height: 32px !important;
             box-sizing: border-box !important;
             line-height: 1 !important;
             margin-top: 0 !important;
@@ -4260,12 +4317,30 @@
         .app-viewer-overlay.pdf-tools-viewer:not(.fullscreen) .app-viewer-page-total {
             display: inline-flex !important;
             justify-content: center;
-            height: 28px !important;
-            min-height: 28px !important;
+            height: 32px !important;
+            min-height: 32px !important;
         }
 
         .app-viewer-overlay.pdf-tools-viewer:not(.fullscreen) .app-viewer-tab-main {
             justify-content: flex-start;
+        }
+
+        .app-viewer-overlay.pdf-tools-viewer:not(.fullscreen) .app-viewer-title {
+            height: 32px !important;
+            min-height: 32px !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            line-height: 1 !important;
+        }
+
+        .app-viewer-overlay.pdf-tools-viewer:not(.fullscreen) .app-viewer-title i,
+        .app-viewer-overlay.pdf-tools-viewer:not(.fullscreen) .app-viewer-action i,
+        .app-viewer-overlay.pdf-tools-viewer:not(.fullscreen) .app-viewer-pdf-overflow-item i {
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            line-height: 1 !important;
         }
 
         .app-viewer-overlay.pdf-tools-viewer:not(.fullscreen) .app-viewer-pdf-settings-action {
@@ -4337,6 +4412,7 @@
 
         .app-viewer-frame {
             flex: 1;
+            min-height: 0;
             border: none;
             width: 100%;
             background: #1a1d23;
@@ -4644,11 +4720,13 @@
                         <i class="ph ph-squares-four"></i>
                         <span>App</span>
                     </div>
-                    <div class="app-viewer-tabs" id="app-viewer-tabs" role="tablist" aria-label="Abas do PDF Tools"></div>
-                    <div class="app-viewer-actions" id="app-viewer-actions"></div>
                     <div class="app-viewer-close" onclick="closeApp()" title="Fechar">
                         <i class="ph ph-x"></i>
                     </div>
+                </div>
+                <div class="app-viewer-toolbar" id="app-viewer-toolbar" aria-label="Ferramentas do app">
+                    <div class="app-viewer-tabs" id="app-viewer-tabs" role="tablist" aria-label="Abas do PDF Tools"></div>
+                    <div class="app-viewer-actions" id="app-viewer-actions"></div>
                 </div>
                 <iframe class="app-viewer-frame" id="app-viewer-frame"
                     sandbox="allow-scripts allow-same-origin allow-forms"
@@ -23718,26 +23796,52 @@
             return PDF_TOOLS_VISIBLE_TAB_LIMIT;
         }
 
+        function normalizePdfToolsShellTabs(tabs) {
+            const seen = new Set();
+            return (Array.isArray(tabs) ? tabs : []).filter((tab) => {
+                const key = String(tab?.document_key || '').trim();
+                const path = String(tab?.path || '').trim().toLowerCase();
+                const name = String(tab?.name || 'PDF').trim().toLowerCase();
+                const identity = path ? `path:${path}` : key ? `key:${key}` : `name:${name}`;
+                if (seen.has(identity)) return false;
+                seen.add(identity);
+                return true;
+            });
+        }
+
         function getPdfToolsVisibleTabs(tabs, activeKey, limit) {
             limit = limit || PDF_TOOLS_VISIBLE_TAB_LIMIT;
-            const normalizedTabs = Array.isArray(tabs) ? tabs : [];
+            const normalizedTabs = normalizePdfToolsShellTabs(tabs);
             if (normalizedTabs.length <= limit) {
                 return { visibleTabs: normalizedTabs, overflowTabs: [] };
             }
             const activeIndex = normalizedTabs.findIndex(
                 (tab) => String(tab.document_key || '') === String(activeKey || '')
             );
-            if (activeIndex < 0 || activeIndex < limit) {
+            if (activeIndex < 0) {
+                const visibleTabs = normalizedTabs.slice(0, limit);
+                const visibleKeys = new Set(visibleTabs.map((tab) => String(tab.document_key || '')));
                 return {
-                    visibleTabs: normalizedTabs.slice(0, limit),
-                    overflowTabs: normalizedTabs.slice(limit),
+                    visibleTabs,
+                    overflowTabs: normalizedTabs.filter((tab) => !visibleKeys.has(String(tab.document_key || ''))),
                 };
             }
-            const visibleTabs = [
-                normalizedTabs[0],
-                normalizedTabs[Math.max(1, activeIndex - 1)],
-                normalizedTabs[activeIndex],
-            ];
+
+            const visibleTabs = [];
+            const addVisibleTab = (tab) => {
+                const key = String(tab?.document_key || '');
+                if (!tab || !key || visibleTabs.some((item) => String(item.document_key || '') === key)) return;
+                if (visibleTabs.length < limit) visibleTabs.push(tab);
+            };
+            if (limit <= 1) {
+                addVisibleTab(normalizedTabs[activeIndex]);
+            } else {
+                addVisibleTab(normalizedTabs[0]);
+                if (activeIndex > 0) addVisibleTab(normalizedTabs[activeIndex]);
+                for (let index = 1; visibleTabs.length < limit && index < normalizedTabs.length; index += 1) {
+                    addVisibleTab(normalizedTabs[index]);
+                }
+            }
             const visibleKeys = new Set(visibleTabs.map((tab) => String(tab.document_key || '')));
             return {
                 visibleTabs,
@@ -23893,7 +23997,7 @@
             const tabsContainer = document.getElementById('app-viewer-tabs');
             if (!tabsContainer) return;
 
-            const tabs = Array.isArray(state?.tabs) ? state.tabs : [];
+            const tabs = normalizePdfToolsShellTabs(state?.tabs);
             if (!state || state.app_id !== 'pdf-tools' || !tabs.length) {
                 clearAppViewerTabs(false);
                 return;
@@ -23905,6 +24009,7 @@
                 visibleLimit: getPdfToolsVisibleTabLimit(),
                 tabs: tabs.map((tab) => [
                     String(tab.document_key || ''),
+                    String(tab.path || ''),
                     String(tab.name || 'PDF'),
                     Boolean(tab.pinned),
                 ]),
