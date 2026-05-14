@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="./style.css">
 </head>
 <body>
-  <div class="app-shell">
+  <div class="app-shell no-document">
     <aside class="picker" id="picker">
       <div class="picker-panel" role="dialog" aria-modal="true" aria-label="Abrir PDF">
         <header class="picker-header">
@@ -30,8 +30,8 @@
     </aside>
 
     <main class="viewer">
-      <div class="tabs" id="tabs"></div>
       <div id="pdf-toolbar-wrapper">
+        <div class="tabs" id="tabs"></div>
         <div class="toolbar" id="pdf-toolbar">
           <div class="toolbar-home-group">
             <button class="btn btn-primary" id="open-picker" title="Abrir PDF" type="button">Abrir PDF</button>
@@ -49,6 +49,7 @@
             <button class="btn btn-cancel icon-button" id="next-page" title="Proxima pagina" type="button">›</button>
             <button class="btn btn-cancel icon-button" id="last-page" title="Ultima pagina" type="button">»</button>
             <span class="divider"></span>
+            <button class="btn btn-cancel icon-button" id="open-find" title="Pesquisar no PDF" type="button"><i class="ph ph-magnifying-glass" aria-hidden="true"></i></button>
             <button class="btn btn-cancel toolbar-button" id="fit-toggle" title="Ajustar a largura" type="button"><i class="ph ph-arrows-out-line-horizontal" aria-hidden="true"></i><span>Ajuste</span></button>
             <button class="btn btn-cancel icon-button" id="rotate-right" title="Girar pagina 90 graus para a direita" type="button"><i class="ph ph-arrow-clockwise" aria-hidden="true"></i></button>
             <button class="btn btn-cancel icon-button" id="zoom-out" title="Diminuir zoom" type="button">−</button>
@@ -96,9 +97,10 @@
           </section>
           <section class="pdf-settings-section">
             <span class="pdf-settings-label"><i class="ph ph-sidebar" aria-hidden="true"></i>Miniaturas</span>
-            <div class="pdf-settings-options" data-preference="thumbsCollapsed">
-              <button class="pdf-settings-option" type="button" data-value="false"><i class="ph ph-layout" aria-hidden="true"></i><span>Abertas</span></button>
-              <button class="pdf-settings-option" type="button" data-value="true"><i class="ph ph-sidebar-simple" aria-hidden="true"></i><span>Recolhidas</span></button>
+            <div class="pdf-settings-options" data-preference="thumbsMode">
+              <button class="pdf-settings-option" type="button" data-value="open"><i class="ph ph-layout" aria-hidden="true"></i><span>Abertas</span></button>
+              <button class="pdf-settings-option" type="button" data-value="collapsed"><i class="ph ph-sidebar-simple" aria-hidden="true"></i><span>Recolhidas</span></button>
+              <button class="pdf-settings-option" type="button" data-value="hidden"><i class="ph ph-sidebar-simple" aria-hidden="true"></i><span>Ocultas</span></button>
             </div>
           </section>
           <section class="pdf-settings-section">

@@ -3,6 +3,7 @@ const PDF_TOOLS_DEFAULT_PREFERENCES = {
   pageSpread: "single",
   scrollMode: "continuous",
   defaultFitMode: "page",
+  thumbsMode: "open",
   thumbsCollapsed: false,
   openBehavior: "new_tab",
 };
@@ -10,6 +11,7 @@ const PDF_TOOLS_PREFERENCE_VALUES = {
   pageSpread: new Set(["single", "double"]),
   scrollMode: new Set(["continuous", "paged"]),
   defaultFitMode: new Set(["page", "width", "custom"]),
+  thumbsMode: new Set(["open", "collapsed", "hidden"]),
   openBehavior: new Set(["new_tab", "replace_current"]),
 };
 const PDF_SPREAD_GAP = 18;
@@ -54,9 +56,14 @@ const app = {
   renderGeneration: 0,
   textStatus: "idle",
   textStatusReason: "",
+  thumbsMode: initialPreferences.thumbsMode,
   thumbsCollapsed: initialPreferences.thumbsCollapsed,
+  thumbsHidden: initialPreferences.thumbsMode === "hidden",
   externalTabs: false,
   viewerState: PDF_VIEWER_STATE.IDLE,
+  viewportResizeObserver: null,
+  lastViewportSize: null,
+  resizeTimer: 0,
 };
 
 const els = {
@@ -83,6 +90,7 @@ const els = {
   pageTotal: document.getElementById("page-total"),
   sync: document.getElementById("sync-state"),
   zoomReset: document.getElementById("zoom-reset"),
+  openFind: document.getElementById("open-find"),
   fitToggle: document.getElementById("fit-toggle"),
   rotateRight: document.getElementById("rotate-right"),
   presentationMode: document.getElementById("presentation-mode"),
@@ -191,23 +199,40 @@ function markPdfPerf(event, payload = {}) {
   }
 }
 
+function normalizeThumbsMode(value, fallback = "open") {
+  const mode = String(value || "").trim();
+  return PDF_TOOLS_PREFERENCE_VALUES.thumbsMode.has(mode) ? mode : fallback;
+}
+
+function thumbsModeFromCollapsed(collapsed) {
+  return collapsed ? "collapsed" : "open";
+}
+
 function normalizePdfToolsPreferences(input = {}) {
   const next = { ...PDF_TOOLS_DEFAULT_PREFERENCES };
   const raw = input && typeof input === "object" ? input : {};
   Object.keys(PDF_TOOLS_PREFERENCE_VALUES).forEach((key) => {
     if (PDF_TOOLS_PREFERENCE_VALUES[key].has(raw[key])) next[key] = raw[key];
   });
-  if (typeof raw.thumbsCollapsed === "boolean") next.thumbsCollapsed = raw.thumbsCollapsed;
+  if (Object.prototype.hasOwnProperty.call(raw, "thumbsMode")) {
+    next.thumbsMode = normalizeThumbsMode(raw.thumbsMode);
+  } else if (typeof raw.thumbsCollapsed === "boolean") {
+    next.thumbsMode = thumbsModeFromCollapsed(raw.thumbsCollapsed);
+  }
+  next.thumbsCollapsed = next.thumbsMode === "collapsed";
   return next;
 }
 
 function loadPdfToolsPreferences() {
   try {
     const parsed = JSON.parse(localStorage.getItem(PDF_TOOLS_PREFERENCES_KEY) || "{}");
-    const preferences = normalizePdfToolsPreferences(parsed);
-    if (!Object.prototype.hasOwnProperty.call(parsed, "thumbsCollapsed")) {
-      preferences.thumbsCollapsed = localStorage.getItem("pdf-tools.thumbsCollapsed") === "1";
+    if (
+      !Object.prototype.hasOwnProperty.call(parsed, "thumbsMode")
+      && !Object.prototype.hasOwnProperty.call(parsed, "thumbsCollapsed")
+    ) {
+      parsed.thumbsCollapsed = localStorage.getItem("pdf-tools.thumbsCollapsed") === "1";
     }
+    const preferences = normalizePdfToolsPreferences(parsed);
     return preferences;
   } catch (error) {
     return { ...PDF_TOOLS_DEFAULT_PREFERENCES };
@@ -216,9 +241,12 @@ function loadPdfToolsPreferences() {
 
 function savePdfToolsPreferences(next) {
   app.preferences = normalizePdfToolsPreferences(next);
+  app.thumbsMode = app.preferences.thumbsMode;
   app.thumbsCollapsed = app.preferences.thumbsCollapsed;
+  app.thumbsHidden = app.preferences.thumbsMode === "hidden";
   try {
     localStorage.setItem(PDF_TOOLS_PREFERENCES_KEY, JSON.stringify(app.preferences));
+    localStorage.setItem("pdf-tools.thumbsCollapsed", app.thumbsCollapsed ? "1" : "0");
   } catch (error) {
     console.warn("Nao foi possivel salvar preferencias do PDF Tools", error);
   }
@@ -530,35 +558,6 @@ function textStatusLabel(status, reason = "") {
   };
   const label = labels[status] || "Estado do texto desconhecido";
   return reason ? `${label}: ${reason}` : label;
-}
-
-function installToolbarRuntimeShield() {
-  if (!els.toolbar || !els.toolbarWrapper) return;
-
-  const applyToolbarGuard = () => {
-    if (els.shell.classList.contains("presentation") || els.shell.classList.contains("external-tabs")) return;
-    const rect = els.toolbar.getBoundingClientRect();
-    const visible = rect.width > 0 || els.toolbarWrapper.getBoundingClientRect().width > 0;
-    if (!visible || rect.height >= 40) return;
-
-    els.toolbarWrapper.style.setProperty("height", "52px", "important");
-    els.toolbarWrapper.style.setProperty("min-height", "52px", "important");
-    els.toolbarWrapper.style.setProperty("max-height", "52px", "important");
-    els.toolbar.style.setProperty("height", "52px", "important");
-    els.toolbar.style.setProperty("min-height", "52px", "important");
-    els.toolbar.style.setProperty("max-height", "52px", "important");
-    els.toolbar.style.setProperty("display", "flex", "important");
-    els.toolbar.style.setProperty("align-items", "center", "important");
-    markPdfPerf("toolbar:height-restored", { height: Math.round(rect.height) });
-  };
-
-  const scheduleGuard = () => requestAnimationFrame(applyToolbarGuard);
-  const observer = new MutationObserver(scheduleGuard);
-  observer.observe(els.toolbar, { attributes: true, attributeFilter: ["class", "style"] });
-  observer.observe(els.toolbarWrapper, { attributes: true, attributeFilter: ["class", "style"] });
-  observer.observe(document.head, { childList: true, subtree: true });
-  window.addEventListener("resize", scheduleGuard);
-  scheduleGuard();
 }
 
 function debugTextLayerEnabled() {
@@ -930,8 +929,26 @@ function syncSettingsUi() {
   });
 }
 
-function openSettingsPanel() {
+function applySettingsAnchor(anchor = null) {
+  if (!els.settingsPanel) return;
+  const top = Number(anchor?.top);
+  const right = Number(anchor?.right);
+  const valid = Number.isFinite(top) && Number.isFinite(right);
+  els.settingsPanel.classList.toggle("anchored-from-shell", valid);
+  if (!valid) {
+    els.settingsPanel.style.removeProperty("--pdf-settings-anchor-top");
+    els.settingsPanel.style.removeProperty("--pdf-settings-anchor-right");
+    return;
+  }
+  const safeTop = Math.max(12, Math.round(top));
+  const safeRight = Math.max(12, Math.round(right));
+  els.settingsPanel.style.setProperty("--pdf-settings-anchor-top", `${safeTop}px`);
+  els.settingsPanel.style.setProperty("--pdf-settings-anchor-right", `${safeRight}px`);
+}
+
+function openSettingsPanel(options = {}) {
   app.settingsOpen = true;
+  applySettingsAnchor(options.anchor);
   closePicker();
   syncSettingsUi();
   publishState();
@@ -940,6 +957,7 @@ function openSettingsPanel() {
 function closeSettingsPanel(options = {}) {
   if (!app.settingsOpen) return;
   app.settingsOpen = false;
+  applySettingsAnchor(null);
   syncSettingsUi();
   publishState();
   if (options.focusStage !== false) els.stage.focus();
@@ -955,7 +973,7 @@ function toggleSettingsPanel() {
 
 async function applyPreferencesToSession(session = getActiveSession(), reason = "preferences") {
   if (!session?.pdf) return;
-  setThumbsCollapsed(app.preferences.thumbsCollapsed, { persist: false, refit: false });
+  setThumbsMode(app.preferences.thumbsMode, { persist: false, refit: false });
   if (app.preferences.defaultFitMode === "page") {
     await fitPageToView(session);
   } else if (app.preferences.defaultFitMode === "width") {
@@ -969,17 +987,21 @@ async function applyPreferencesToSession(session = getActiveSession(), reason = 
 function setPdfPreference(key, rawValue) {
   const next = { ...app.preferences };
   if (key === "thumbsCollapsed") {
-    next.thumbsCollapsed = rawValue === true || rawValue === "true";
+    next.thumbsMode = thumbsModeFromCollapsed(rawValue === true || rawValue === "true");
+  } else if (key === "thumbsMode") {
+    next.thumbsMode = normalizeThumbsMode(rawValue, app.preferences.thumbsMode);
   } else if (PDF_TOOLS_PREFERENCE_VALUES[key]?.has(rawValue)) {
     next[key] = rawValue;
   } else {
     return;
   }
-  savePdfToolsPreferences(next);
-  if (key === "thumbsCollapsed") {
-    setThumbsCollapsed(next.thumbsCollapsed);
+  if (key === "thumbsCollapsed" || key === "thumbsMode") {
+    setThumbsMode(next.thumbsMode);
   } else if (["pageSpread", "scrollMode", "defaultFitMode"].includes(key)) {
+    savePdfToolsPreferences(next);
     applyPreferencesToSession(getActiveSession(), `preferencia:${key}`).catch(showError);
+  } else {
+    savePdfToolsPreferences(next);
   }
 }
 
@@ -2101,6 +2123,8 @@ function publishState() {
         pinned: Boolean(tab.pinned),
       })),
       thumbs_collapsed: Boolean(app.thumbsCollapsed),
+      thumbs_hidden: Boolean(app.thumbsHidden),
+      thumbs_mode: app.thumbsMode || "open",
     },
     window.location.origin
   );
@@ -2737,6 +2761,53 @@ async function fitPageToView(session = getActiveSession()) {
   await renderPage(session, session.page);
 }
 
+function getViewportFitSize() {
+  const width = Math.round(els.stage?.clientWidth || 0);
+  const height = Math.round(els.stage?.clientHeight || 0);
+  return { width, height, area: width * height };
+}
+
+function viewportGrewEnoughForAutoFit(size) {
+  const previous = app.lastViewportSize;
+  app.lastViewportSize = size;
+  if (!previous?.area || !size.area) return false;
+  const areaGain = size.area / previous.area;
+  return size.width >= previous.width + 160 || size.height >= previous.height + 120 || areaGain >= 1.35;
+}
+
+async function refitForViewportChange() {
+  const session = getActiveSession();
+  if (!session?.pdf) return;
+  const size = getViewportFitSize();
+  const shouldPromoteCustomFit = session.fitMode === "custom" && viewportGrewEnoughForAutoFit(size);
+  if (!shouldPromoteCustomFit) app.lastViewportSize = size;
+  if (app.presentationActive || session.fitMode === "page" || shouldPromoteCustomFit) {
+    await fitPageToView(session);
+  } else if (session.fitMode === "width") {
+    await fitPageWidth(session);
+  } else {
+    await renderPage(session, session.page);
+  }
+}
+
+function scheduleViewportRefit(delay = 120) {
+  const session = getActiveSession();
+  if (!session?.pdf) return;
+  clearTimeout(app.resizeTimer);
+  app.resizeTimer = setTimeout(() => {
+    refitForViewportChange().catch(showError);
+  }, delay);
+}
+
+function observeViewportResize() {
+  if (app.viewportResizeObserver || typeof ResizeObserver === "undefined") return;
+  const targets = [els.stage, els.documentHost, els.shell].filter(Boolean);
+  if (!targets.length) return;
+  app.viewportResizeObserver = new ResizeObserver(() => scheduleViewportRefit(80));
+  targets.forEach((target) => app.viewportResizeObserver.observe(target));
+  app.lastViewportSize = getViewportFitSize();
+}
+
 async function toggleFitMode(session = getActiveSession()) {
   if (!session?.pdf) return;
   if (nextFitMode(session) === "width") {
@@ -2842,12 +2913,16 @@ function renderThumbsToggleIcon(collapsed) {
 function updateThumbsToggle() {
   const toggle = els.thumbs.querySelector(".thumbs-toggle");
   if (!toggle) return;
-  const label = app.thumbsCollapsed ? "Expandir miniaturas" : "Recolher miniaturas";
+  const label = app.thumbsHidden
+    ? "Mostrar miniaturas"
+    : app.thumbsCollapsed
+      ? "Expandir miniaturas"
+      : "Recolher miniaturas";
   toggle.innerHTML = renderThumbsToggleIcon(app.thumbsCollapsed);
   toggle.classList.toggle("is-collapsed", app.thumbsCollapsed);
   toggle.title = label;
   toggle.setAttribute("aria-label", label);
-  toggle.setAttribute("aria-expanded", app.thumbsCollapsed ? "false" : "true");
+  toggle.setAttribute("aria-expanded", app.thumbsCollapsed || app.thumbsHidden ? "false" : "true");
 }
 
 function renderThumbsChrome() {
@@ -2943,23 +3018,36 @@ function showThumbsForSession(session) {
   if (session) markActiveThumb(session);
 }
 
-function setThumbsCollapsed(collapsed, options = {}) {
-  app.thumbsCollapsed = Boolean(collapsed);
+function setThumbsMode(mode, options = {}) {
+  const nextMode = normalizeThumbsMode(mode, "open");
+  app.preferences = normalizePdfToolsPreferences({ ...app.preferences, thumbsMode: nextMode });
+  app.thumbsMode = app.preferences.thumbsMode;
+  app.thumbsCollapsed = app.thumbsMode === "collapsed";
+  app.thumbsHidden = app.thumbsMode === "hidden";
   els.shell.classList.toggle("thumbs-collapsed", app.thumbsCollapsed);
+  els.shell.classList.toggle("thumbs-hidden", app.thumbsHidden);
   updateThumbsToggle();
 
   if (options.persist !== false) {
     try {
+      localStorage.setItem(PDF_TOOLS_PREFERENCES_KEY, JSON.stringify(app.preferences));
       localStorage.setItem("pdf-tools.thumbsCollapsed", app.thumbsCollapsed ? "1" : "0");
     } catch (error) {
       console.warn("Nao foi possivel salvar preferencia de miniaturas", error);
     }
   }
 
+  syncSettingsUi();
   publishState();
 
   const session = getActiveSession();
   if (options.refit !== false && session?.pdf) {
+    if (app.thumbsHidden && session.thumbObserver) {
+      session.thumbObserver.disconnect();
+      session.thumbObserver = null;
+    } else if (!app.thumbsHidden) {
+      renderThumbs(session);
+    }
     setTimeout(() => {
       if (app.presentationActive || session.fitMode === "page") {
         fitPageToView(session).catch(showError);
@@ -2970,8 +3058,12 @@ function setThumbsCollapsed(collapsed, options = {}) {
   }
 }
 
+function setThumbsCollapsed(collapsed, options = {}) {
+  setThumbsMode(thumbsModeFromCollapsed(Boolean(collapsed)), options);
+}
+
 function toggleThumbsCollapsed() {
-  setThumbsCollapsed(!app.thumbsCollapsed);
+  setThumbsMode(app.thumbsCollapsed ? "open" : "collapsed");
 }
 
 function setExternalTabs(enabled) {
@@ -2986,6 +3078,7 @@ function setExternalTabs(enabled) {
 
 function renderThumbs(session = getActiveSession()) {
   if (!session?.pdf) return;
+  if (app.thumbsHidden) return;
   const expectedMode = `pages:${session.totalPages}`;
   const hasPageSkeletons = session.elements.thumbsList?.dataset.skeletonMode === expectedMode;
   if (session.elements.thumbsList && session.elements.thumbsList.childElementCount > 0 && session.elements.thumbsList.dataset.thumbsReady === "1") {
@@ -3338,6 +3431,7 @@ function wireEvents() {
   if (els.openPickerReader) els.openPickerReader.onclick = openPicker;
   if (els.settingsToggle) els.settingsToggle.onclick = toggleSettingsPanel;
   if (els.settingsToggleHome) els.settingsToggleHome.onclick = toggleSettingsPanel;
+  if (els.openFind) els.openFind.onclick = () => toggleFindPanel({ select: true });
   if (els.settingsClose) els.settingsClose.onclick = () => closeSettingsPanel();
   els.settingsPanel?.querySelectorAll(".pdf-settings-option").forEach((button) => {
     button.onclick = () => {
@@ -3475,16 +3569,7 @@ function wireEvents() {
     }
   });
   window.addEventListener("resize", () => {
-    const session = getActiveSession();
-    if (!session?.pdf) return;
-    clearTimeout(app.resizeTimer);
-    app.resizeTimer = setTimeout(() => {
-      if (app.presentationActive || session.fitMode === "page") {
-        fitPageToView(session).catch(showError);
-      } else if (session.fitMode === "width") {
-        fitPageWidth(session).catch(showError);
-      }
-    }, 150);
+    scheduleViewportRefit(150);
   });
   window.addEventListener("pagehide", () => flushState("pagehide"));
   window.addEventListener("message", (event) => {
@@ -3506,7 +3591,7 @@ async function handleShellCommand(command, payload = {}) {
   if (command === "shellTabsReady") return setExternalTabs(true);
   if (command === "openPicker") return openPicker();
   if (command === "openFind") return toggleFindPanel({ select: true });
-  if (command === "openSettings") return openSettingsPanel();
+  if (command === "openSettings") return openSettingsPanel({ anchor: payload.settings_anchor });
   if (command === "closeSettings") return closeSettingsPanel();
   if (command === "toggleSettings") return toggleSettingsPanel();
   if (command === "openRecentPdf") return openPdf(String(payload.path || ""), String(payload.name || ""));
@@ -3547,6 +3632,7 @@ async function handleShellCommand(command, payload = {}) {
   if (command === "switchTab") return switchTab(String(payload.document_key || ""));
   if (command === "closeTab") return closeTab(String(payload.document_key || ""));
   if (command === "setThumbsCollapsed") return setThumbsCollapsed(Boolean(payload.collapsed));
+  if (command === "setThumbsMode") return setThumbsMode(payload.mode);
   if (command === "toggleThumbsCollapsed") return toggleThumbsCollapsed();
   if (command === "presentation") return enterPresentationMode();
   return undefined;
@@ -3561,11 +3647,11 @@ async function consumeLaunches() {
 }
 
 async function start() {
-  installToolbarRuntimeShield();
   wireEvents();
+  observeViewportResize();
   renderThumbsChrome();
   syncSettingsUi();
-  setThumbsCollapsed(app.thumbsCollapsed, { persist: false, refit: false });
+  setThumbsMode(app.thumbsMode, { persist: false, refit: false });
   setSync("Conectando");
   app.session = await window.TCloudApp.ready();
   await ensurePdfJs();

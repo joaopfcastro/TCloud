@@ -260,35 +260,33 @@ input:focus:not(:focus-visible) {
   min-width: 0;
   height: 100%;
   display: grid;
-  grid-template-rows: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
   background: var(--bg-content);
 }
 
-.app-shell:not(.external-tabs) .viewer {
-  grid-template-rows: 52px minmax(0, 1fr);
-}
-
 .tabs {
-  position: absolute;
-  top: 12px;
-  left: 18px;
-  right: 18px;
-  z-index: 8;
   min-width: 0;
-  width: auto;
-  height: 32px;
+  width: 100%;
+  min-height: 40px;
   overflow: hidden;
-  background: transparent;
-  border-bottom: 0;
-  padding: 0;
-  pointer-events: none;
+  background: rgba(34, 34, 34, 0.95);
+  border-bottom: 1px solid var(--border);
+  padding: 6px 12px;
   display: grid;
   grid-template-columns: repeat(var(--pdf-tab-count, 1), minmax(0, 1fr));
   gap: 6px;
 }
 
+.tabs:empty {
+  display: none;
+}
+
 .app-shell.external-tabs .tabs {
   display: none;
+}
+
+.app-shell.external-tabs .viewer {
+  grid-template-rows: minmax(0, 1fr);
 }
 
 .tab {
@@ -306,7 +304,6 @@ input:focus:not(:focus-visible) {
   background: rgba(44, 44, 46, 0.78);
   color: var(--text-secondary);
   backdrop-filter: var(--glass);
-  pointer-events: auto;
 }
 
 .tabs.dense-tabs .tab {
@@ -354,27 +351,27 @@ input:focus:not(:focus-visible) {
 }
 
 .toolbar {
-  display: none;
+  display: flex;
   min-width: 0;
+  min-height: 52px;
   padding: 0 12px;
   border-bottom: 1px solid var(--border);
   background: rgba(34, 34, 34, 0.95);
   overflow-x: auto;
+  overflow-y: hidden;
   scrollbar-width: thin;
   backdrop-filter: var(--glass);
 }
 
-.app-shell:not(.external-tabs) .toolbar {
-  display: flex;
-}
-
 .toolbar-home-group,
 .toolbar-reader-group {
-  width: 100%;
-  min-width: 0;
+  width: max-content;
+  min-width: 100%;
+  min-height: 52px;
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: nowrap;
 }
 
 .app-shell.no-document .toolbar-reader-group,
@@ -441,6 +438,15 @@ input:focus:not(:focus-visible) {
 
 .pdf-settings-toggle {
   margin-left: auto;
+}
+
+.toolbar-reader-group .pdf-settings-toggle {
+  order: 20;
+  margin-left: 0;
+}
+
+.toolbar-reader-group .sync-state {
+  order: 21;
 }
 
 .icon-button {
@@ -524,6 +530,11 @@ input:focus:not(:focus-visible) {
   overflow: hidden;
 }
 
+.app-shell:not(.no-document) .pdf-settings-panel {
+  top: 100px;
+  max-height: min(520px, calc(100% - 148px));
+}
+
 .pdf-settings-panel.open {
   display: grid;
 }
@@ -532,6 +543,12 @@ input:focus:not(:focus-visible) {
 .app-shell.presentation .pdf-settings-panel {
   top: 14px;
   max-height: min(520px, calc(100% - 72px));
+}
+
+.app-shell.external-tabs .pdf-settings-panel.anchored-from-shell {
+  top: var(--pdf-settings-anchor-top, 14px);
+  right: var(--pdf-settings-anchor-right, 16px);
+  max-height: min(520px, calc(100% - var(--pdf-settings-anchor-top, 14px) - 24px));
 }
 
 .pdf-settings-header {
@@ -646,6 +663,15 @@ input:focus:not(:focus-visible) {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.pdf-settings-options[data-preference="thumbsMode"] {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.pdf-settings-options[data-preference="thumbsMode"] .pdf-settings-option {
+  padding: 0 8px;
+  gap: 6px;
+}
+
 .pdf-settings-option {
   min-width: 0;
   min-height: 34px;
@@ -707,6 +733,10 @@ input:focus:not(:focus-visible) {
   grid-template-columns: minmax(120px, 1fr) auto 32px 32px 32px;
   align-items: center;
   gap: 6px;
+}
+
+.app-shell:not(.no-document) .pdf-find-panel {
+  top: 100px;
 }
 
 .pdf-find-panel.open {
@@ -799,6 +829,7 @@ input:focus:not(:focus-visible) {
 .workspace {
   min-width: 0;
   min-height: 0;
+  height: 100%;
   display: grid;
   grid-template-columns: 172px minmax(0, 1fr);
   transition: grid-template-columns 0.18s ease;
@@ -808,10 +839,15 @@ input:focus:not(:focus-visible) {
   grid-template-columns: 56px minmax(0, 1fr);
 }
 
+.app-shell.thumbs-hidden .workspace {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .app-shell.no-document .workspace {
   grid-template-columns: minmax(0, 1fr);
 }
 
+.app-shell.thumbs-hidden .thumbs,
 .app-shell.no-document .thumbs {
   display: none;
 }
@@ -1039,10 +1075,6 @@ input:focus:not(:focus-visible) {
   white-space: nowrap;
 }
 
-.app-shell.external-tabs .page-stage {
-  padding-top: 26px;
-}
-
 .app-shell.thumbs-collapsed .thumbs-list::-webkit-scrollbar {
   width: 4px;
 }
@@ -1099,7 +1131,7 @@ input:focus:not(:focus-visible) {
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  padding: 54px 26px 26px;
+  padding: 26px;
   background: #171717;
   scrollbar-gutter: stable;
 }
@@ -1563,87 +1595,25 @@ input:focus:not(:focus-visible) {
   grid-template-columns: minmax(0, 1fr);
 }
 
-/* Runtime shield: keep PDF.js/viewer.css generic .toolbar rules out of TCloud chrome. */
 #pdf-toolbar-wrapper {
-  all: initial;
-  contain: layout style;
-  display: none !important;
-  box-sizing: border-box !important;
-  width: 100% !important;
-  height: 52px !important;
-  min-height: 52px !important;
-  max-height: 52px !important;
-  overflow: hidden !important;
-  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
-  color: var(--text-primary) !important;
+  min-width: 0;
+  display: grid;
+  grid-template-rows: auto auto;
+  background: rgba(34, 34, 34, 0.95);
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  z-index: 8;
 }
 
 .app-shell:not(.external-tabs) #pdf-toolbar-wrapper {
-  display: block !important;
+  display: grid;
+}
+
+.app-shell.external-tabs #pdf-toolbar-wrapper {
+  display: none;
 }
 
 .app-shell.presentation #pdf-toolbar-wrapper {
-  display: none !important;
-}
-
-#pdf-toolbar-wrapper > #pdf-toolbar.toolbar {
-  all: unset;
-  box-sizing: border-box !important;
-  width: 100% !important;
-  height: 52px !important;
-  min-height: 52px !important;
-  max-height: 52px !important;
-  display: flex !important;
-  align-items: center !important;
-  gap: 8px !important;
-  min-width: 0 !important;
-  padding: 0 12px !important;
-  border-bottom: 1px solid var(--border) !important;
-  background: rgba(34, 34, 34, 0.95) !important;
-  overflow-x: auto !important;
-  overflow-y: hidden !important;
-  scrollbar-width: thin !important;
-  backdrop-filter: var(--glass) !important;
-  font: 13px Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
-  color: var(--text-primary) !important;
-}
-
-#pdf-toolbar-wrapper #pdf-toolbar.toolbar *,
-#pdf-toolbar-wrapper #pdf-toolbar.toolbar *::before,
-#pdf-toolbar-wrapper #pdf-toolbar.toolbar *::after {
-  box-sizing: border-box !important;
-}
-
-#pdf-toolbar-wrapper #pdf-toolbar.toolbar .toolbar-home-group,
-#pdf-toolbar-wrapper #pdf-toolbar.toolbar .toolbar-reader-group {
-  height: 52px !important;
-  min-height: 52px !important;
-  align-items: center !important;
-}
-
-#pdf-toolbar-wrapper #pdf-toolbar.toolbar .btn {
-  min-height: 32px !important;
-  height: 32px !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  flex-shrink: 0 !important;
-}
-
-#pdf-toolbar-wrapper #pdf-toolbar.toolbar .icon-button {
-  width: 34px !important;
-  min-width: 34px !important;
-  flex-basis: 34px !important;
-}
-
-#pdf-toolbar-wrapper #pdf-toolbar.toolbar .btn-primary {
-  background: var(--accent) !important;
-  color: #fff !important;
-}
-
-#pdf-toolbar-wrapper #pdf-toolbar.toolbar .page-control-editor {
-  min-height: 31px !important;
-  height: 31px !important;
+  display: none;
 }
 
 .app-shell.presentation .page-stage {
@@ -1795,6 +1765,37 @@ input:focus:not(:focus-visible) {
   }
 }
 
+@media (max-width: 1180px) {
+  .toolbar {
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+  }
+
+  .toolbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .toolbar-reader-group {
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    height: 44px;
+    padding: 0 8px;
+    flex-wrap: nowrap;
+    overflow: hidden;
+    gap: 4px;
+  }
+
+  .toolbar-reader-group .sync-state {
+    display: none;
+  }
+
+  .toolbar-reader-group .pdf-settings-toggle {
+    margin-left: auto;
+  }
+}
+
 @media (max-width: 420px) {
   .pdf-settings-panel {
     left: 10px;
@@ -1806,6 +1807,16 @@ input:focus:not(:focus-visible) {
   .pdf-settings-options,
   .pdf-settings-options[data-preference="defaultFitMode"] {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .pdf-settings-options[data-preference="thumbsMode"] {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .pdf-settings-options[data-preference="thumbsMode"] .pdf-settings-option {
+    padding: 0 6px;
+    font-size: 11px;
+    gap: 5px;
   }
 }
 

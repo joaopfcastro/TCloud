@@ -1,43 +1,30 @@
 # AGENTS.md
 
 ## Objetivo
-Quando o usuário pedir um plano, diagnóstico, arquitetura, correção, implementação ou estratégia para este projeto, gere um arquivo `.md` completo e alimente a memória do sistema automaticamente.
+Ajude no projeto TCloud de forma direta, evitando gerar arquivos, planos longos ou memória automática quando não for necessário.
 
-## Arquivos obrigatórios
-- Template do plano: `agent-system/PLAN_TEMPLATE.md`
-- Saída final: `agent-system/final_md/`
-- Registro de memória: `agent-system/register_plan.py`
-- Histórico local: `agent-system/memory.json`
+## Regras gerais
+- Responda no chat por padrão.
+- Só crie plano em `.md` quando o usuário pedir explicitamente.
+- Só use `agent-system/PLAN_TEMPLATE.md` quando o usuário pedir um plano formal.
+- Só registre memória com `register_plan.py` quando o usuário pedir explicitamente.
+- Antes de alterar código, leia apenas os arquivos diretamente relacionados ao problema.
+- Evite respostas genéricas; seja objetivo e prático.
 
-## Instruções obrigatórias para Codex
-1. Leia `agent-system/PLAN_TEMPLATE.md` antes de criar qualquer plano.
-2. Crie sempre um único arquivo `.md` em `agent-system/final_md/`.
-3. Nome do arquivo:
-   - `plano_<assunto_curto>.md`
-   - use snake_case
-4. O conteúdo deve seguir a estrutura do template e ser completo.
-5. Considere prints, logs e arquivos anexados pelo usuário.
-6. Se existirem arquivos relevantes no projeto, leia-os antes de escrever o plano.
-7. Após salvar o `.md`, execute este comando para alimentar a memória:
-   - `cd agent-system && ./.venv/bin/python register_plan.py --file "../agent-system/final_md/NOME_DO_ARQUIVO.md" --problem "RESUMO_CURTO_DO_PROBLEMA"`
-8. No final da resposta ao usuário:
-   - informe o caminho do `.md` criado
-   - informe que a memória foi atualizada
+## Planos formais
+Quando o usuário pedir explicitamente um plano formal:
+1. Leia `agent-system/PLAN_TEMPLATE.md`.
+2. Crie um único arquivo em `agent-system/final_md/`.
+3. Use nome no formato `plano_<assunto_curto>.md`.
+4. Inclua objetivo, arquivos envolvidos, passos, validação, riscos e fallback.
+5. Só execute `register_plan.py` se o usuário pedir memória.
 
-## Regra global de backup antes de edição
-- Antes de editar qualquer arquivo do projeto, crie uma cópia de segurança do estado atual.
-- Salve o backup dentro de `deploy/` com nome descritivo e timestamp, por exemplo:
-  - `deploy/backup_pre_<assunto>_YYYYMMDD_HHMMSS/`
-- Copie para esse diretório todos os arquivos que serão alterados na tarefa.
-- Depois de criar o backup, não edite o conteúdo desse backup.
-- Essa regra vale para qualquer tarefa com modificação de arquivo, mesmo quando o usuário não pedir explicitamente.
+## Backups
+- Crie backup apenas para mudanças grandes, arriscadas ou quando o usuário pedir.
+- Para mudanças pequenas e localizadas, explique os arquivos alterados no final.
 
-## Se o usuário trouxer resultado da execução
-Se o usuário disser o que aconteceu depois de executar o plano, registre com:
-`cd agent-system && ./.venv/bin/python archive_feedback.py --file "../agent-system/final_md/NOME_DO_ARQUIVO.md" --execution_result "RESULTADO" --lessons "LIÇÕES"`
-
-## Regras de escrita
-- não seja genérico
-- não responda só no chat se a tarefa pedir plano
-- a entrega principal deve ser o arquivo `.md`
-- inclua fallback, validação e riscos
+## Resposta final
+Informe:
+- o que foi alterado;
+- os arquivos tocados;
+- como validar.

@@ -3536,24 +3536,32 @@
         .app-viewer-overlay.pdf-tools-viewer .app-viewer-header {
             gap: 10px;
             align-items: center;
+            background: var(--bg-header);
+            border-bottom: 1px solid var(--border);
         }
 
         .app-viewer-overlay.pdf-tools-viewer .app-viewer-title {
             min-width: 0;
+            font-size: 12.5px;
+            opacity: 0.85;
+        }
+
+        .app-viewer-header-spacer {
+            flex: 1 1 auto;
         }
 
 
         .app-viewer-header {
-            height: var(--tcloud-window-titlebar-height, 46px);
-            min-height: var(--tcloud-window-titlebar-height, 46px);
+            height: var(--tcloud-window-titlebar-height, 38px);
+            min-height: var(--tcloud-window-titlebar-height, 38px);
             background: var(--bg-header);
             border-bottom: 1px solid var(--border);
             display: flex;
             align-items: center;
             justify-content: flex-start;
-            padding: 0 18px;
+            padding: 0 12px;
             flex-shrink: 0;
-            gap: 18px;
+            gap: 10px;
             position: relative;
             overflow: hidden;
         }
@@ -3561,14 +3569,16 @@
         .app-viewer-toolbar {
             display: none;
             flex: 0 0 auto;
-            min-width: 0;
-            min-height: 0;
             align-items: center;
-            gap: 10px;
-            padding: 6px 12px;
+            gap: 5px;
+            padding: 0 10px;
+            min-height: 44px;
+            height: 44px;
             border-bottom: 1px solid var(--border);
-            background: rgba(34, 34, 34, 0.96);
+            background: var(--bg-header);
             overflow: visible;
+            box-sizing: border-box;
+            flex-wrap: nowrap;
         }
 
         .app-viewer-overlay.pdf-tools-viewer .app-viewer-toolbar {
@@ -3595,8 +3605,8 @@
         .app-viewer-window-dot {
             appearance: none;
             -webkit-appearance: none;
-            width: var(--tcloud-window-control-hit-size, 16px);
-            height: var(--tcloud-window-control-hit-size, 16px);
+            width: var(--tcloud-window-control-hit-size, 20px);
+            height: var(--tcloud-window-control-hit-size, 20px);
             padding: 0;
             border: 0;
             border-radius: 50%;
@@ -3610,44 +3620,83 @@
 
         .app-viewer-window-dot::after {
             content: "";
-            width: var(--tcloud-window-control-size, 10px);
-            height: var(--tcloud-window-control-size, 10px);
+            width: var(--tcloud-window-control-size, 12px);
+            height: var(--tcloud-window-control-size, 12px);
             border-radius: 50%;
-            border: 1px solid transparent;
             grid-area: 1 / 1;
             pointer-events: none;
+            transition: filter 0.15s ease;
+        }
+
+        .app-viewer-window-dot::before {
+            content: "";
+            grid-area: 1 / 1;
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            opacity: 0;
+            transition: opacity 0.15s ease;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .app-viewer-window-controls:hover .app-viewer-window-dot::before {
+            opacity: 1;
         }
 
         .app-viewer-window-dot.close::after {
             background: #FF5F56;
-            border: 1px solid #E0443E;
+            box-shadow: 0 0 0 0.5px rgba(0,0,0,0.35);
+        }
+
+        .app-viewer-window-dot.close::before {
+            background: #4D0000;
+            clip-path: polygon(20% 0%, 0% 20%, 30% 50%, 0% 80%, 20% 100%, 50% 70%, 80% 100%, 100% 80%, 70% 50%, 100% 20%, 80% 0%, 50% 30%);
         }
 
         .app-viewer-window-dot.minimize::after {
             background: #FFBD2E;
-            border: 1px solid #DEA123;
+            box-shadow: 0 0 0 0.5px rgba(0,0,0,0.28);
+        }
+
+        .app-viewer-window-dot.minimize::before {
+            background: #995700;
+            width: 7px;
+            height: 1.5px;
+            border-radius: 1px;
         }
 
         .app-viewer-window-dot.maximize::after {
             background: #27C93F;
-            border: 1px solid #1AAB29;
+            box-shadow: 0 0 0 0.5px rgba(0,0,0,0.28);
+        }
+
+        .app-viewer-window-dot.maximize::before {
+            background: #0A4A00;
+            clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+            width: 7px;
+            height: 7px;
         }
 
         .app-viewer-title {
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 600;
             color: var(--text-primary);
-            display: flex;
+            display: inline-flex;
             align-items: center;
-            gap: 8px;
-            min-width: 140px;
+            gap: 7px;
+            min-width: 0;
             flex: 0 0 auto;
             overflow: hidden;
+            white-space: nowrap;
+            line-height: 1;
         }
 
         .app-viewer-title i {
-            font-size: 18px;
+            font-size: 16px;
             color: var(--accent);
+            line-height: 1;
+            flex-shrink: 0;
         }
 
         .app-viewer-tabs {
@@ -3657,13 +3706,12 @@
             place-items: center stretch;
             gap: 4px;
             min-width: 0;
-            flex: 1 1 420px;
+            flex: 1 1 0;
             max-width: none;
-            overflow: visible;
-            height: 30px;
+            height: 34px;
             padding: 0;
             grid-template-columns: repeat(var(--pdf-shell-tab-count, 1), minmax(0, 1fr)) auto;
-            overflow: hidden;
+            overflow: visible;
         }
 
         .app-viewer-tabs.active {
@@ -3671,24 +3719,25 @@
         }
 
         .app-viewer-tab {
-            height: 28px;
+            height: 32px;
             width: 100%;
             max-width: none;
             min-width: 0;
-            border: 1px solid var(--border);
+            border: 1px solid rgba(255,255,255,0.1);
             border-radius: 8px;
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(255, 255, 255, 0.04);
             color: var(--text-secondary);
             display: inline-grid;
             grid-template-columns: minmax(0, 1fr) auto;
             align-items: center;
             align-self: center;
-            gap: 4px;
+            gap: 2px;
             line-height: 1;
+            transition: background 0.12s, border-color 0.12s;
         }
 
         .app-viewer-tabs.many-tabs .app-viewer-tab {
-            gap: 2px;
+            gap: 1px;
         }
 
         .app-viewer-tab:hover {
@@ -3696,9 +3745,9 @@
         }
 
         .app-viewer-tab.active {
-            border-color: rgba(10, 132, 255, 0.55);
-            background: rgba(10, 132, 255, 0.18);
-            color: var(--text-primary);
+            border-color: rgba(10, 132, 255, 0.6);
+            background: linear-gradient(135deg, rgba(10, 132, 255, 0.22), rgba(10, 132, 255, 0.12));
+            color: #fff;
         }
 
         .app-viewer-tab-main,
@@ -3764,22 +3813,27 @@
             position: relative;
             flex: 0 0 auto;
             min-width: 0;
+            isolation: isolate;
+            z-index: 20;
         }
 
         .app-viewer-tab-list-toggle {
-            height: 28px;
-            min-width: 48px;
-            border: 1px solid var(--border);
+            height: 32px;
+            min-width: 44px;
+            border: 1px solid rgba(255,255,255,0.12);
             border-radius: 8px;
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(255, 255, 255, 0.06);
             color: var(--text-secondary);
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            gap: 5px;
-            padding: 0 9px;
+            gap: 4px;
+            padding: 0 8px;
             cursor: pointer;
-            font-size: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.01em;
+            transition: background 0.12s, border-color 0.12s;
         }
 
         .app-viewer-tab-list.open .app-viewer-tab-list-toggle,
@@ -3800,10 +3854,10 @@
             padding: 6px;
             border: 1px solid var(--border);
             border-radius: 10px;
-            background: rgba(34, 34, 34, 0.98);
-            box-shadow: 0 18px 44px rgba(0, 0, 0, 0.45);
-            backdrop-filter: blur(18px);
-            z-index: 50;
+            background: rgba(28, 28, 30, 0.98);
+            box-shadow: 0 18px 44px rgba(0, 0, 0, 0.55);
+            backdrop-filter: blur(20px);
+            z-index: 999;
         }
 
         .app-viewer-tab-list.open .app-viewer-tab-list-menu {
@@ -3901,7 +3955,7 @@
 
         .app-viewer-actions.pdf-home-mode,
         .app-viewer-actions.pdf-reader-mode {
-            padding-right: 42px;
+            padding-right: 0;
         }
 
         .app-viewer-action {
@@ -4101,34 +4155,16 @@
             background: var(--hover);
         }
 
-        .app-viewer-overlay:not(.fullscreen).pdf-toolbar-compact .app-viewer-header {
-            gap: 8px;
-            padding: 0 12px;
-        }
-
-        .app-viewer-overlay:not(.fullscreen).pdf-toolbar-ultra-compact .app-viewer-header {
-            gap: 6px;
-            padding: 0 10px;
-        }
-
-        .app-viewer-overlay:not(.fullscreen).pdf-toolbar-compact .app-viewer-title {
-            min-width: 0;
-            max-width: 44px;
-        }
-
-        .app-viewer-overlay:not(.fullscreen).pdf-toolbar-ultra-compact .app-viewer-title {
-            display: flex;
-            min-width: 24px;
-            max-width: 24px;
-        }
-
-        .app-viewer-overlay:not(.fullscreen).pdf-toolbar-ultra-compact .app-viewer-title span {
+        /* Overflow menu: compact density only. Normal density uses settings gear. */
+        .app-viewer-overlay:not(.fullscreen) .app-viewer-pdf-overflow {
             display: none;
         }
 
-        .app-viewer-overlay:not(.fullscreen).pdf-toolbar-compact .app-viewer-title span,
+        /* compact/ultra-compact: hide secondary items */
         .app-viewer-overlay:not(.fullscreen).pdf-toolbar-compact .app-viewer-action-label,
+        .app-viewer-overlay:not(.fullscreen).pdf-toolbar-ultra-compact .app-viewer-action-label,
         .app-viewer-overlay:not(.fullscreen).pdf-toolbar-compact .pdf-action-status,
+        .app-viewer-overlay:not(.fullscreen).pdf-toolbar-ultra-compact .pdf-action-status,
         .app-viewer-overlay:not(.fullscreen).pdf-toolbar-ultra-compact .app-viewer-page-total {
             display: none;
         }
@@ -4138,17 +4174,28 @@
         }
 
         .app-viewer-overlay:not(.fullscreen).pdf-toolbar-compact .app-viewer-tabs {
-            flex: 1 1 280px;
-            min-width: 170px;
+            flex: 1 1 360px;
+            min-width: 0;
             max-width: none;
+            overflow: hidden;
+            grid-template-columns: repeat(var(--pdf-shell-tab-count, 1), minmax(0, 1fr)) auto;
+        }
+
+        .app-viewer-overlay:not(.fullscreen).pdf-toolbar-compact .app-viewer-tabs.has-open-tab-list,
+        .app-viewer-overlay:not(.fullscreen).pdf-toolbar-ultra-compact .app-viewer-tabs.has-open-tab-list {
             overflow: visible;
-            grid-template-columns: repeat(var(--pdf-shell-tab-count, 1), minmax(78px, 1fr)) auto;
+        }
+
+        .app-viewer-overlay:not(.fullscreen).pdf-toolbar-compact .app-viewer-tabs.no-visible-tabs,
+        .app-viewer-overlay:not(.fullscreen).pdf-toolbar-ultra-compact .app-viewer-tabs.no-visible-tabs {
+            grid-template-columns: auto;
         }
 
         .app-viewer-overlay:not(.fullscreen).pdf-toolbar-ultra-compact .app-viewer-tabs {
             flex: 1 1 auto;
-            min-width: 92px;
-            grid-template-columns: repeat(var(--pdf-shell-tab-count, 1), minmax(84px, 1fr)) auto;
+            min-width: 0;
+            overflow: hidden;
+            grid-template-columns: repeat(var(--pdf-shell-tab-count, 1), minmax(0, 1fr)) auto;
         }
 
         .app-viewer-overlay:not(.fullscreen).pdf-toolbar-compact .app-viewer-tab {
@@ -4156,7 +4203,7 @@
         }
 
         .app-viewer-overlay:not(.fullscreen).pdf-toolbar-compact .app-viewer-tab-close {
-            width: 22px;
+            display: none;
         }
 
         .app-viewer-overlay:not(.fullscreen).pdf-toolbar-ultra-compact .app-viewer-tab {
@@ -4170,7 +4217,7 @@
 
         .app-viewer-overlay:not(.fullscreen).pdf-toolbar-compact .app-viewer-actions {
             flex: 0 0 auto;
-            gap: 4px;
+            gap: 2px;
             overflow: visible;
             padding-right: 0;
         }
@@ -4181,12 +4228,23 @@
         }
 
         .app-viewer-overlay:not(.fullscreen).pdf-toolbar-compact .pdf-action-secondary,
-        .app-viewer-overlay:not(.fullscreen).pdf-toolbar-compact .pdf-action-secondary-sep {
+        .app-viewer-overlay:not(.fullscreen).pdf-toolbar-compact .pdf-action-secondary-sep,
+        .app-viewer-overlay:not(.fullscreen).pdf-toolbar-compact .app-viewer-page-total,
+        .app-viewer-overlay:not(.fullscreen).pdf-toolbar-compact .app-viewer-pdf-download-btn,
+        .app-viewer-overlay:not(.fullscreen).pdf-toolbar-compact [data-pdf-command="zoomReset"],
+        .app-viewer-overlay:not(.fullscreen).pdf-toolbar-ultra-compact .pdf-action-secondary,
+        .app-viewer-overlay:not(.fullscreen).pdf-toolbar-ultra-compact .pdf-action-secondary-sep {
             display: none;
         }
 
-        .app-viewer-overlay:not(.fullscreen).pdf-toolbar-compact .app-viewer-pdf-overflow {
+        .app-viewer-overlay:not(.fullscreen).pdf-toolbar-compact .app-viewer-pdf-overflow,
+        .app-viewer-overlay:not(.fullscreen).pdf-toolbar-ultra-compact .app-viewer-pdf-overflow {
             display: inline-flex;
+        }
+
+        .app-viewer-overlay:not(.fullscreen).pdf-toolbar-compact .app-viewer-actions.pdf-reader-mode .pdf-action-settings,
+        .app-viewer-overlay:not(.fullscreen).pdf-toolbar-ultra-compact .app-viewer-actions.pdf-reader-mode .pdf-action-settings {
+            display: none;
         }
 
         .app-viewer-overlay:not(.fullscreen).pdf-toolbar-compact .app-viewer-pdf-settings-action {
@@ -4195,7 +4253,9 @@
         }
 
         .app-viewer-overlay:not(.fullscreen).pdf-toolbar-compact .app-viewer-action {
-            padding: 0 6px;
+            width: 28px;
+            min-width: 28px;
+            padding: 0;
         }
 
         .app-viewer-overlay:not(.fullscreen).pdf-toolbar-ultra-compact .app-viewer-action {
@@ -4206,7 +4266,7 @@
         }
 
         .app-viewer-overlay:not(.fullscreen).pdf-toolbar-compact .app-viewer-page-input {
-            width: 50px;
+            width: 42px;
         }
 
         .app-viewer-overlay:not(.fullscreen).pdf-toolbar-ultra-compact .app-viewer-page-input {
@@ -4220,134 +4280,68 @@
         }
 
         .app-viewer-overlay.pdf-tools-viewer:not(.fullscreen) .app-viewer-header {
-            --tcloud-window-titlebar-height: 46px;
-            height: var(--tcloud-window-titlebar-height, 46px) !important;
-            min-height: var(--tcloud-window-titlebar-height, 46px) !important;
-            box-sizing: border-box !important;
-            display: flex !important;
-            align-items: center !important;
-            padding-top: 0 !important;
-            padding-bottom: 0 !important;
-            background: #323232 !important;
-            overflow: hidden !important;
-        }
-
-        .app-viewer-overlay.pdf-tools-viewer:not(.fullscreen) .app-viewer-header > * {
-            align-self: center !important;
-            transform: none !important;
+            --tcloud-window-titlebar-height: 36px;
+            height: 36px !important;
+            min-height: 36px !important;
+            background: #1e1e1e !important;
+            border-bottom: 1px solid rgba(255,255,255,0.07) !important;
+            padding: 0 10px !important;
+            gap: 10px !important;
         }
 
         .app-viewer-overlay.pdf-tools-viewer:not(.fullscreen) .app-viewer-toolbar {
             display: flex !important;
             align-items: center !important;
-            gap: 8px;
-            min-height: 44px;
-            height: 44px;
-            padding: 6px 12px;
-            box-sizing: border-box;
-            overflow: visible;
-        }
-
-        .app-viewer-overlay.pdf-tools-viewer:not(.fullscreen).pdf-toolbar-compact .app-viewer-title,
-        .app-viewer-overlay.pdf-tools-viewer:not(.fullscreen).pdf-toolbar-ultra-compact .app-viewer-title {
-            display: inline-flex !important;
-            min-width: 120px !important;
-            max-width: min(320px, 40vw) !important;
-        }
-
-        .app-viewer-overlay.pdf-tools-viewer:not(.fullscreen).pdf-toolbar-compact .app-viewer-title span,
-        .app-viewer-overlay.pdf-tools-viewer:not(.fullscreen).pdf-toolbar-ultra-compact .app-viewer-title span {
-            display: inline !important;
-        }
-
-        .app-viewer-overlay.pdf-tools-viewer:not(.fullscreen) .app-viewer-actions.pdf-home-mode,
-        .app-viewer-overlay.pdf-tools-viewer:not(.fullscreen) .app-viewer-actions.pdf-reader-mode {
-            padding-right: 0 !important;
-        }
-
-        .app-viewer-overlay.pdf-tools-viewer.pdf-tools-home-mode:not(.fullscreen) .app-viewer-tabs {
-            flex: 0 1 auto;
-        }
-
-        .app-viewer-overlay.pdf-tools-viewer.pdf-tools-home-mode:not(.fullscreen) .app-viewer-actions {
-            flex: 1 1 auto !important;
-            justify-content: flex-start !important;
-            min-width: 32px;
-        }
-
-        .app-viewer-overlay.pdf-tools-viewer.pdf-tools-home-mode:not(.fullscreen) .app-viewer-pdf-settings-action {
-            margin-left: auto !important;
-        }
-
-        .app-viewer-overlay.pdf-tools-viewer:not(.fullscreen) .app-viewer-window-controls,
-        .app-viewer-overlay.pdf-tools-viewer:not(.fullscreen) .app-viewer-title,
-        .app-viewer-overlay.pdf-tools-viewer:not(.fullscreen) .app-viewer-tabs,
-        .app-viewer-overlay.pdf-tools-viewer:not(.fullscreen) .app-viewer-tab-list,
-        .app-viewer-overlay.pdf-tools-viewer:not(.fullscreen) .app-viewer-actions,
-        .app-viewer-overlay.pdf-tools-viewer:not(.fullscreen) .app-viewer-pdf-overflow {
-            align-items: center !important;
-            align-self: center !important;
-            height: 32px !important;
-            min-height: 32px !important;
+            gap: 5px !important;
+            min-height: 44px !important;
+            height: 44px !important;
+            padding: 0 10px !important;
+            background: #232323 !important;
+            border-bottom: 1px solid rgba(255,255,255,0.07) !important;
             box-sizing: border-box !important;
-            line-height: 1 !important;
-            transform: none !important;
+            overflow: hidden !important;
+            flex-wrap: nowrap !important;
         }
 
-        .app-viewer-overlay.pdf-tools-viewer:not(.fullscreen) .app-viewer-tab,
-        .app-viewer-overlay.pdf-tools-viewer:not(.fullscreen) .app-viewer-tab-main,
-        .app-viewer-overlay.pdf-tools-viewer:not(.fullscreen) .app-viewer-tab-close,
-        .app-viewer-overlay.pdf-tools-viewer:not(.fullscreen) .app-viewer-tab-list-toggle,
-        .app-viewer-overlay.pdf-tools-viewer:not(.fullscreen) .app-viewer-action,
+        .app-viewer-overlay.pdf-tools-viewer.fullscreen .app-viewer-toolbar {
+            display: none !important;
+        }
+
+        .app-viewer-overlay.pdf-tools-viewer:not(.fullscreen) .app-viewer-tabs {
+            flex: 1 1 auto;
+            min-width: 0;
+            overflow: hidden;
+        }
+
+        .app-viewer-overlay.pdf-tools-viewer:not(.fullscreen) .app-viewer-actions {
+            flex: 0 0 auto;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .app-viewer-overlay.pdf-tools-viewer:not(.fullscreen) .app-viewer-action {
+            height: 30px;
+            min-height: 30px;
+        }
+
         .app-viewer-overlay.pdf-tools-viewer:not(.fullscreen) .app-viewer-page-input,
-        .app-viewer-overlay.pdf-tools-viewer:not(.fullscreen) .app-viewer-page-total,
-        .app-viewer-overlay.pdf-tools-viewer:not(.fullscreen) .app-viewer-sync {
-            align-items: center !important;
-            height: 32px !important;
-            min-height: 32px !important;
-            box-sizing: border-box !important;
-            line-height: 1 !important;
-            margin-top: 0 !important;
-            margin-bottom: 0 !important;
-            transform: none !important;
+        .app-viewer-overlay.pdf-tools-viewer:not(.fullscreen) .app-viewer-page-total {
+            height: 30px;
+            min-height: 30px;
+            line-height: 30px;
+        }
+
+        .app-viewer-overlay.pdf-tools-viewer:not(.fullscreen) .app-viewer-tab {
+            height: 32px;
+            min-height: 32px;
         }
 
         .app-viewer-overlay.pdf-tools-viewer:not(.fullscreen) .app-viewer-tab-main,
-        .app-viewer-overlay.pdf-tools-viewer:not(.fullscreen) .app-viewer-tab-close,
-        .app-viewer-overlay.pdf-tools-viewer:not(.fullscreen) .app-viewer-page-total {
-            display: inline-flex !important;
-            justify-content: center;
-            height: 32px !important;
-            min-height: 32px !important;
-        }
-
-        .app-viewer-overlay.pdf-tools-viewer:not(.fullscreen) .app-viewer-tab-main {
-            justify-content: flex-start;
-        }
-
-        .app-viewer-overlay.pdf-tools-viewer:not(.fullscreen) .app-viewer-title {
-            height: 32px !important;
-            min-height: 32px !important;
-            display: inline-flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            line-height: 1 !important;
-        }
-
-        .app-viewer-overlay.pdf-tools-viewer:not(.fullscreen) .app-viewer-title i,
-        .app-viewer-overlay.pdf-tools-viewer:not(.fullscreen) .app-viewer-action i,
-        .app-viewer-overlay.pdf-tools-viewer:not(.fullscreen) .app-viewer-pdf-overflow-item i {
-            display: inline-flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            line-height: 1 !important;
-        }
-
-        .app-viewer-overlay.pdf-tools-viewer:not(.fullscreen) .app-viewer-pdf-settings-action {
-            position: static !important;
-            top: auto !important;
-            right: auto !important;
-            transform: none !important;
+        .app-viewer-overlay.pdf-tools-viewer:not(.fullscreen) .app-viewer-tab-close {
+            height: 32px;
+            display: inline-flex;
+            align-items: center;
         }
 
         @media (max-width: 980px) {
@@ -4720,11 +4714,12 @@
                         <i class="ph ph-squares-four"></i>
                         <span>App</span>
                     </div>
+                    <div class="app-viewer-header-spacer"></div>
                     <div class="app-viewer-close" onclick="closeApp()" title="Fechar">
                         <i class="ph ph-x"></i>
                     </div>
                 </div>
-                <div class="app-viewer-toolbar" id="app-viewer-toolbar" aria-label="Ferramentas do app">
+                <div class="app-viewer-toolbar" id="app-viewer-toolbar" aria-label="Ferramentas do PDF Tools">
                     <div class="app-viewer-tabs" id="app-viewer-tabs" role="tablist" aria-label="Abas do PDF Tools"></div>
                     <div class="app-viewer-actions" id="app-viewer-actions"></div>
                 </div>
@@ -10006,10 +10001,16 @@
         }
 
         // Global click to close menus
-        document.addEventListener('click', () => {
+        document.addEventListener('click', (e) => {
             hideContextMenu();
             hideBackgroundContextMenu();
             hideFinderTabMenu();
+            // Close PDF tab-list dropdown if clicking outside
+            const openTabList = document.querySelector('.app-viewer-tab-list.open');
+            if (openTabList && !openTabList.contains(e.target)) {
+                openTabList.classList.remove('open');
+                openTabList.querySelector('.app-viewer-tab-list-toggle')?.setAttribute('aria-expanded', 'false');
+            }
         });
 
         // API Actions
@@ -23313,6 +23314,17 @@
             );
         }
 
+        function getPdfSettingsAnchorPayload(button) {
+            const frame = document.getElementById('app-viewer-frame');
+            const anchor = button?.closest?.('#app-viewer-pdf-overflow')?.querySelector?.('[data-pdf-overflow-toggle]') || button;
+            if (!frame || !anchor?.getBoundingClientRect) return {};
+            const frameRect = frame.getBoundingClientRect();
+            const buttonRect = anchor.getBoundingClientRect();
+            const top = Math.max(12, Math.round(buttonRect.bottom - frameRect.top + 8));
+            const right = Math.max(12, Math.round(frameRect.right - buttonRect.right));
+            return { settings_anchor: { top, right } };
+        }
+
         let activeRuntimeApp = null;
         let activeAppRuntimeSession = null;
         let activeAppRuntimeRefreshPromise = null;
@@ -23778,12 +23790,33 @@
             const list = document.querySelector('.app-viewer-tab-list.open');
             if (!list) return;
             list.classList.remove('open');
+            list.closest('.app-viewer-tabs')?.classList.remove('has-open-tab-list');
             list.querySelector('.app-viewer-tab-list-toggle')?.setAttribute('aria-expanded', 'false');
         }
 
         function closePdfToolsOverflowMenu() {
             document.getElementById('app-viewer-pdf-overflow')?.classList.remove('open');
+            document.querySelector('[data-pdf-overflow-toggle]')?.setAttribute('aria-expanded', 'false');
             closePdfToolsTabListMenu();
+        }
+
+        function togglePdfToolsOverflowMenu(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            const overflow = document.getElementById('app-viewer-pdf-overflow');
+            if (!overflow) return;
+            const isOpen = overflow.classList.toggle('open');
+            event.currentTarget?.setAttribute?.('aria-expanded', isOpen ? 'true' : 'false');
+        }
+
+        function wirePdfToolsOverflowToggle() {
+            document.querySelectorAll('[data-pdf-overflow-toggle]').forEach((button) => {
+                if (button.dataset.overflowToggleWired === '1') return;
+                button.dataset.overflowToggleWired = '1';
+                button.setAttribute('aria-haspopup', 'menu');
+                button.setAttribute('aria-expanded', 'false');
+                button.addEventListener('click', togglePdfToolsOverflowMenu);
+            });
         }
 
         const PDF_TOOLS_VISIBLE_TAB_LIMIT = 3;
@@ -23791,7 +23824,6 @@
         function getPdfToolsVisibleTabLimit() {
             const viewer = document.getElementById('app-viewer');
             const width = viewer?.getBoundingClientRect?.().width || window.innerWidth || 0;
-            if (width > 0 && width < 1180) return 1;
             if (width > 0 && width < 1420) return 2;
             return PDF_TOOLS_VISIBLE_TAB_LIMIT;
         }
@@ -23810,10 +23842,16 @@
         }
 
         function getPdfToolsVisibleTabs(tabs, activeKey, limit) {
-            limit = limit || PDF_TOOLS_VISIBLE_TAB_LIMIT;
+            limit = Number.isFinite(Number(limit)) ? Math.max(0, Number(limit)) : PDF_TOOLS_VISIBLE_TAB_LIMIT;
             const normalizedTabs = normalizePdfToolsShellTabs(tabs);
+            if (normalizedTabs.length === 1) {
+                return { visibleTabs: normalizedTabs, overflowTabs: [] };
+            }
             if (normalizedTabs.length <= limit) {
                 return { visibleTabs: normalizedTabs, overflowTabs: [] };
+            }
+            if (limit <= 0) {
+                return { visibleTabs: [], overflowTabs: normalizedTabs };
             }
             const activeIndex = normalizedTabs.findIndex(
                 (tab) => String(tab.document_key || '') === String(activeKey || '')
@@ -23862,24 +23900,22 @@
         }
 
         function applyPdfToolsToolbarDensity(viewer, mode) {
-            const nextMode = mode === 'normal' ? 'normal' : 'compact';
-            viewer.classList.toggle('pdf-toolbar-compact', nextMode === 'compact');
+            viewer.classList.toggle('pdf-toolbar-compact', mode === 'compact');
             viewer.classList.remove('pdf-toolbar-ultra-compact');
-            pdfToolsToolbarDensityState.mode = nextMode;
-            if (nextMode === 'normal') closePdfToolsOverflowMenu();
+            pdfToolsToolbarDensityState.mode = mode;
+            if (mode === 'normal') closePdfToolsOverflowMenu();
         }
 
         function ensurePdfToolsToolbarDensityObserver() {
             if (typeof ResizeObserver === 'undefined') return;
-            const viewer = document.getElementById('app-viewer');
-            const header = viewer?.querySelector?.('.app-viewer-header') || null;
-            if (!header || header === pdfToolsToolbarDensityObservedHeader) return;
+            const toolbar = document.getElementById('app-viewer-toolbar');
+            if (!toolbar || toolbar === pdfToolsToolbarDensityObservedHeader) return;
             if (pdfToolsToolbarDensityObserver) {
                 pdfToolsToolbarDensityObserver.disconnect();
             }
-            pdfToolsToolbarDensityObservedHeader = header;
+            pdfToolsToolbarDensityObservedHeader = toolbar;
             pdfToolsToolbarDensityObserver = new ResizeObserver(() => schedulePdfToolsToolbarDensity());
-            pdfToolsToolbarDensityObserver.observe(header);
+            pdfToolsToolbarDensityObserver.observe(toolbar);
         }
 
         function schedulePdfToolsToolbarDensity() {
@@ -23905,10 +23941,10 @@
                 return;
             }
 
-            const header = viewer.querySelector('.app-viewer-header');
+            const toolbar = document.getElementById('app-viewer-toolbar');
             const tabs = document.getElementById('app-viewer-tabs');
             const actions = document.getElementById('app-viewer-actions');
-            if (!header || !actions) return;
+            if (!toolbar || !actions) return;
 
             if (!pdfToolsLastState) {
                 applyPdfToolsToolbarDensity(viewer, 'compact');
@@ -23923,10 +23959,17 @@
                 renderPdfToolsShellTabs(pdfToolsLastState);
                 return;
             }
-            const headerWidth = header.clientWidth || 0;
+            const toolbarWidth = toolbar.clientWidth || 0;
             const isReaderMode = actions.classList.contains('pdf-reader-mode');
+
+            let mode = 'normal';
+            if (toolbarWidth < 780) {
+                mode = 'compact';
+            }
+            const nextMode = mode === 'normal' ? 'normal' : 'compact';
+
             const signature = JSON.stringify({
-                width: Math.round(headerWidth),
+                width: Math.round(toolbarWidth),
                 tabCount,
                 visibleTabCount,
                 reader: isReaderMode,
@@ -23934,8 +23977,8 @@
             });
 
             pdfToolsToolbarDensityState.lastSignature = signature;
-            pdfToolsToolbarDensityState.lastWidth = headerWidth;
-            applyPdfToolsToolbarDensity(viewer, 'compact');
+            pdfToolsToolbarDensityState.lastWidth = toolbarWidth;
+            applyPdfToolsToolbarDensity(viewer, nextMode);
         }
 
         function clearAppViewerTabs(resetReady = true) {
@@ -24027,6 +24070,7 @@
 
             const visibleLimit = getPdfToolsVisibleTabLimit();
             const { visibleTabs, overflowTabs } = getPdfToolsVisibleTabs(tabs, activeKey, visibleLimit);
+            tabsContainer.classList.toggle('no-visible-tabs', visibleTabs.length === 0 && overflowTabs.length > 0);
             tabsContainer.dataset.visibleTabCount = String(visibleTabs.length);
             tabsContainer.dataset.visibleLimit = String(visibleLimit);
             tabsContainer.style.setProperty('--pdf-shell-tab-count', String(Math.max(1, visibleTabs.length)));
@@ -24121,6 +24165,7 @@
                 toggle.onclick = (event) => {
                     event.stopPropagation();
                     const isOpen = overflowWrapper.classList.toggle('open');
+                    tabsContainer.classList.toggle('has-open-tab-list', isOpen);
                     toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
                 };
 
@@ -24202,42 +24247,42 @@
                     <span class="app-viewer-page-total pdf-action-essential pdf-action-page-control" id="app-viewer-pdf-total">/ 0</span>
                     <button class="app-viewer-action pdf-action-essential" data-pdf-command="next" title="Próxima página"><i class="ph ph-caret-right"></i></button>
                     <button class="app-viewer-action pdf-action-secondary" data-pdf-command="last" title="Última página"><i class="ph ph-caret-double-right"></i></button>
-                    <span class="app-viewer-actions-sep pdf-action-secondary-sep"></span>
+                    <span class="app-viewer-actions-sep pdf-action-essential"></span>
                     <button class="app-viewer-action pdf-action-secondary" data-pdf-command="toggleFitMode" data-pdf-fit-toggle title="Ajustar à largura"><i class="ph ph-arrows-out-line-horizontal"></i></button>
-                    <button class="app-viewer-action pdf-action-secondary" data-pdf-command="rotateRight" title="Girar página 90° à direita"><i class="ph ph-arrow-clockwise"></i></button>
+                    <button class="app-viewer-action pdf-action-secondary" data-pdf-command="rotateRight" title="Girar página"><i class="ph ph-arrow-clockwise"></i></button>
                     <button class="app-viewer-action pdf-action-secondary" data-pdf-command="zoomOut" title="Diminuir zoom"><i class="ph ph-minus"></i></button>
                     <button class="app-viewer-action pdf-action-essential" data-pdf-command="zoomReset" title="Restaurar zoom"><span id="app-viewer-pdf-zoom">100%</span></button>
                     <button class="app-viewer-action pdf-action-secondary" data-pdf-command="zoomIn" title="Aumentar zoom"><i class="ph ph-plus"></i></button>
                     <span class="app-viewer-actions-sep pdf-action-secondary-sep"></span>
-                    <button class="app-viewer-action pdf-action-secondary" data-pdf-command="presentation" title="Modo apresentação"><i class="ph ph-presentation"></i></button>
+                    <button class="app-viewer-action pdf-action-secondary" data-pdf-command="presentation" title="Apresentar"><i class="ph ph-presentation"></i></button>
+                    <button class="app-viewer-action app-viewer-pdf-settings-action pdf-action-essential pdf-action-settings" data-pdf-command="openSettings" title="Configurações" aria-label="Configurações"><i class="ph ph-gear-six"></i></button>
                     <div class="app-viewer-pdf-overflow" id="app-viewer-pdf-overflow">
-                        <button class="app-viewer-action" data-pdf-overflow-toggle type="button" title="Mais controles"><i class="ph ph-dots-three"></i></button>
+                        <button class="app-viewer-action" data-pdf-overflow-toggle type="button" title="Mais opções"><i class="ph ph-dots-three-outline-vertical"></i></button>
                         <div class="app-viewer-pdf-overflow-menu" role="menu" aria-label="Mais controles do PDF">
                             <button class="app-viewer-pdf-overflow-item" data-pdf-command="first" type="button" role="menuitem"><i class="ph ph-caret-double-left"></i><span>Primeira página</span></button>
                             <button class="app-viewer-pdf-overflow-item" data-pdf-command="last" type="button" role="menuitem"><i class="ph ph-caret-double-right"></i><span>Última página</span></button>
-                            <button class="app-viewer-pdf-overflow-item" data-pdf-command="toggleFitMode" data-pdf-fit-toggle type="button" role="menuitem"><i class="ph ph-arrows-out-line-horizontal"></i><span>Ajustar largura</span></button>
-                            <button class="app-viewer-pdf-overflow-item" data-pdf-command="rotateRight" type="button" role="menuitem"><i class="ph ph-arrow-clockwise"></i><span>Girar página</span></button>
                             <button class="app-viewer-pdf-overflow-item" data-pdf-command="zoomOut" type="button" role="menuitem"><i class="ph ph-minus"></i><span>Diminuir zoom</span></button>
                             <button class="app-viewer-pdf-overflow-item" data-pdf-command="zoomIn" type="button" role="menuitem"><i class="ph ph-plus"></i><span>Aumentar zoom</span></button>
+                            <button class="app-viewer-pdf-overflow-item" data-pdf-command="toggleFitMode" data-pdf-fit-toggle type="button" role="menuitem"><i class="ph ph-arrows-out-line-horizontal"></i><span>Ajustar largura</span></button>
+                            <button class="app-viewer-pdf-overflow-item" data-pdf-command="rotateRight" type="button" role="menuitem"><i class="ph ph-arrow-clockwise"></i><span>Girar página</span></button>
                             <button class="app-viewer-pdf-overflow-item" data-pdf-command="presentation" type="button" role="menuitem"><i class="ph ph-presentation"></i><span>Apresentar</span></button>
+                            <button class="app-viewer-pdf-overflow-item" data-pdf-command="openSettings" type="button" role="menuitem"><i class="ph ph-gear-six"></i><span>Configurações</span></button>
                         </div>
                     </div>
-                    <button class="app-viewer-action app-viewer-pdf-settings-action pdf-action-essential pdf-action-settings" data-pdf-command="openSettings" title="Configurações"><i class="ph ph-gear-six"></i></button>
                     <span class="app-viewer-sync pdf-action-status" id="app-viewer-pdf-sync">Pronto</span>
                 </div>
             `;
 
             actions.querySelectorAll('[data-pdf-command]').forEach((button) => {
                 button.onclick = (event) => {
-                    sendAppViewerCommand(button.dataset.pdfCommand || '');
+                    const command = button.dataset.pdfCommand || '';
+                    const payload = command === 'openSettings' ? getPdfSettingsAnchorPayload(button) : {};
+                    sendAppViewerCommand(command, payload);
                     closePdfToolsOverflowMenu();
                     if (event.detail > 0) button.blur();
                 };
             });
-            actions.querySelector('[data-pdf-overflow-toggle]')?.addEventListener('click', (event) => {
-                event.stopPropagation();
-                document.getElementById('app-viewer-pdf-overflow')?.classList.toggle('open');
-            });
+            wirePdfToolsOverflowToggle();
 
             const pageInput = document.getElementById('app-viewer-pdf-page');
             if (pageInput) {
@@ -24299,6 +24344,7 @@
                 currentActions.classList.toggle('pdf-home-mode', !hasDocument);
                 currentActions.classList.toggle('pdf-reader-mode', hasDocument);
             }
+            wirePdfToolsOverflowToggle();
             renderPdfToolsShellRecents(state);
             const pageInput = document.getElementById('app-viewer-pdf-page');
             const total = document.getElementById('app-viewer-pdf-total');
@@ -24406,7 +24452,6 @@
                 return;
             }
             const isMaximized = record.status === 'maximized';
-            viewer.classList.toggle('fullscreen', isMaximized);
             if (!isMaximized) {
                 delete viewer.dataset.nativeFullscreen;
             }
@@ -24856,6 +24901,8 @@
                 }
                 if (app.id === 'pdf-tools') {
                     sendAppViewerCommand('shellTabsReady', { version: 1 });
+                    // Re-send after a short delay to catch slow initializations
+                    setTimeout(() => sendAppViewerCommand('shellTabsReady', { version: 1 }), 600);
                 }
             };
 

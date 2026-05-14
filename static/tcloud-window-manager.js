@@ -5,7 +5,7 @@
         snapThreshold: 24,
         viewportPadding: 8,
         visibleMargin: 96,
-        titlebarHeight: 46,
+        titlebarHeight: 32,
         dragThreshold: 4,
     };
 
@@ -1045,11 +1045,11 @@
     function wireWindowControls(record) {
         record.element.querySelectorAll('[data-window-action]').forEach((button) => {
             button.addEventListener('pointerdown', (event) => {
-                event.preventDefault();
                 event.stopPropagation();
             });
             button.addEventListener('pointerup', (event) => event.stopPropagation());
             button.addEventListener('click', (event) => {
+                if (event.__tcloudWindowActionHandled) return;
                 event.preventDefault();
                 event.stopPropagation();
                 const action = button.dataset.windowAction;
@@ -1063,6 +1063,43 @@
                 wireLayoutMenuTrigger(record, button);
             }
         });
+    }
+
+    function handleWindowActionButton(button, event) {
+        const element = button?.closest?.('.tcloud-window');
+        if (!element?.id) return false;
+        const record = state.windows.get(element.id);
+        if (!record || record.status === 'closed') return false;
+
+        event.__tcloudWindowActionHandled = true;
+        event.preventDefault();
+        event.stopPropagation();
+
+        const action = button.dataset.windowAction;
+        hideLayoutMenu();
+        if (action === 'close') close(record.id);
+        if (action === 'minimize') minimize(record.id);
+        if (action === 'maximize') maximize(record.id);
+        if (action === 'restore') restore(record.id);
+        return true;
+    }
+
+    function wireGlobalWindowControlCapture() {
+        document.addEventListener('pointerdown', (event) => {
+            const button = event.target?.closest?.('[data-window-action]');
+            if (!button?.closest?.('.tcloud-window')) return;
+            event.stopPropagation();
+        }, true);
+        document.addEventListener('pointerup', (event) => {
+            const button = event.target?.closest?.('[data-window-action]');
+            if (!button?.closest?.('.tcloud-window')) return;
+            event.stopPropagation();
+        }, true);
+        document.addEventListener('click', (event) => {
+            const button = event.target?.closest?.('[data-window-action]');
+            if (!button) return;
+            handleWindowActionButton(button, event);
+        }, true);
     }
 
     function ensureLayoutMenu() {
@@ -1384,6 +1421,7 @@
     });
     wireGlobalFocusCapture();
     wireGlobalResizeHoverTracking();
+    wireGlobalWindowControlCapture();
     wireGlobalWindowShortcuts();
 
     window.TCloudWindowManager = {
