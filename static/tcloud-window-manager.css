@@ -119,7 +119,8 @@
     padding-top: 0 !important;
     padding-bottom: 0 !important;
     line-height: 1;
-    overflow: visible !important;
+    min-width: 0;
+    overflow: hidden !important;
 }
 
 .tcloud-window[data-app-id="notes"] {
@@ -133,16 +134,19 @@
     border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
     container-type: inline-size;
     z-index: 40;
-    overflow: visible !important;
+    overflow: hidden !important;
 }
 
 .tcloud-window[data-app-id="notes"] .app-viewer-title {
     display: inline-flex !important;
     align-items: center !important;
     gap: 9px !important;
-    min-width: 148px;
+    flex: 0 1 auto;
+    min-width: 32px;
+    max-width: 180px;
     height: 32px !important;
     line-height: 1 !important;
+    overflow: hidden;
 }
 
 .tcloud-window[data-app-id="notes"] .app-viewer-title i {
@@ -159,28 +163,41 @@
 }
 
 .tcloud-window[data-app-id="notes"] .app-viewer-generic-status {
-    flex: 1 1 auto;
+    flex: 0 1 auto;
     min-width: 90px;
+    max-width: 190px;
     margin-left: 0;
     font-size: 13px;
 }
 
 .tcloud-window[data-app-id="notes"] .app-viewer-generic-actions {
-    flex: 0 0 auto;
+    flex: 1 1 auto;
     gap: 10px;
+    min-width: 0;
+    overflow: hidden;
 }
 
 .tcloud-window[data-app-id="notes"] .app-viewer-action {
+    flex: 0 1 auto;
     height: 36px;
     min-width: 36px;
+    max-width: 178px;
+    overflow: hidden;
     padding: 0 13px;
     border-radius: 10px;
     line-height: 1;
 }
 
+.tcloud-window[data-app-id="notes"] .app-viewer-action span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .tcloud-window[data-app-id="notes"] .app-viewer-generic-menu-panel {
     z-index: 160;
-    right: 4px;
+    right: auto;
     max-width: min(240px, calc(100vw - 28px));
 }
 

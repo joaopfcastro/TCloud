@@ -26,7 +26,7 @@
   --shadow: 0 18px 44px rgba(0, 0, 0, 0.38);
   --radius-window: 12px;
   --radius-item: 8px;
-  --sidebar-width: 318px;
+  --sidebar-width: clamp(248px, 30vw, 318px);
   --note-width-open: clamp(780px, calc(100vw - 420px), 1160px);
   --note-width-collapsed: clamp(900px, calc(100vw - 120px), 1380px);
   --note-gutter-open: clamp(18px, 2.8vw, 44px);
@@ -87,9 +87,12 @@ select:focus-visible {
 }
 
 .notes-app {
+  display: flex;
   width: 100%;
   height: 100%;
+  min-width: 0;
   min-height: 0;
+  overflow: hidden;
   background: var(--bg-content);
   --note-width-current: var(--note-width-open);
   --note-gutter-current: var(--note-gutter-open);
@@ -99,8 +102,10 @@ select:focus-visible {
   position: relative;
   display: grid;
   grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+  flex: 1 1 auto;
   width: 100%;
   height: 100%;
+  min-width: 0;
   min-height: 0;
   overflow: hidden;
 }
@@ -109,6 +114,7 @@ select:focus-visible {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  min-width: 0;
   min-height: 0;
   padding: 18px 14px;
   overflow: hidden;
@@ -331,7 +337,9 @@ button:disabled,
 
 .search-shell {
   display: grid;
+  flex: 0 0 auto;
   gap: 7px;
+  min-width: 0;
 }
 
 .search-shell span,
@@ -377,7 +385,9 @@ button:disabled,
 
 .filter-tabs {
   display: grid;
+  flex: 0 0 auto;
   gap: 6px;
+  min-width: 0;
 }
 
 .filter-tab {
@@ -393,9 +403,18 @@ button:disabled,
 }
 
 .sidebar-footer {
+  flex: 0 0 auto;
   margin-top: auto;
   padding-top: 12px;
   border-top: 1px solid var(--border);
+}
+
+.list-meta {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .notes-list {
@@ -404,13 +423,15 @@ button:disabled,
   flex-direction: column;
   gap: 6px;
   min-height: 0;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
   padding-right: 2px;
   padding-bottom: 12px;
 }
 
 .note-card {
   width: 100%;
+  min-width: 0;
   border: 1px solid transparent;
   border-radius: var(--radius-item);
   background: rgba(255, 255, 255, 0.035);
@@ -526,14 +547,18 @@ button:disabled,
 
 .editor-shell {
   position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
   min-height: 0;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
   background: var(--bg-content);
   padding: 0 clamp(16px, 2.6vw, 32px) 88px;
 }
 
 .editor-empty-state {
   display: grid;
+  min-width: 0;
   min-height: 100%;
   padding: 42px;
   place-items: center;
@@ -541,6 +566,7 @@ button:disabled,
 
 .empty-panel {
   width: min(720px, 100%);
+  min-width: 0;
   padding: 28px;
 }
 
@@ -556,6 +582,7 @@ button:disabled,
 }
 
 .editor-panel {
+  min-width: 0;
   min-height: 100%;
   overflow: visible;
   padding-bottom: 0;
@@ -581,6 +608,7 @@ button:disabled,
 .note-page {
   width: min(var(--note-width-current), calc(100% - (var(--note-gutter-current) * 2)));
   max-width: 100%;
+  min-width: 0;
   margin: 0 auto;
   padding: clamp(24px, 3vw, 36px) 0 0;
 }
@@ -760,11 +788,15 @@ button:disabled,
 .editor-content-grid {
   position: relative;
   display: block;
+  min-width: 0;
+  overflow-x: hidden;
 }
 
 .editorjs-host {
+  min-width: 0;
   min-height: min(720px, calc(100vh - 300px));
   padding-bottom: 112px;
+  overflow-wrap: anywhere;
 }
 
 .editorjs-host .codex-editor,
@@ -1956,6 +1988,60 @@ button:disabled,
 .notes-app.sidebar-collapsed .sidebar > * {
   opacity: 0;
   pointer-events: none;
+}
+
+.notes-app.is-compact-window {
+  --note-width-current: 100%;
+  --note-gutter-current: 14px;
+}
+
+.notes-app.is-compact-window .notes-layout {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.notes-app.is-compact-window .sidebar {
+  position: absolute;
+  z-index: 45;
+  width: clamp(248px, 72%, 300px);
+  max-width: calc(100% - 20px);
+  height: 100%;
+  transform: translateX(-102%);
+  transition: transform 180ms ease;
+  box-shadow: 24px 0 52px rgba(0, 0, 0, 0.38);
+}
+
+.notes-app.is-compact-window:not(.sidebar-collapsed) .sidebar {
+  transform: translateX(0);
+}
+
+.notes-app.is-compact-window.sidebar-collapsed .notes-layout {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.notes-app.is-compact-window.sidebar-collapsed .sidebar > * {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.notes-app.is-compact-window .editor-shell {
+  padding: 0 12px 72px;
+}
+
+.notes-app.is-compact-window .note-cover {
+  height: 176px;
+}
+
+.notes-app.is-compact-window .note-page {
+  width: 100%;
+  padding-top: 20px;
+}
+
+.notes-app.is-compact-window .note-title {
+  font-size: clamp(28px, 8vw, 38px);
+}
+
+.notes-app.is-compact-window .editorjs-host .ce-paragraph {
+  font-size: 16px;
 }
 
 @media (max-width: 980px) {

@@ -162,7 +162,9 @@ const state = {
   },
   ui: {
     sidebarCollapsed: false,
+    compactWindow: false,
   },
+  compactWindowObserver: null,
   bootAttempt: 0,
   favoriteSaving: false,
   floatingSearch: {
@@ -605,6 +607,7 @@ function publishWindowActions() {
   if (!hasShellWindowActions()) return;
 
   const selectedCount = state.selectedNoteIds?.size || 0;
+  const isCompactWindow = Boolean(state.ui.compactWindow);
   if (selectedCount > 1) {
     const view = state.filters.view;
     const isTrash = view === "trash";
@@ -626,12 +629,23 @@ function publishWindowActions() {
         icon: "ph-arrow-counter-clockwise",
         variant: "primary",
       });
-      actions.push({
-        id: "bulk-purge.run",
-        label: "Excluir definitivamente",
-        icon: "ph-trash",
-        variant: "danger",
-      });
+      if (isCompactWindow) {
+        actions.push({
+          id: "bulk-more",
+          label: "Mais",
+          icon: "ph-dots-three",
+          menuItems: [
+            { id: "bulk-purge.run", label: "Excluir definitivamente", icon: "ph-trash", variant: "danger" },
+          ],
+        });
+      } else {
+        actions.push({
+          id: "bulk-purge.run",
+          label: "Excluir definitivamente",
+          icon: "ph-trash",
+          variant: "danger",
+        });
+      }
     } else {
       const selectedIds = Array.from(state.selectedNoteIds);
       const anyFav = selectedIds.some((id) => {
@@ -649,12 +663,23 @@ function publishWindowActions() {
         label: isArchived ? "Desarquivar" : "Arquivar",
         icon: isArchived ? "ph-archive-tray" : "ph-archive",
       });
-      actions.push({
-        id: "bulk-delete.run",
-        label: "Mover para lixeira",
-        icon: "ph-trash",
-        variant: "danger",
-      });
+      if (isCompactWindow) {
+        actions.push({
+          id: "bulk-more",
+          label: "Mais",
+          icon: "ph-dots-three",
+          menuItems: [
+            { id: "bulk-delete.run", label: "Mover para lixeira", icon: "ph-trash", variant: "danger" },
+          ],
+        });
+      } else {
+        actions.push({
+          id: "bulk-delete.run",
+          label: "Mover para lixeira",
+          icon: "ph-trash",
+          variant: "danger",
+        });
+      }
     }
 
     actions.push({
@@ -664,7 +689,7 @@ function publishWindowActions() {
     });
 
     window.TCloudApp?.setWindowActions?.({
-      statusText: `${selectedCount} notas selecionadas`,
+      statusText: isCompactWindow ? `${selectedCount} selecionadas` : `${selectedCount} notas selecionadas`,
       actions,
     });
     return;
@@ -752,6 +777,7 @@ function tickSaveStatus() {
 
 function applyLayoutState() {
   els.app?.classList.toggle("sidebar-collapsed", Boolean(state.ui.sidebarCollapsed));
+  els.app?.classList.toggle("is-compact-window", Boolean(state.ui.compactWindow));
   els.sidebarOpenButton?.setAttribute("aria-pressed", state.ui.sidebarCollapsed ? "false" : "true");
   els.sidebarToggleButton?.setAttribute("aria-expanded", state.ui.sidebarCollapsed ? "false" : "true");
   publishWindowActions();
@@ -760,6 +786,29 @@ function applyLayoutState() {
 function setSidebarCollapsed(collapsed) {
   state.ui.sidebarCollapsed = Boolean(collapsed);
   applyLayoutState();
+}
+
+function updateCompactWindowMode(width) {
+  const nextCompact = Number(width || 0) > 0 && Number(width) < 820;
+  if (state.ui.compactWindow === nextCompact) return;
+  state.ui.compactWindow = nextCompact;
+  applyLayoutState();
+}
+
+function setupCompactWindowObserver() {
+  if (!els.app) return;
+  if (typeof ResizeObserver === "undefined") {
+    updateCompactWindowMode(els.app.getBoundingClientRect().width || window.innerWidth);
+    window.addEventListener("resize", () => {
+      updateCompactWindowMode(els.app.getBoundingClientRect().width || window.innerWidth);
+    });
+    return;
+  }
+  state.compactWindowObserver = new ResizeObserver((entries) => {
+    const width = entries[0]?.contentRect?.width || els.app.getBoundingClientRect().width;
+    updateCompactWindowMode(width);
+  });
+  state.compactWindowObserver.observe(els.app);
 }
 
 function noteTagsLabel(note) {
@@ -2755,9 +2804,11 @@ function wireContextMenus() {
 
 async function init() {
   state.currentNoteId = readNoteIdFromHash();
-  state.ui.sidebarCollapsed = window.matchMedia("(max-width: 860px)").matches;
+  state.ui.sidebarCollapsed = false;
+  updateCompactWindowMode(els.app?.getBoundingClientRect?.().width || window.innerWidth);
   setEditorVisibility(false);
   renderSaveStatus();
+  setupCompactWindowObserver();
   wireTemplateButtons();
   state.statusTimer = window.setInterval(tickSaveStatus, SAVE_STATUS_TICK_MS);
   state.picker = new NotesFilePicker({ api: state.api, root: els.filePickerModal });
@@ -2959,7 +3010,6 @@ function navigateFloatingSearch(direction) {
 window.showFloatingSearch = showFloatingSearch;
 window.hideFloatingSearch = hideFloatingSearch;
 window.state = state;
-
 
 
 
