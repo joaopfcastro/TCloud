@@ -12,6 +12,10 @@ from pathlib import Path
 from pymongo import ReturnDocument
 
 
+class NoteConflictError(ValueError):
+    pass
+
+
 class NotesService:
     PROPERTY_TYPES = {"text", "number", "select", "multi_select", "checkbox", "date", "url", "relation"}
     FILTER_OPERATORS = {
@@ -1373,6 +1377,53 @@ class NotesService:
         if not doc:
             return None
         return {"note": self._serialize_note(doc)}
+
+    async def purge_note(self, owner_id: str, note_id: str) -> dict | None:
+        safe_owner_id = self._owner_id(owner_id)
+        safe_note_id = str(note_id or "").strip()
+        if not safe_note_id:
+            raise ValueError("note_id ausente")
+
+        existing = await self._db.notes_collection.find_one({"_id": safe_note_id, "owner_id": safe_owner_id})
+        if not existing:
+            return None
+        if existing.get("deleted_at") is None:
+            raise NoteConflictError("nota precisa estar na lixeira para exclusao definitiva")
+
+        removed = await self._db.notes_collection.find_one_and_delete(
+            {"_id": safe_note_id, "owner_id": safe_owner_id, "deleted_at": {"$ne": None}}
+        )
+        if not removed:
+            return None
+        return {"note_id": safe_note_id, "deleted": True}
+
+    async def bulk_purge_notes(self, owner_id: str, note_ids) -> dict:
+        if not isinstance(note_ids, list):
+            raise ValueError("note_ids deve ser uma lista")
+
+        seen = set()
+        ordered_ids = []
+        for item in note_ids:
+            note_id = str(item or "").strip()
+            if not note_id or note_id in seen:
+                continue
+            seen.add(note_id)
+            ordered_ids.append(note_id)
+
+        deleted_count = 0
+        skipped = []
+        for note_id in ordered_ids:
+            try:
+                result = await self.purge_note(owner_id, note_id)
+            except NoteConflictError as exc:
+                skipped.append({"note_id": note_id, "reason": str(exc)})
+                continue
+            if result:
+                deleted_count += 1
+            else:
+                skipped.append({"note_id": note_id, "reason": "nota nao encontrada"})
+
+        return {"deleted_count": deleted_count, "skipped": skipped}
 
     async def restore_note(self, owner_id: str, note_id: str) -> dict | None:
         safe_owner_id = self._owner_id(owner_id)

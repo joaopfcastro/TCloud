@@ -169,6 +169,26 @@ export class NotesApi {
     return apiJson(`/api/notes/${encodeURIComponent(noteId)}/restore`, { method: "POST" });
   }
 
+  async purge(noteId) {
+    if (await detectRuntimeMode()) {
+      return window.TCloudApp.call("notes.purge", { note_id: noteId });
+    }
+    return apiJson(`/api/notes/${encodeURIComponent(noteId)}/permanent`, { method: "DELETE" });
+  }
+
+  async bulkPurge(noteIds = []) {
+    const uniqueIds = Array.from(new Set((Array.isArray(noteIds) ? noteIds : [])
+      .map((id) => String(id || "").trim())
+      .filter(Boolean)));
+    if (await detectRuntimeMode()) {
+      return window.TCloudApp.call("notes.bulkPurge", { note_ids: uniqueIds });
+    }
+    return apiJson("/api/notes/bulk-permanent-delete", {
+      method: "POST",
+      body: JSON.stringify({ note_ids: uniqueIds }),
+    });
+  }
+
   async listRevisions(noteId, { limit = 50 } = {}) {
     if (await detectRuntimeMode()) {
       return window.TCloudApp.call("notes.revisions", { note_id: noteId, limit });

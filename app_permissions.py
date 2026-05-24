@@ -510,6 +510,20 @@ FUNCTION_CATALOG = {
         "implemented": True,
         "dangerous": True,
     },
+    "notes.purge": {
+        "label": "Excluir nota definitivamente",
+        "permission": "notes.write",
+        "transport": "backend",
+        "implemented": True,
+        "dangerous": True,
+    },
+    "notes.bulkPurge": {
+        "label": "Excluir notas definitivamente em lote",
+        "permission": "notes.write",
+        "transport": "backend",
+        "implemented": True,
+        "dangerous": True,
+    },
     "notes.tags": {
         "label": "Listar tags de notas",
         "permission": "notes.read",

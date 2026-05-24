@@ -32,6 +32,8 @@
     "notes.create",
     "notes.update",
     "notes.delete",
+    "notes.purge",
+    "notes.bulkPurge",
     "notes.restore",
     "notes.revisions",
     "notes.restoreRevision",

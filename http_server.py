@@ -61,7 +61,7 @@ from media_track_labels import (
     looks_like_technical_track_label as _looks_like_technical_track_label,
     normalize_language_code as _shared_normalize_language_code,
 )
-from notes_service import NotesService
+from notes_service import NoteConflictError, NotesService
 
 logger = logging.getLogger("tcloud.http")
 _PERCENT_ENCODED_PATH_RE = re.compile(r"%[0-9A-Fa-f]{2}")
@@ -1290,6 +1290,7 @@ class TCloudHTTPServer:
         self._app.router.add_delete("/api/notes/views/{view_id}", self._handle_api_notes_view_delete)
         self._app.router.add_post("/api/notes/views/{view_id}/duplicate", self._handle_api_notes_view_duplicate)
         self._app.router.add_post("/api/notes/query", self._handle_api_notes_query)
+        self._app.router.add_post("/api/notes/bulk-permanent-delete", self._handle_api_notes_bulk_permanent_delete)
         self._app.router.add_get("/api/notes/relations/search", self._handle_api_notes_relations_search)
         self._app.router.add_get("/api/notes/{note_id}/backlinks", self._handle_api_notes_backlinks)
         self._app.router.add_get("/api/notes/{note_id}", self._handle_api_notes_get)
@@ -1299,6 +1300,7 @@ class TCloudHTTPServer:
         self._app.router.add_post("/api/notes/{note_id}/backup", self._handle_api_notes_backup)
         self._app.router.add_post("/api/notes/import", self._handle_api_notes_import)
         self._app.router.add_post("/api/notes/{note_id}/restore", self._handle_api_notes_restore)
+        self._app.router.add_delete("/api/notes/{note_id}/permanent", self._handle_api_notes_permanent_delete)
         self._app.router.add_get("/api/notes/{note_id}/revisions", self._handle_api_notes_revisions)
         self._app.router.add_post("/api/notes/{note_id}/revisions/{version}/restore", self._handle_api_notes_restore_revision)
         self._app.router.add_patch("/api/notes/{note_id}", self._handle_api_notes_patch)
@@ -8626,6 +8628,21 @@ except Exception as e:
                 raise FileNotFoundError("nota nao encontrada")
             return result
 
+        if function_id == "notes.purge":
+            note_id = str(payload.get("note_id") or payload.get("id") or "").strip()
+            if not note_id:
+                raise ValueError("note_id ausente")
+            result = await self._notes_service.purge_note(self._runtime_owner_id(session_payload), note_id)
+            if not result:
+                raise FileNotFoundError("nota nao encontrada")
+            return result
+
+        if function_id == "notes.bulkPurge":
+            return await self._notes_service.bulk_purge_notes(
+                self._runtime_owner_id(session_payload),
+                payload.get("note_ids") or [],
+            )
+
         if function_id == "notes.tags":
             return await self._notes_service.list_tags(self._runtime_owner_id(session_payload))
 
@@ -8919,6 +8936,8 @@ except Exception as e:
             return web.json_response({"error": str(exc)}, status=404)
         except PermissionError as exc:
             return web.json_response({"error": str(exc)}, status=403)
+        except NoteConflictError as exc:
+            return web.json_response({"error": str(exc)}, status=409)
         except ValueError as exc:
             return web.json_response({"error": str(exc)}, status=400)
         except Exception as exc:
@@ -9250,6 +9269,42 @@ except Exception as e:
             return web.json_response({"ok": False, "error": str(exc)}, status=400)
         except Exception as exc:
             logger.error(f"Notes restore failed: {exc}", exc_info=True)
+            return web.json_response({"ok": False, "error": str(exc)}, status=500)
+
+    async def _handle_api_notes_permanent_delete(self, request):
+        note_id = str(request.match_info.get("note_id") or "").strip()
+        if not note_id:
+            return web.json_response({"ok": False, "error": "note_id ausente"}, status=400)
+
+        try:
+            result = await self._notes_service.purge_note(self._request_owner_id(request), note_id)
+            if not result:
+                return web.json_response({"ok": False, "error": "nota nao encontrada"}, status=404)
+            return web.json_response({"ok": True, **result})
+        except NoteConflictError as exc:
+            return web.json_response({"ok": False, "error": str(exc)}, status=409)
+        except ValueError as exc:
+            return web.json_response({"ok": False, "error": str(exc)}, status=400)
+        except Exception as exc:
+            logger.error(f"Notes permanent delete failed: {exc}", exc_info=True)
+            return web.json_response({"ok": False, "error": str(exc)}, status=500)
+
+    async def _handle_api_notes_bulk_permanent_delete(self, request):
+        try:
+            payload = await request.json()
+        except Exception:
+            return web.json_response({"ok": False, "error": "JSON invalido"}, status=400)
+
+        try:
+            result = await self._notes_service.bulk_purge_notes(
+                self._request_owner_id(request),
+                payload.get("note_ids") or [],
+            )
+            return web.json_response({"ok": True, **result})
+        except ValueError as exc:
+            return web.json_response({"ok": False, "error": str(exc)}, status=400)
+        except Exception as exc:
+            logger.error(f"Notes bulk permanent delete failed: {exc}", exc_info=True)
             return web.json_response({"ok": False, "error": str(exc)}, status=500)
 
     async def _handle_api_notes_revisions(self, request):

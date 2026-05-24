@@ -620,6 +620,12 @@ function publishWindowActions() {
         icon: "ph-arrow-counter-clockwise",
         variant: "primary",
       });
+      actions.push({
+        id: "bulk-purge.run",
+        label: "Excluir definitivamente",
+        icon: "ph-trash",
+        variant: "danger",
+      });
     } else {
       const selectedIds = Array.from(state.selectedNoteIds);
       const anyFav = selectedIds.some((id) => {
@@ -693,6 +699,7 @@ function publishWindowActions() {
           { id: "copy-link.run", label: "Copiar link da nota", icon: "ph-link-simple", disabled: !hasNote },
           { id: "info.open", label: "Informações da nota", icon: "ph-info", disabled: !hasNote },
           { id: "restore.run", label: "Restaurar", icon: "ph-arrow-counter-clockwise", disabled: !hasNote || !trashed },
+          { id: "purge.run", label: "Excluir definitivamente", icon: "ph-trash", variant: "danger", disabled: !hasNote || !trashed },
           { id: "delete.run", label: "Mover para lixeira", icon: "ph-trash", variant: "danger", disabled: !hasNote || trashed },
         ],
       },
@@ -1120,16 +1127,19 @@ function renderBulkPanelButtons() {
   const arcBtn = document.getElementById("bulk-arc-btn");
   const delBtn = document.getElementById("bulk-del-btn");
   const rstBtn = document.getElementById("bulk-rst-btn");
+  const purgeBtn = document.getElementById("bulk-purge-btn");
 
   if (isTrash) {
     favBtn?.classList.add("hidden");
     arcBtn?.classList.add("hidden");
     rstBtn?.classList.remove("hidden");
+    purgeBtn?.classList.remove("hidden");
     delBtn?.classList.add("hidden");
   } else {
     favBtn?.classList.remove("hidden");
     arcBtn?.classList.remove("hidden");
     rstBtn?.classList.add("hidden");
+    purgeBtn?.classList.add("hidden");
     delBtn?.classList.remove("hidden");
 
     const selectedIds = Array.from(state.selectedNoteIds);
@@ -1188,6 +1198,36 @@ async function handleBulkAction(command) {
     state.filters.view = "active";
     await loadNotes({ preserveSelection: false });
     setSaveState("saved", { at: Date.now() });
+    return;
+  }
+
+  if (command === "bulk-purge.run") {
+    askConfirmation({
+      eyebrow: "Exclusão definitiva",
+      title: "Excluir definitivamente?",
+      description: `Excluir definitivamente ${selectedIds.length} notas? Esta ação não pode ser desfeita.`,
+      acceptLabel: "Excluir definitivamente",
+      acceptKind: "danger",
+      onAccept: async () => {
+        setSaveState("saving");
+        const response = await state.api.bulkPurge(selectedIds);
+        const deletedCount = Number(response.deleted_count || response.result?.deleted_count || 0);
+        const skipped = response.skipped || response.result?.skipped || [];
+        if (state.currentNoteId && selectedIds.includes(state.currentNoteId)) {
+          state.currentNoteId = "";
+          setCurrentNote(null);
+        }
+        state.selectedNoteIds.clear();
+        await loadNotes({ preserveSelection: false });
+        showToast(
+          skipped.length
+            ? `${deletedCount} notas excluídas definitivamente; ${skipped.length} não foram excluídas.`
+            : `${deletedCount} notas excluídas definitivamente.`,
+          skipped.length ? "info" : "success",
+        );
+        setSaveState("saved", { at: Date.now() });
+      },
+    });
     return;
   }
 
@@ -1505,6 +1545,28 @@ async function restoreCurrentNote() {
   await loadNotes({ preserveSelection: false });
   if (response.note?.id) await openNote(response.note.id, { skipPendingSave: true });
   setSaveState("saved", { at: Date.now() });
+}
+
+async function purgeCurrentNote() {
+  if (!state.currentNote?.deleted_at) return;
+  askConfirmation({
+    eyebrow: "Exclusão definitiva",
+    title: "Excluir definitivamente esta nota?",
+    description: "Excluir definitivamente esta nota? Esta ação não pode ser desfeita.",
+    acceptLabel: "Excluir definitivamente",
+    acceptKind: "danger",
+    onAccept: async () => {
+      setSaveState("saving");
+      const purgedNoteId = state.currentNote.id;
+      await state.api.purge(purgedNoteId);
+      showToast("Nota excluída definitivamente.", "success");
+      state.selectedNoteIds.delete(purgedNoteId);
+      state.currentNoteId = "";
+      setCurrentNote(null);
+      await loadNotes({ preserveSelection: false });
+      setSaveState("saved", { at: Date.now() });
+    },
+  });
 }
 
 function normalizeTagValue(value) {
@@ -2122,6 +2184,10 @@ function handleWindowAction({ actionId, menuItemId } = {}) {
     restoreCurrentNote().catch(handleUnexpectedError);
     return;
   }
+  if (command === "purge.run") {
+    purgeCurrentNote().catch(handleUnexpectedError);
+    return;
+  }
   if (command === "delete.run") {
     deleteCurrentNote().catch(handleUnexpectedError);
   }
@@ -2137,6 +2203,7 @@ function wireEvents() {
   document.getElementById("bulk-arc-btn")?.addEventListener("click", () => handleBulkAction("bulk-archive.run").catch(handleUnexpectedError));
   document.getElementById("bulk-del-btn")?.addEventListener("click", () => handleBulkAction("bulk-delete.run").catch(handleUnexpectedError));
   document.getElementById("bulk-rst-btn")?.addEventListener("click", () => handleBulkAction("bulk-restore.run").catch(handleUnexpectedError));
+  document.getElementById("bulk-purge-btn")?.addEventListener("click", () => handleBulkAction("bulk-purge.run").catch(handleUnexpectedError));
   document.getElementById("bulk-clear-btn")?.addEventListener("click", () => handleBulkAction("bulk-clear.run").catch(handleUnexpectedError));
 
   els.newNoteButton.addEventListener("click", () => createBlankNote().catch(handleUnexpectedError));
