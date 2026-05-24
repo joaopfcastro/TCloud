@@ -2505,6 +2505,31 @@ button:disabled,
   max-width: 500px;
 }
 
+#editor-bulk-state {
+  align-content: start;
+  padding-top: 48px;
+  place-items: start center;
+}
+
+#editor-bulk-state .empty-panel {
+  width: min(560px, 100%);
+  padding: 22px;
+}
+
+#editor-bulk-state .empty-panel h2 {
+  font-size: clamp(24px, 3vw, 32px);
+}
+
+#editor-bulk-state .empty-panel p:last-of-type {
+  margin-top: 8px;
+  font-size: 14px;
+}
+
+#editor-bulk-state .bulk-actions-grid {
+  margin-top: 18px;
+  max-width: none;
+}
+
 /* Ajustes de Alinhamento de Ícones */
 .primary-button,
 .secondary-button,

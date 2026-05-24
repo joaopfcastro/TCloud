@@ -597,7 +597,13 @@ function currentSaveStatusText() {
   return "Pronto";
 }
 
+function hasShellWindowActions() {
+  return window.parent !== window && typeof window.TCloudApp?.setWindowActions === "function";
+}
+
 function publishWindowActions() {
+  if (!hasShellWindowActions()) return;
+
   const selectedCount = state.selectedNoteIds?.size || 0;
   if (selectedCount > 1) {
     const view = state.filters.view;
@@ -1077,15 +1083,16 @@ function selectNoteRange(noteId) {
 
 function updateSelectionUI() {
   const selectedCount = state.selectedNoteIds.size;
+  const useShellActions = hasShellWindowActions();
   
   // 2. Controlar visibilidade do editor e do painel de lote
   if (selectedCount > 1) {
     els.editorPanel.classList.add("hidden");
     els.emptyState.classList.add("hidden");
-    els.bulkState.classList.remove("hidden");
+    els.bulkState.classList.toggle("hidden", useShellActions);
 
     document.getElementById("bulk-title").textContent = `${selectedCount} notas selecionadas`;
-    renderBulkPanelButtons();
+    if (!useShellActions) renderBulkPanelButtons();
   } else {
     els.bulkState.classList.add("hidden");
     if (selectedCount === 1) {
@@ -2952,8 +2959,6 @@ function navigateFloatingSearch(direction) {
 window.showFloatingSearch = showFloatingSearch;
 window.hideFloatingSearch = hideFloatingSearch;
 window.state = state;
-
-
 
 
 
