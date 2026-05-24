@@ -171,6 +171,10 @@ const state = {
     index: -1,
     highlights: [],
   },
+  selectedNoteIds: new Set(),
+  lastClickedNoteId: null,
+  currentListRequestId: 0,
+  currentOpenNoteRequestId: 0,
 };
 
 const els = {
@@ -239,6 +243,7 @@ const els = {
   searchPrev: document.getElementById("search-prev"),
   searchNext: document.getElementById("search-next"),
   searchClose: document.getElementById("search-close"),
+  bulkState: document.getElementById("editor-bulk-state"),
 };
 
 function showToast(message, kind = "info") {
@@ -593,6 +598,66 @@ function currentSaveStatusText() {
 }
 
 function publishWindowActions() {
+  const selectedCount = state.selectedNoteIds?.size || 0;
+  if (selectedCount > 1) {
+    const view = state.filters.view;
+    const isTrash = view === "trash";
+    const isArchived = view === "archived";
+
+    const actions = [
+      {
+        id: "sidebar.toggle",
+        label: "Sidebar",
+        icon: "ph-sidebar",
+        pressed: !state.ui.sidebarCollapsed,
+      },
+    ];
+
+    if (isTrash) {
+      actions.push({
+        id: "bulk-restore.run",
+        label: "Restaurar selecionadas",
+        icon: "ph-arrow-counter-clockwise",
+        variant: "primary",
+      });
+    } else {
+      const selectedIds = Array.from(state.selectedNoteIds);
+      const anyFav = selectedIds.some((id) => {
+        const n = state.notes.find((x) => x.id === id);
+        return n && n.favorite;
+      });
+
+      actions.push({
+        id: "bulk-favorite.run",
+        label: anyFav ? "Desfavoritar" : "Favoritar",
+        icon: "ph-star",
+      });
+      actions.push({
+        id: "bulk-archive.run",
+        label: isArchived ? "Desarquivar" : "Arquivar",
+        icon: isArchived ? "ph-archive-tray" : "ph-archive",
+      });
+      actions.push({
+        id: "bulk-delete.run",
+        label: "Mover para lixeira",
+        icon: "ph-trash",
+        variant: "danger",
+      });
+    }
+
+    actions.push({
+      id: "bulk-clear.run",
+      label: "Limpar seleção",
+      icon: "ph-x",
+    });
+
+    window.TCloudApp?.setWindowActions?.({
+      statusText: `${selectedCount} notas selecionadas`,
+      actions,
+    });
+    return;
+  }
+
   const hasNote = Boolean(state.currentNote);
   const trashed = Boolean(state.currentNote?.deleted_at);
   const archived = Boolean(state.currentNote?.archived);
@@ -763,7 +828,7 @@ function renderNoteTags() {
     const remove = document.createElement("button");
     remove.type = "button";
     remove.setAttribute("aria-label", `Remover tag ${tag}`);
-    remove.textContent = "×";
+    remove.innerHTML = '<i class="ph ph-x"></i>';
     remove.addEventListener("click", () => removeTag(tag));
     chip.appendChild(remove);
     els.noteTags.appendChild(chip);
@@ -789,9 +854,10 @@ function renderNotesList() {
   }
 
   state.notes.forEach((note) => {
+    const isSelected = state.selectedNoteIds.has(note.id);
     const button = document.createElement("button");
     button.type = "button";
-    button.className = `note-card${note.id === state.currentNoteId ? " is-active" : ""}`;
+    button.className = `note-card${note.id === state.currentNoteId ? " is-active" : ""}${isSelected ? " is-selected" : ""}`;
     button.dataset.id = note.id;
     button.setAttribute("role", "listitem");
     const tags = Array.isArray(note.tags) ? note.tags.slice(0, 3) : [];
@@ -799,7 +865,10 @@ function renderNotesList() {
     const stateLabels = noteStateLabels(note);
     button.innerHTML = `
       <div class="note-card-top">
-        <span class="note-card-title">${escapeHtml(note.title || "Sem título")}</span>
+        <div class="note-card-title-container">
+          <input type="checkbox" class="note-card-checkbox" ${isSelected ? "checked" : ""}>
+          <span class="note-card-title">${escapeHtml(note.title || "Sem título")}</span>
+        </div>
         ${note.favorite ? '<span class="note-card-favorite" aria-hidden="true">★</span>' : ""}
       </div>
       <span class="note-card-excerpt">${escapeHtml(preview)}</span>
@@ -812,11 +881,32 @@ function renderNotesList() {
         </div>
       </div>
     `;
-    button.addEventListener("click", () => {
-      openNote(note.id).then(() => {
-        if (window.matchMedia("(max-width: 860px)").matches) setSidebarCollapsed(true);
-      }).catch(handleUnexpectedError);
+
+    const checkbox = button.querySelector(".note-card-checkbox");
+    checkbox.addEventListener("click", (event) => {
+      event.stopPropagation();
+      toggleNoteSelection(note.id);
     });
+
+    button.addEventListener("click", (event) => {
+      const isCmdOrCtrl = event.metaKey || event.ctrlKey;
+      const isShift = event.shiftKey;
+      if (isCmdOrCtrl) {
+        event.preventDefault();
+        toggleNoteSelection(note.id);
+      } else if (isShift) {
+        event.preventDefault();
+        selectNoteRange(note.id);
+      } else {
+        state.selectedNoteIds.clear();
+        state.selectedNoteIds.add(note.id);
+        state.lastClickedNoteId = note.id;
+        openNote(note.id).then(() => {
+          if (window.matchMedia("(max-width: 860px)").matches) setSidebarCollapsed(true);
+        }).catch(handleUnexpectedError);
+      }
+    });
+
     els.notesList.appendChild(button);
   });
 }
@@ -855,7 +945,7 @@ function setCurrentNote(note) {
   els.titleInput.value = note?.title || "";
   els.favoriteButton.classList.toggle("is-active", Boolean(note?.favorite));
   els.favoriteButton.setAttribute("aria-pressed", note?.favorite ? "true" : "false");
-  els.favoriteButton.textContent = note?.favorite ? "★" : "☆";
+  els.favoriteButton.innerHTML = note?.favorite ? '<i class="ph-fill ph-star"></i>' : '<i class="ph ph-star"></i>';
   renderAppearance();
   renderNoteTags();
   renderHeaderMeta();
@@ -879,32 +969,261 @@ function setCurrentNote(note) {
 }
 
 async function loadNotes({ preserveSelection = true } = {}) {
-  const response = await state.api.list({
-    query: currentQuery(),
-    limit: 100,
-    favorite: currentFavoriteFilter(),
-    tag: state.filters.tag,
-    deleted: currentDeletedFilter(),
-    archived: currentArchivedFilter(),
-  });
-  state.notes = Array.isArray(response.notes) ? response.notes : [];
-  state.lastLoadedQuery = currentQuery();
-  renderNotesList();
+  const requestId = ++state.currentListRequestId;
 
-  if (!state.notes.length) {
-    state.currentNoteId = "";
-    setCurrentNote(null);
-    setEditorVisibility(false);
+  if (!preserveSelection) {
+    state.selectedNoteIds.clear();
+    state.lastClickedNoteId = null;
+    state.currentOpenNoteRequestId++; // Invalidate pending openNote calls
+    updateSelectionUI();
+  }
+
+  try {
+    const response = await state.api.list({
+      query: currentQuery(),
+      limit: 100,
+      favorite: currentFavoriteFilter(),
+      tag: state.filters.tag,
+      deleted: currentDeletedFilter(),
+      archived: currentArchivedFilter(),
+    });
+    if (requestId !== state.currentListRequestId) return;
+
+    state.notes = Array.isArray(response.notes) ? response.notes : [];
+    state.lastLoadedQuery = currentQuery();
+
+    // Keep only selected notes that are still in the loaded notes list
+    const currentNoteIds = new Set(state.notes.map((n) => n.id));
+    state.selectedNoteIds.forEach((id) => {
+      if (!currentNoteIds.has(id)) {
+        state.selectedNoteIds.delete(id);
+      }
+    });
+
+    renderNotesList();
+
+    if (!state.notes.length) {
+      state.selectedNoteIds.clear();
+      state.currentNoteId = "";
+      setCurrentNote(null);
+      setEditorVisibility(false);
+      updateSelectionUI();
+      return;
+    }
+
+    if (state.selectedNoteIds.size > 1) {
+      updateSelectionUI();
+      return;
+    }
+
+    // Fallback to single note selection if 0 or 1 notes are selected
+    const desiredId = preserveSelection ? (Array.from(state.selectedNoteIds)[0] || state.currentNoteId) : "";
+    const nextNote = state.notes.find((note) => note.id === desiredId) || state.notes[0];
+
+    state.selectedNoteIds.clear();
+    state.selectedNoteIds.add(nextNote.id);
+
+    if (!state.currentNote || state.currentNote.id !== nextNote.id) {
+      if (requestId !== state.currentListRequestId) return;
+      await openNote(nextNote.id, { skipPendingSave: true });
+    } else {
+      if (requestId !== state.currentListRequestId) return;
+      setCurrentNote({ ...state.currentNote, ...nextNote });
+      updateSelectionUI();
+    }
+  } catch (error) {
+    if (requestId === state.currentListRequestId) {
+      handleUnexpectedError(error);
+    }
+  }
+}
+
+function toggleNoteSelection(noteId) {
+  if (state.selectedNoteIds.has(noteId)) {
+    state.selectedNoteIds.delete(noteId);
+  } else {
+    state.selectedNoteIds.add(noteId);
+    state.lastClickedNoteId = noteId;
+  }
+  updateSelectionUI();
+}
+
+function selectNoteRange(noteId) {
+  if (!state.lastClickedNoteId) {
+    toggleNoteSelection(noteId);
+    return;
+  }
+  const ids = state.notes.map((n) => n.id);
+  const startIdx = ids.indexOf(state.lastClickedNoteId);
+  const endIdx = ids.indexOf(noteId);
+  if (startIdx === -1 || endIdx === -1) {
+    toggleNoteSelection(noteId);
+    return;
+  }
+  const min = Math.min(startIdx, endIdx);
+  const max = Math.max(startIdx, endIdx);
+  for (let i = min; i <= max; i++) {
+    state.selectedNoteIds.add(ids[i]);
+  }
+  updateSelectionUI();
+}
+
+function updateSelectionUI() {
+  const selectedCount = state.selectedNoteIds.size;
+  
+  // 2. Controlar visibilidade do editor e do painel de lote
+  if (selectedCount > 1) {
+    els.editorPanel.classList.add("hidden");
+    els.emptyState.classList.add("hidden");
+    els.bulkState.classList.remove("hidden");
+
+    document.getElementById("bulk-title").textContent = `${selectedCount} notas selecionadas`;
+    renderBulkPanelButtons();
+  } else {
+    els.bulkState.classList.add("hidden");
+    if (selectedCount === 1) {
+      const singleId = Array.from(state.selectedNoteIds)[0];
+      if (state.currentNoteId !== singleId) {
+        openNote(singleId).catch(handleUnexpectedError);
+      } else {
+        setEditorVisibility(true);
+      }
+    } else {
+      state.currentNoteId = "";
+      setCurrentNote(null);
+      setEditorVisibility(false);
+    }
+  }
+
+  // 1. Atualizar estilos e checkboxes dos cards
+  const cards = els.notesList.querySelectorAll(".note-card");
+  cards.forEach((card) => {
+    const id = card.dataset.id;
+    const isSelected = state.selectedNoteIds.has(id);
+    const isActive = (state.currentNoteId === id);
+    card.classList.toggle("is-selected", isSelected);
+    card.classList.toggle("is-active", isActive);
+    const cb = card.querySelector(".note-card-checkbox");
+    if (cb) cb.checked = isSelected;
+  });
+
+  // 3. Atualizar Window Actions (Menu Auxiliar)
+  publishWindowActions();
+}
+
+function renderBulkPanelButtons() {
+  const view = state.filters.view;
+  const isTrash = view === "trash";
+  const isArchived = view === "archived";
+
+  const favBtn = document.getElementById("bulk-fav-btn");
+  const arcBtn = document.getElementById("bulk-arc-btn");
+  const delBtn = document.getElementById("bulk-del-btn");
+  const rstBtn = document.getElementById("bulk-rst-btn");
+
+  if (isTrash) {
+    favBtn?.classList.add("hidden");
+    arcBtn?.classList.add("hidden");
+    rstBtn?.classList.remove("hidden");
+    delBtn?.classList.add("hidden");
+  } else {
+    favBtn?.classList.remove("hidden");
+    arcBtn?.classList.remove("hidden");
+    rstBtn?.classList.add("hidden");
+    delBtn?.classList.remove("hidden");
+
+    const selectedIds = Array.from(state.selectedNoteIds);
+    const anyFav = selectedIds.some((id) => {
+      const n = state.notes.find((x) => x.id === id);
+      return n && n.favorite;
+    });
+
+    if (favBtn) {
+      favBtn.querySelector(".label-text").textContent = anyFav ? "Desfavoritar" : "Favoritar";
+      favBtn.querySelector("i").className = anyFav ? "ph-fill ph-star" : "ph ph-star";
+    }
+    if (arcBtn) {
+      arcBtn.querySelector(".label-text").textContent = isArchived ? "Desarquivar" : "Arquivar";
+      arcBtn.querySelector("i").className = isArchived ? "ph ph-archive-tray" : "ph ph-archive";
+    }
+  }
+}
+
+async function handleBulkAction(command) {
+  const selectedIds = Array.from(state.selectedNoteIds);
+  if (!selectedIds.length && command !== "bulk-clear.run") return;
+
+  if (command === "bulk-clear.run") {
+    state.selectedNoteIds.clear();
+    state.lastClickedNoteId = null;
+    state.currentOpenNoteRequestId++; // Invalidate pending openNote calls
+    updateSelectionUI();
     return;
   }
 
-  const desiredId = preserveSelection ? state.currentNoteId : "";
-  const nextNote = state.notes.find((note) => note.id === desiredId) || state.notes[0];
-  if (!state.currentNote || state.currentNote.id !== nextNote.id) {
-    await openNote(nextNote.id, { skipPendingSave: true });
-  } else {
-    setCurrentNote({ ...state.currentNote, ...nextNote });
-    renderNotesList();
+  if (command === "bulk-delete.run") {
+    askConfirmation({
+      eyebrow: "Ação em lote",
+      title: "Mover notas para a lixeira?",
+      description: `Deseja mover ${selectedIds.length} notas para a lixeira? Elas poderão ser restauradas depois.`,
+      acceptLabel: "Mover para lixeira",
+      acceptKind: "danger",
+      onAccept: async () => {
+        setSaveState("saving");
+        await Promise.all(selectedIds.map((id) => state.api.remove(id)));
+        showToast(`${selectedIds.length} notas enviadas para a lixeira.`, "info");
+        state.selectedNoteIds.clear();
+        await loadNotes({ preserveSelection: false });
+        setSaveState("saved", { at: Date.now() });
+      },
+    });
+    return;
+  }
+
+  if (command === "bulk-restore.run") {
+    setSaveState("saving");
+    await Promise.all(selectedIds.map((id) => state.api.restore(id)));
+    showToast(`${selectedIds.length} notas restauradas.`, "success");
+    state.selectedNoteIds.clear();
+    state.filters.view = "active";
+    await loadNotes({ preserveSelection: false });
+    setSaveState("saved", { at: Date.now() });
+    return;
+  }
+
+  if (command === "bulk-favorite.run") {
+    setSaveState("saving");
+    const anyFav = selectedIds.some((id) => {
+      const n = state.notes.find((x) => x.id === id);
+      return n && n.favorite;
+    });
+    const targetFav = !anyFav;
+    await Promise.all(selectedIds.map((id) => state.api.update(id, { favorite: targetFav })));
+    showToast(targetFav ? `${selectedIds.length} notas favoritadas.` : `${selectedIds.length} notas desfavoritadas.`, "success");
+    state.selectedNoteIds.clear();
+    await loadNotes({ preserveSelection: true });
+    setSaveState("saved", { at: Date.now() });
+    return;
+  }
+
+  if (command === "bulk-archive.run") {
+    setSaveState("saving");
+    const isArchived = state.filters.view === "archived";
+    const targetArchived = !isArchived;
+    await Promise.all(selectedIds.map((id) => state.api.update(id, { archived: targetArchived })));
+    showToast(targetArchived ? `${selectedIds.length} notas arquivadas.` : `${selectedIds.length} notas desarquivadas.`, "success");
+    state.selectedNoteIds.clear();
+
+    if (targetArchived && state.filters.view === "active") {
+      await loadNotes({ preserveSelection: false });
+    } else if (!targetArchived && state.filters.view === "archived") {
+      state.filters.view = "active";
+      await loadNotes({ preserveSelection: false });
+    } else {
+      await loadNotes({ preserveSelection: true });
+    }
+    setSaveState("saved", { at: Date.now() });
+    return;
   }
 }
 
@@ -996,23 +1315,45 @@ async function openNote(noteId, options = {}) {
   hideFloatingSearch();
   if (!options.skipPendingSave) await flushPendingSave();
 
+  const requestId = ++state.currentOpenNoteRequestId;
+
   state.loadingNote = true;
   state.currentNoteId = noteId;
+
+  // Clear multi-selection state and ensure only the opened note is in selectedNoteIds
+  state.selectedNoteIds.clear();
+  state.selectedNoteIds.add(noteId);
+  state.lastClickedNoteId = noteId;
+
   renderNotesList();
   setSaveState("saving");
 
-  const response = await state.api.get(noteId, { includeDeleted: currentDeletedFilter() === "only" });
-  state.dirtyTitle = false;
-  state.dirtyContent = false;
-  state.dirtyMeta = false;
-  setCurrentNote(response.note);
-  setEditorVisibility(true);
-  await state.editor.render(sanitizeContentForSave(response.note.content), { isNewNote: true });
-  syncNoteHash(response.note.id);
-  document.querySelector(".editor-shell")?.scrollTo({ top: 0, left: 0 });
-  state.loadingNote = false;
-  renderNotesList();
-  setSaveState("saved", { at: Date.now() });
+  try {
+    const response = await state.api.get(noteId, { includeDeleted: currentDeletedFilter() === "only" });
+    if (requestId !== state.currentOpenNoteRequestId) return;
+
+    state.dirtyTitle = false;
+    state.dirtyContent = false;
+    state.dirtyMeta = false;
+    setCurrentNote(response.note);
+    setEditorVisibility(true);
+    await state.editor.render(sanitizeContentForSave(response.note.content), { isNewNote: true });
+    if (requestId !== state.currentOpenNoteRequestId) return;
+
+    syncNoteHash(response.note.id);
+    document.querySelector(".editor-shell")?.scrollTo({ top: 0, left: 0 });
+    state.loadingNote = false;
+
+    updateSelectionUI();
+
+    renderNotesList();
+    setSaveState("saved", { at: Date.now() });
+  } catch (error) {
+    if (requestId === state.currentOpenNoteRequestId) {
+      state.loadingNote = false;
+      handleUnexpectedError(error);
+    }
+  }
 }
 
 function scheduleAutosave() {
@@ -1299,7 +1640,7 @@ function renderRevisionsList() {
     const restoreButton = document.createElement("button");
     restoreButton.type = "button";
     restoreButton.className = "secondary-button";
-    restoreButton.textContent = "Restaurar esta versao";
+    restoreButton.innerHTML = '<i class="ph ph-arrow-counter-clockwise"></i> Restaurar esta versão';
     restoreButton.addEventListener("click", () => restoreRevision(revision.version).catch(handleUnexpectedError));
     card.querySelector(".revision-bottom").appendChild(restoreButton);
     els.revisionsList.appendChild(card);
@@ -1745,6 +2086,10 @@ function handleUnexpectedError(error) {
 
 function handleWindowAction({ actionId, menuItemId } = {}) {
   const command = menuItemId || actionId;
+  if (command && command.startsWith("bulk-")) {
+    handleBulkAction(command).catch(handleUnexpectedError);
+    return;
+  }
   if (command === "sidebar.toggle") {
     setSidebarCollapsed(!state.ui.sidebarCollapsed);
     return;
@@ -1788,6 +2133,12 @@ function wireTemplateButtons() {
 }
 
 function wireEvents() {
+  document.getElementById("bulk-fav-btn")?.addEventListener("click", () => handleBulkAction("bulk-favorite.run").catch(handleUnexpectedError));
+  document.getElementById("bulk-arc-btn")?.addEventListener("click", () => handleBulkAction("bulk-archive.run").catch(handleUnexpectedError));
+  document.getElementById("bulk-del-btn")?.addEventListener("click", () => handleBulkAction("bulk-delete.run").catch(handleUnexpectedError));
+  document.getElementById("bulk-rst-btn")?.addEventListener("click", () => handleBulkAction("bulk-restore.run").catch(handleUnexpectedError));
+  document.getElementById("bulk-clear-btn")?.addEventListener("click", () => handleBulkAction("bulk-clear.run").catch(handleUnexpectedError));
+
   els.newNoteButton.addEventListener("click", () => createBlankNote().catch(handleUnexpectedError));
   els.sidebarToggleButton?.addEventListener("click", () => setSidebarCollapsed(true));
   els.sidebarOpenButton?.addEventListener("click", () => setSidebarCollapsed(!state.ui.sidebarCollapsed));

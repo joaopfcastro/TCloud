@@ -1,4 +1,4 @@
-import { CodeBlockTool, DividerTool, QuoteTool, TodoTool } from "./editor-tools.js";
+import { CodeBlockTool, DividerTool, QuoteTool, TextColorTool, TodoTool } from "./editor-tools.js";
 import {
   TCloudAudioTool,
   TCloudFileTool,
@@ -127,6 +127,7 @@ export class EditorAdapter {
             Bold: "Negrito",
             Italic: "Itálico",
             Link: "Link",
+            Color: "Cor",
             "Inline Code": "Código inline",
             text: "Texto",
             heading: "Título",
@@ -184,14 +185,14 @@ export class EditorAdapter {
       tools: {
         paragraph: {
           class: window.Paragraph,
-          inlineToolbar: true,
+          inlineToolbar: ["bold", "italic", "link", "textColor"],
           config: {
             preserveBlank: true,
           },
         },
         header: {
           class: window.Header,
-          inlineToolbar: true,
+          inlineToolbar: ["bold", "italic", "link", "textColor"],
           config: {
             levels: [1, 2, 3],
             defaultLevel: 2,
@@ -199,10 +200,13 @@ export class EditorAdapter {
         },
         list: {
           class: window.EditorjsList,
-          inlineToolbar: true,
+          inlineToolbar: ["bold", "italic", "link", "textColor"],
           config: {
             defaultStyle: "unordered",
           },
+        },
+        textColor: {
+          class: TextColorTool,
         },
         todo: {
           class: TodoTool,

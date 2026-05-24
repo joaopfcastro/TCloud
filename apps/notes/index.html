@@ -6,7 +6,7 @@
   <title>TCloud Notes</title>
   <script src="https://unpkg.com/@phosphor-icons/web"></script>
   <link rel="icon" href="data:,">
-  <link rel="stylesheet" href="./style.css?v=notes-layout-20260519b">
+  <link rel="stylesheet" href="./style.css?v=notes-color-menu-20260524">
 </head>
 <body>
   <div class="notes-app">
@@ -15,13 +15,13 @@
         <aside class="sidebar">
           <div class="sidebar-header">
             <div class="brand-lockup">
-              <span class="brand-icon" aria-hidden="true">▣</span>
+              <i class="ph ph-notebook brand-icon" aria-hidden="true"></i>
               <h1>TCloud Notes</h1>
             </div>
-            <button id="sidebar-toggle-button" class="sidebar-toggle-button" type="button" aria-label="Recolher sidebar">«</button>
+            <button id="sidebar-toggle-button" class="sidebar-toggle-button" type="button" aria-label="Recolher sidebar"><i class="ph ph-caret-double-left"></i></button>
           </div>
 
-          <button id="new-note-button" class="primary-button" type="button">+ Nova nota</button>
+          <button id="new-note-button" class="primary-button" type="button"><i class="ph ph-plus"></i> Nova nota</button>
 
           <label class="search-shell" for="search-input">
             <span>Buscar</span>
@@ -29,10 +29,10 @@
           </label>
 
           <nav class="filter-tabs" role="tablist" aria-label="Filtros principais">
-            <button id="filter-all" class="filter-tab is-active" type="button" data-view="active">Minhas Notas</button>
-            <button id="filter-favorites" class="filter-tab" type="button" data-view="favorites">Favoritas</button>
-            <button id="filter-archived" class="filter-tab" type="button" data-view="archived">Arquivadas</button>
-            <button id="filter-trash" class="filter-tab" type="button" data-view="trash">Lixeira</button>
+            <button id="filter-all" class="filter-tab is-active" type="button" data-view="active"><i class="ph ph-note"></i> <span>Minhas Notas</span></button>
+            <button id="filter-favorites" class="filter-tab" type="button" data-view="favorites"><i class="ph ph-star"></i> <span>Favoritas</span></button>
+            <button id="filter-archived" class="filter-tab" type="button" data-view="archived"><i class="ph ph-archive"></i> <span>Arquivadas</span></button>
+            <button id="filter-trash" class="filter-tab" type="button" data-view="trash"><i class="ph ph-trash"></i> <span>Lixeira</span></button>
           </nav>
 
           <div id="notes-list" class="notes-list" role="list" aria-label="Lista de notas"></div>
@@ -48,6 +48,31 @@
               <h2 id="empty-title">Crie sua primeira nota</h2>
               <p id="empty-description">Abra uma nota em branco ou comece com um template. Escreva, organize com tags e mantenha foco no conteúdo.</p>
               <div id="empty-template-grid" class="template-grid"></div>
+            </div>
+          </section>
+
+          <section id="editor-bulk-state" class="editor-empty-state hidden">
+            <div class="empty-panel">
+              <p class="eyebrow">Seleção Múltipla</p>
+              <h2 id="bulk-title">0 notas selecionadas</h2>
+              <p id="bulk-description">Escolha uma ação em lote para as notas selecionadas.</p>
+              <div id="bulk-actions-grid" class="bulk-actions-grid">
+                <button id="bulk-fav-btn" class="secondary-button" type="button">
+                  <i class="ph ph-star"></i> <span class="label-text">Favoritar</span>
+                </button>
+                <button id="bulk-arc-btn" class="secondary-button" type="button">
+                  <i class="ph ph-archive"></i> <span class="label-text">Arquivar</span>
+                </button>
+                <button id="bulk-del-btn" class="ghost-danger-button" type="button">
+                  <i class="ph ph-trash"></i> <span class="label-text">Mover para lixeira</span>
+                </button>
+                <button id="bulk-rst-btn" class="primary-button hidden" type="button">
+                  <i class="ph ph-arrow-counter-clockwise"></i> Restaurar
+                </button>
+                <button id="bulk-clear-btn" class="secondary-button" type="button">
+                  <i class="ph ph-x"></i> Limpar seleção
+                </button>
+              </div>
             </div>
           </section>
 
@@ -70,7 +95,7 @@
                     </div>
                   </div>
                   <div class="note-cover-shell">
-                    <button id="note-cover-button" class="appearance-toggle-button" type="button" aria-haspopup="menu" aria-expanded="false">Capa</button>
+                    <button id="note-cover-button" class="appearance-toggle-button" type="button" aria-haspopup="menu" aria-expanded="false"><i class="ph ph-image"></i> Capa</button>
                     <div id="note-cover-menu" class="appearance-popover hidden" role="menu" aria-label="Ações da capa">
                       <button class="appearance-button" type="button" data-cover-action="gradient">Gradiente</button>
                       <button class="appearance-button" type="button" data-cover-action="color">Cor</button>
@@ -80,7 +105,7 @@
                   </div>
                 </div>
                 <div class="title-row">
-                  <button id="favorite-button" class="icon-toggle-button" type="button" aria-pressed="false" title="Favoritar nota">☆</button>
+                  <button id="favorite-button" class="icon-toggle-button" type="button" aria-pressed="false" title="Favoritar nota"><i class="ph ph-star"></i></button>
                   <input id="note-title" class="note-title" type="text" placeholder="Sem título" maxlength="240">
                 </div>
                 <div class="tags-shell">
@@ -112,7 +137,7 @@
           <p class="eyebrow">Templates</p>
           <h3>Escolha um ponto de partida</h3>
         </div>
-        <button class="icon-close-button" type="button" data-close-modal="templates" aria-label="Fechar">×</button>
+        <button class="icon-close-button" type="button" data-close-modal="templates" aria-label="Fechar"><i class="ph ph-x"></i></button>
       </div>
       <div id="templates-grid" class="template-grid"></div>
     </div>
@@ -126,7 +151,7 @@
           <p class="eyebrow">Histórico</p>
           <h3>Versões da nota</h3>
         </div>
-        <button class="icon-close-button" type="button" data-close-modal="revisions" aria-label="Fechar">×</button>
+        <button class="icon-close-button" type="button" data-close-modal="revisions" aria-label="Fechar"><i class="ph ph-x"></i></button>
       </div>
       <div id="revisions-summary" class="revisions-summary"></div>
       <div id="revisions-list" class="revisions-list"></div>
@@ -141,22 +166,22 @@
           <p class="eyebrow">Importar e exportar</p>
           <h3>Arquivos da nota</h3>
         </div>
-        <button class="icon-close-button" type="button" data-close-modal="import-export" aria-label="Fechar">×</button>
+        <button class="icon-close-button" type="button" data-close-modal="import-export" aria-label="Fechar"><i class="ph ph-x"></i></button>
       </div>
       <div class="import-export-grid">
         <section class="io-card">
           <h4>Importar</h4>
           <p class="note-meta">Suporta <code>.txt</code>, <code>.md</code> básico e <code>.tcnote.json</code>.</p>
           <input id="import-file-input" type="file" accept=".txt,.md,.markdown,.json,.tcnote.json">
-          <button id="import-confirm-button" class="primary-button" type="button">Importar arquivo</button>
+          <button id="import-confirm-button" class="primary-button" type="button"><i class="ph ph-upload-simple"></i> Importar arquivo</button>
         </section>
         <section class="io-card">
           <h4>Exportar</h4>
           <p id="export-preview" class="note-meta">Selecione uma nota para habilitar a exportação.</p>
           <div class="io-actions">
-            <button id="export-json-button" class="secondary-button" type="button">.tcnote.json</button>
-            <button id="export-markdown-button" class="secondary-button" type="button">Markdown</button>
-            <button id="export-html-button" class="secondary-button" type="button">HTML</button>
+            <button id="export-json-button" class="secondary-button" type="button"><i class="ph ph-code"></i> .tcnote.json</button>
+            <button id="export-markdown-button" class="secondary-button" type="button"><i class="ph ph-file-text"></i> Markdown</button>
+            <button id="export-html-button" class="secondary-button" type="button"><i class="ph ph-globe"></i> HTML</button>
           </div>
         </section>
       </div>
@@ -173,12 +198,12 @@
           <p id="confirm-eyebrow" class="eyebrow">Confirmacao</p>
           <h3 id="confirm-title">Tem certeza?</h3>
         </div>
-        <button class="icon-close-button" type="button" data-close-modal="confirm" aria-label="Fechar">×</button>
+        <button class="icon-close-button" type="button" data-close-modal="confirm" aria-label="Fechar"><i class="ph ph-x"></i></button>
       </div>
       <p id="confirm-description" class="confirm-description">Confirme para continuar.</p>
       <div class="confirm-actions">
-        <button id="confirm-cancel-button" class="secondary-button" type="button">Cancelar</button>
-        <button id="confirm-accept-button" class="ghost-danger-button" type="button">Confirmar</button>
+        <button id="confirm-cancel-button" class="secondary-button" type="button"><i class="ph ph-x"></i> Cancelar</button>
+        <button id="confirm-accept-button" class="ghost-danger-button" type="button"><i class="ph ph-check"></i> Confirmar</button>
       </div>
     </div>
   </div>
@@ -234,6 +259,6 @@
   <script src="./vendor/editorjs/paragraph/paragraph.umd.js"></script>
   <script src="./vendor/editorjs/header/header.umd.js"></script>
   <script src="./vendor/editorjs/list/editorjs-list.umd.js"></script>
-  <script type="module" src="./script.js?v=notes-delete-20260524"></script>
+  <script type="module" src="./script.js?v=notes-color-menu-20260524"></script>
 </body>
 </html>

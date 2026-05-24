@@ -1,0 +1,45 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - complementary [ref=e4]:
+      - generic [ref=e5]:
+        - generic [ref=e6]:
+          - generic [ref=e7]: ▣
+          - heading "TCloud Notes" [level=1] [ref=e8]
+        - button "Recolher sidebar" [expanded] [ref=e9] [cursor=pointer]: «
+      - button "+ Nova nota" [ref=e10] [cursor=pointer]
+      - generic [ref=e11]:
+        - generic [ref=e12]: Buscar
+        - searchbox "Buscar" [ref=e13]
+      - tablist "Filtros principais" [ref=e14]:
+        - button "Minhas Notas" [ref=e15] [cursor=pointer]
+        - button "Favoritas" [ref=e16] [cursor=pointer]
+        - button "Arquivadas" [ref=e17] [cursor=pointer]
+        - button "Lixeira" [ref=e18] [cursor=pointer]
+      - list "Lista de notas" [ref=e19]
+      - generic [ref=e20]: Carregando notas...
+    - main [ref=e21]:
+      - generic [ref=e23]:
+        - paragraph [ref=e24]: Notas
+        - heading "Crie sua primeira nota" [level=2] [ref=e25]
+        - paragraph [ref=e26]: Comece em branco ou use um template. Escreva, organize com tags e mantenha foco no conteúdo.
+        - generic [ref=e27]:
+          - button "Em branco Página vazia para começar rápido." [ref=e28] [cursor=pointer]:
+            - generic [ref=e29]: Em branco
+            - generic [ref=e30]: Página vazia para começar rápido.
+          - button "Reunião Agenda, tópicos e próximos passos." [ref=e31] [cursor=pointer]:
+            - generic [ref=e32]: Reunião
+            - generic [ref=e33]: Agenda, tópicos e próximos passos.
+          - button "Checklist Lista de tarefas simples em blocos." [ref=e34] [cursor=pointer]:
+            - generic [ref=e35]: Checklist
+            - generic [ref=e36]: Lista de tarefas simples em blocos.
+          - button "Estudo Resumo, referências e perguntas." [ref=e37] [cursor=pointer]:
+            - generic [ref=e38]: Estudo
+            - generic [ref=e39]: Resumo, referências e perguntas.
+          - button "Diário Reflexões, humor e destaques do dia." [ref=e40] [cursor=pointer]:
+            - generic [ref=e41]: Diário
+            - generic [ref=e42]: Reflexões, humor e destaques do dia.
+          - button "Projeto Contexto, entregas, riscos e status." [ref=e43] [cursor=pointer]:
+            - generic [ref=e44]: Projeto
+            - generic [ref=e45]: Contexto, entregas, riscos e status.
+      - text: Escreva aqui. Use / para inserir blocos.
+  - text:  

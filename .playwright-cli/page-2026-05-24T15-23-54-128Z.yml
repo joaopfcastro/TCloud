@@ -1,0 +1,187 @@
+- generic [ref=e1]:
+  - generic [ref=e3]:
+    - complementary [ref=e4]:
+      - generic [ref=e5]:
+        - generic [ref=e6]:
+          - generic [ref=e7]: ▣
+          - heading "TCloud Notes" [level=1] [ref=e8]
+        - button "Recolher sidebar" [expanded] [ref=e9] [cursor=pointer]: «
+      - button "+ Nova nota" [ref=e10] [cursor=pointer]
+      - generic [ref=e11]:
+        - generic [ref=e12]: Buscar
+        - searchbox "Buscar" [ref=e13]
+      - tablist "Filtros principais" [ref=e14]:
+        - button "Minhas Notas" [ref=e15] [cursor=pointer]
+        - button "Favoritas" [ref=e16] [cursor=pointer]
+        - button "Arquivadas" [ref=e17] [cursor=pointer]
+        - button "Lixeira" [ref=e18] [cursor=pointer]
+      - list "Lista de notas" [ref=e19]:
+        - listitem [ref=e158] [cursor=pointer]:
+          - generic [ref=e160]: Sem título
+          - generic [ref=e161]: Sem título
+        - listitem [ref=e162] [cursor=pointer]:
+          - generic [ref=e164]: Sem título
+          - generic [ref=e165]: Sem título
+        - listitem [ref=e166] [cursor=pointer]:
+          - generic [ref=e168]: Sem título
+          - generic [ref=e169]: Sem título
+        - listitem [ref=e170] [cursor=pointer]:
+          - generic [ref=e172]: Sem título
+          - generic [ref=e173]: Sem título
+        - listitem [ref=e174] [cursor=pointer]:
+          - generic [ref=e176]: Sem título
+          - generic [ref=e177]: Sem título
+        - listitem [ref=e178] [cursor=pointer]:
+          - generic [ref=e180]: Sem título
+          - generic [ref=e181]: Sem título
+        - listitem [ref=e182] [cursor=pointer]:
+          - generic [ref=e184]: Sem título
+          - generic [ref=e185]: Sem título
+        - listitem [ref=e186] [cursor=pointer]:
+          - generic [ref=e188]: Sem título
+          - generic [ref=e189]: Sem título
+        - listitem [ref=e190] [cursor=pointer]:
+          - generic [ref=e192]: Sem título
+          - generic [ref=e193]: Sem título
+        - listitem [ref=e194] [cursor=pointer]:
+          - generic [ref=e196]: Sem título
+          - generic [ref=e197]: image COMO COLOCAR LINKS NOS VÍDEOS DO YOUTUBE 2025 (DEFINITIVO).mp4 image poster (2).jpg
+        - listitem [ref=e198] [cursor=pointer]:
+          - generic [ref=e200]: Sem título
+          - generic [ref=e201]: Sem título
+        - listitem [ref=e202] [cursor=pointer]:
+          - generic [ref=e204]: Sem título
+          - generic [ref=e205]: Sem título
+        - listitem [ref=e206] [cursor=pointer]:
+          - generic [ref=e208]: Sem título
+          - generic [ref=e209]: Sem título
+        - listitem [ref=e210] [cursor=pointer]:
+          - generic [ref=e212]: Sem título
+          - generic [ref=e213]: Sem título
+        - listitem [ref=e214] [cursor=pointer]:
+          - generic [ref=e216]: Sem título
+          - generic [ref=e217]: Sem título
+        - listitem [ref=e218] [cursor=pointer]:
+          - generic [ref=e220]: Sem título
+          - generic [ref=e221]: Sem título
+        - listitem [ref=e222] [cursor=pointer]:
+          - generic [ref=e224]: Sem título
+          - generic [ref=e225]: Sem título
+        - listitem [ref=e226] [cursor=pointer]:
+          - generic [ref=e228]: Sem título
+          - generic [ref=e229]: Sem título
+        - listitem [ref=e230] [cursor=pointer]:
+          - generic [ref=e232]: Sem título
+          - generic [ref=e233]: Sem título
+        - listitem [ref=e234] [cursor=pointer]:
+          - generic [ref=e236]: Sem título
+          - generic [ref=e237]: image poster (1).jpg
+        - listitem [ref=e238] [cursor=pointer]:
+          - generic [ref=e240]: Sem título
+          - generic [ref=e241]: Sem título
+        - listitem [ref=e242] [cursor=pointer]:
+          - generic [ref=e244]: Sem título
+          - generic [ref=e245]: Sem título
+        - listitem [ref=e246] [cursor=pointer]:
+          - generic [ref=e248]: Sem título
+          - generic [ref=e249]: Sem título
+        - listitem [ref=e250] [cursor=pointer]:
+          - generic [ref=e252]: Sem título
+          - generic [ref=e253]: Sem título
+        - listitem [ref=e254] [cursor=pointer]:
+          - generic [ref=e256]: Sem título
+          - generic [ref=e257]: Texto de teste digitado programaticamente
+        - listitem [ref=e258] [cursor=pointer]:
+          - generic [ref=e260]: Sem título
+          - generic [ref=e261]: Sem título
+        - listitem [ref=e262] [cursor=pointer]:
+          - generic [ref=e264]: Reuniao
+          - generic [ref=e265]: Reuniao
+        - listitem [ref=e266] [cursor=pointer]:
+          - generic [ref=e268]: Sessao de estudo
+          - generic [ref=e269]: Sessao de estudo Objetivo Resumo Perguntas abertas
+      - generic [ref=e132]: Minhas Notas • 28 notas
+    - main [ref=e133]:
+      - region "Editor da nota" [ref=e270]:
+        - generic [ref=e272]:
+          - generic [ref=e273]:
+            - generic [ref=e274]:
+              - button "Trocar ícone da nota" [ref=e276] [cursor=pointer]: ▰
+              - button "Capa" [ref=e278] [cursor=pointer]
+            - generic [ref=e279]:
+              - button "☆" [ref=e280] [cursor=pointer]
+              - textbox "Sem título" [ref=e281]
+            - textbox "Adicionar tag" [ref=e283]
+            - generic [ref=e285]: v1 • Sem tags
+          - generic [ref=e288]:
+            - generic [active] [ref=e292]: Escreva aqui. Use / para inserir blocos.
+            - generic [ref=e294]:
+              - img [ref=e296] [cursor=pointer]
+              - generic [ref=e299]:
+                - generic:
+                  - generic:
+                    - generic:
+                      - img
+                    - textbox "Filtrar"
+                  - generic:
+                    - generic:
+                      - generic:
+                        - img
+                      - generic: Texto
+                    - generic:
+                      - generic:
+                        - img
+                      - generic: Título
+                    - generic:
+                      - generic:
+                        - img
+                      - generic: Lista
+                    - generic:
+                      - generic:
+                        - img
+                      - generic: Lista numerada
+                    - generic:
+                      - generic:
+                        - img
+                      - generic: Checklist
+                    - generic:
+                      - generic:
+                        - img
+                      - generic: Checklist
+                    - generic:
+                      - generic:
+                        - img
+                      - generic: Citação
+                    - generic:
+                      - generic:
+                        - img
+                      - generic: Código
+                    - generic:
+                      - generic:
+                        - img
+                      - generic: Divisor
+                    - generic:
+                      - generic:
+                        - img
+                      - generic: Arquivo
+                    - generic:
+                      - generic:
+                        - img
+                      - generic: Imagem
+                    - generic:
+                      - generic:
+                        - img
+                      - generic: Video
+                    - generic:
+                      - generic:
+                        - img
+                      - generic: Audio
+                    - generic:
+                      - generic:
+                        - img
+                      - generic: PDF
+                    - generic:
+                      - generic:
+                        - img
+                      - generic: Pasta
+  - text:  
