@@ -461,9 +461,8 @@ export class EditorAdapter {
     }
   }
 
-  async deleteBlock() {
+  async deleteBlockAtIndex(index) {
     await this.init();
-    const index = await this.currentBlockIndex();
     if (index === -1) return;
     const content = normalizeEditorData(await this.save());
     if (content.blocks.length <= 1) {
@@ -483,6 +482,23 @@ export class EditorAdapter {
     } else {
       await this.focus();
     }
+    await this.onChange();
+    this.triggerHistorySave();
+  }
+
+  async deleteBlockByElement(element) {
+    await this.init();
+    const blockElement = element?.closest?.(".ce-block");
+    if (!blockElement) return;
+    const holderElement = typeof this.holder === "string" ? document.getElementById(this.holder) : this.holder;
+    const blocks = Array.from(holderElement?.querySelectorAll(".ce-block") || []);
+    const index = blocks.indexOf(blockElement);
+    if (index === -1) return;
+    await this.deleteBlockAtIndex(index);
+  }
+
+  async deleteBlock() {
+    await this.deleteBlockAtIndex(await this.currentBlockIndex());
   }
 }
 

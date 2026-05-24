@@ -272,6 +272,33 @@ export class NotesApi {
     return this.authUrl(`/api/thumbnail?path=${encodeURIComponent(path)}`);
   }
 
+  async deleteFile(path) {
+    const normalizedPath = String(path || "").trim();
+    if (!normalizedPath) return null;
+    const deleteResponse = await apiFetch(`/api/files/${encodeURIComponent(normalizedPath)}`, { method: "DELETE" });
+    if (deleteResponse.ok) {
+      try {
+        return await deleteResponse.json();
+      } catch (error) {
+        return { ok: true };
+      }
+    }
+    if (deleteResponse.status !== 404 && deleteResponse.status !== 405) {
+      let message = "Falha ao excluir arquivo.";
+      try {
+        const data = await deleteResponse.json();
+        message = data.error || message;
+      } catch (error) {
+        message = await deleteResponse.text() || message;
+      }
+      throw new Error(message);
+    }
+    return apiJson("/api/delete", {
+      method: "POST",
+      body: JSON.stringify({ path: normalizedPath }),
+    });
+  }
+
   async searchFiles(query, limit = 25) {
     if (await detectRuntimeMode()) {
       return window.TCloudApp.call("search.query", { query, limit });

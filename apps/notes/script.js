@@ -468,6 +468,28 @@ function extractAttachmentsFromContent(content) {
   return attachments;
 }
 
+function attachmentKey(attachment) {
+  const path = String(attachment?.path || "").trim();
+  if (!path) return "";
+  const kind = String(attachment?.kind || "file").trim().toLowerCase() || "file";
+  return `${kind}:${path}`;
+}
+
+function removedAttachments(previousContent, nextContent) {
+  const previous = extractAttachmentsFromContent(previousContent);
+  const nextKeys = new Set(extractAttachmentsFromContent(nextContent).map(attachmentKey));
+  return previous.filter((attachment) => {
+    const key = attachmentKey(attachment);
+    return key && !nextKeys.has(key);
+  });
+}
+
+async function deleteRemovedAttachments(attachments) {
+  const targets = Array.isArray(attachments) ? attachments.filter((attachment) => attachment?.path) : [];
+  if (!targets.length) return;
+  await Promise.all(targets.map((attachment) => state.api.deleteFile(attachment.path)));
+}
+
 function sanitizeContentForSave(content) {
   const normalized = normalizeEditorData(content);
   const filteredBlocks = (Array.isArray(normalized.blocks) ? normalized.blocks : []).filter((block) => {
@@ -1027,8 +1049,10 @@ async function saveCurrentNote({ force = false } = {}) {
 
   try {
     let response = null;
+    let attachmentsToDelete = [];
     if ((force || wasDirtyContent) && !wasDirtyTitle && !wasDirtyMeta) {
       const nextContent = sanitizeContentForSave(await state.editor.save());
+      attachmentsToDelete = removedAttachments(state.currentNote.content, nextContent);
       state.attachments = extractAttachmentsFromContent(nextContent);
       response = await state.api.updateContent(state.currentNote.id, nextContent);
     } else {
@@ -1044,10 +1068,12 @@ async function saveCurrentNote({ force = false } = {}) {
       }
       if (force || wasDirtyContent) {
         payload.content = sanitizeContentForSave(await state.editor.save());
+        attachmentsToDelete = removedAttachments(state.currentNote.content, payload.content);
         state.attachments = extractAttachmentsFromContent(payload.content);
       }
       response = await state.api.update(state.currentNote.id, payload);
     }
+    await deleteRemovedAttachments(attachmentsToDelete);
     // Only clear the flags that were captured at save start.
     // If markDirty was called during the async save, the flag will still be true.
     if (wasDirtyTitle) state.dirtyTitle = false;
@@ -2319,6 +2345,7 @@ async function init() {
       resolvePreview: (data) => resolveBlockPreview(data),
       onPick: (type, config) => pickerFromBlock(type, config),
       onChange: () => markDirty("content"),
+      onDelete: (element) => state.editor.deleteBlockByElement(element).catch(handleUnexpectedError),
     },
   });
   await state.editor.init(normalizeEditorData(null));
@@ -2507,7 +2534,6 @@ function navigateFloatingSearch(direction) {
 window.showFloatingSearch = showFloatingSearch;
 window.hideFloatingSearch = hideFloatingSearch;
 window.state = state;
-
 
 
 

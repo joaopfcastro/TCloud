@@ -122,6 +122,7 @@ class TCloudReferenceTool {
   render() {
     const wrapper = document.createElement("div");
     wrapper.className = `tcloud-block-card is-${this.meta.kind}`;
+    wrapper.dataset.tcloudBlockType = this.type;
     this.wrapper = wrapper;
     this.refreshView();
     return wrapper;
@@ -135,7 +136,7 @@ class TCloudReferenceTool {
       const savedWidth = this.data.width || "";
       this.wrapper.innerHTML = `
         <div class="tcloud-image-container">
-          <div class="tcloud-image-wrapper" style="${savedWidth ? `width: ${savedWidth};` : ''}">
+          <div class="tcloud-image-wrapper" tabindex="0" role="button" aria-label="Imagem ${escapeHtml(this.data.name || this.data.path || "")}" style="${savedWidth ? `width: ${savedWidth};` : ''}">
             <img class="tcloud-image-content" src="" alt="" loading="lazy" />
             <div class="tcloud-image-loading">
               Carregando imagem...
@@ -184,6 +185,15 @@ class TCloudReferenceTool {
           if (w !== wrapperEl) w.classList.remove("is-focused");
         });
         wrapperEl.classList.add("is-focused");
+        wrapperEl.focus({ preventScroll: true });
+      });
+      wrapperEl.addEventListener("keydown", (e) => {
+        if (e.key !== "Delete" && e.key !== "Backspace") return;
+        e.preventDefault();
+        e.stopPropagation();
+        if (typeof this.config.onDelete === "function") {
+          this.config.onDelete(this.wrapper);
+        }
       });
 
       const onDocumentClick = (e) => {
