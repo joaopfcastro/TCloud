@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TCloud Notes</title>
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="./style.css?v=notes-layout-20260519b">
+</head>
+<body>
+  <div class="notes-app">
+    <span id="save-status" class="save-status hidden" aria-live="polite">Inicializando editor...</span>
+    <div class="notes-layout">
+        <aside class="sidebar">
+          <div class="sidebar-header">
+            <div class="brand-lockup">
+              <span class="brand-icon" aria-hidden="true">▣</span>
+              <h1>TCloud Notes</h1>
+            </div>
+            <button id="sidebar-toggle-button" class="sidebar-toggle-button" type="button" aria-label="Recolher sidebar">«</button>
+          </div>
+
+          <button id="new-note-button" class="primary-button" type="button">+ Nova nota</button>
+
+          <label class="search-shell" for="search-input">
+            <span>Buscar</span>
+            <input id="search-input" type="search" placeholder="Título, conteúdo ou tag" autocomplete="off">
+          </label>
+
+          <nav class="filter-tabs" role="tablist" aria-label="Filtros principais">
+            <button id="filter-all" class="filter-tab is-active" type="button" data-view="active">Minhas Notas</button>
+            <button id="filter-favorites" class="filter-tab" type="button" data-view="favorites">Favoritas</button>
+            <button id="filter-archived" class="filter-tab" type="button" data-view="archived">Arquivadas</button>
+            <button id="filter-trash" class="filter-tab" type="button" data-view="trash">Lixeira</button>
+          </nav>
+
+          <div id="notes-list" class="notes-list" role="list" aria-label="Lista de notas"></div>
+          <div class="sidebar-footer">
+            <span id="list-meta" class="list-meta">Carregando notas...</span>
+          </div>
+        </aside>
+
+        <main class="editor-shell">
+          <section id="editor-empty-state" class="editor-empty-state">
+            <div class="empty-panel">
+              <p id="empty-eyebrow" class="eyebrow">Notas</p>
+              <h2 id="empty-title">Crie sua primeira nota</h2>
+              <p id="empty-description">Abra uma nota em branco ou comece com um template. Escreva, organize com tags e mantenha foco no conteúdo.</p>
+              <div id="empty-template-grid" class="template-grid"></div>
+            </div>
+          </section>
+
+          <section id="editor-panel" class="editor-panel hidden" aria-label="Editor da nota">
+            <div id="note-cover" class="note-cover">
+            </div>
+            <div class="note-page">
+              <header class="note-page-header">
+                <div class="note-page-tools">
+                  <div class="note-icon-shell">
+                    <button id="note-icon-button" class="note-icon" type="button" aria-haspopup="menu" aria-expanded="false" aria-label="Trocar ícone da nota">▰</button>
+                    <div id="note-icon-menu" class="appearance-popover hidden" role="menu" aria-label="Ícones da nota">
+                      <button type="button" data-icon-value="▰">▰</button>
+                      <button type="button" data-icon-value="✦">✦</button>
+                      <button type="button" data-icon-value="✓">✓</button>
+                      <button type="button" data-icon-value="◆">◆</button>
+                      <button type="button" data-icon-value="📌">📌</button>
+                      <button type="button" data-icon-value="🧠">🧠</button>
+                      <button type="button" class="appearance-popover-wide" data-icon-value="none">Remover</button>
+                    </div>
+                  </div>
+                  <div class="note-cover-shell">
+                    <button id="note-cover-button" class="appearance-toggle-button" type="button" aria-haspopup="menu" aria-expanded="false">Capa</button>
+                    <div id="note-cover-menu" class="appearance-popover hidden" role="menu" aria-label="Ações da capa">
+                      <button class="appearance-button" type="button" data-cover-action="gradient">Gradiente</button>
+                      <button class="appearance-button" type="button" data-cover-action="color">Cor</button>
+                      <button class="appearance-button" type="button" data-cover-action="image">Imagem</button>
+                      <button class="appearance-button is-danger" type="button" data-cover-action="none">Remover</button>
+                    </div>
+                  </div>
+                </div>
+                <div class="title-row">
+                  <button id="favorite-button" class="icon-toggle-button" type="button" aria-pressed="false" title="Favoritar nota">☆</button>
+                  <input id="note-title" class="note-title" type="text" placeholder="Sem título" maxlength="240">
+                </div>
+                <div class="tags-shell">
+                  <div id="note-tags" class="note-tags"></div>
+                  <input id="tag-input" class="tag-input" type="text" placeholder="Adicionar tag">
+                </div>
+                <div class="editor-meta-row">
+                  <span id="note-meta" class="note-meta">Nenhuma nota selecionada</span>
+                </div>
+              </header>
+
+              <div class="editor-content-grid">
+                <div id="editorjs" class="editorjs-host"></div>
+              </div>
+            </div>
+          </section>
+        </main>
+
+      </div>
+  </div>
+
+  <div id="slash-menu" class="slash-menu hidden" role="menu" aria-label="Inserir bloco"></div>
+
+  <div id="templates-modal" class="modal hidden" aria-hidden="true">
+    <div class="modal-backdrop" data-close-modal="templates"></div>
+    <div class="modal-card">
+      <div class="modal-header">
+        <div>
+          <p class="eyebrow">Templates</p>
+          <h3>Escolha um ponto de partida</h3>
+        </div>
+        <button class="icon-close-button" type="button" data-close-modal="templates" aria-label="Fechar">×</button>
+      </div>
+      <div id="templates-grid" class="template-grid"></div>
+    </div>
+  </div>
+
+  <div id="revisions-modal" class="modal hidden" aria-hidden="true">
+    <div class="modal-backdrop" data-close-modal="revisions"></div>
+    <div class="modal-card modal-card-wide">
+      <div class="modal-header">
+        <div>
+          <p class="eyebrow">Histórico</p>
+          <h3>Versões da nota</h3>
+        </div>
+        <button class="icon-close-button" type="button" data-close-modal="revisions" aria-label="Fechar">×</button>
+      </div>
+      <div id="revisions-summary" class="revisions-summary"></div>
+      <div id="revisions-list" class="revisions-list"></div>
+    </div>
+  </div>
+
+  <div id="import-export-modal" class="modal hidden" aria-hidden="true">
+    <div class="modal-backdrop" data-close-modal="import-export"></div>
+    <div class="modal-card modal-card-wide">
+      <div class="modal-header">
+        <div>
+          <p class="eyebrow">Importar e exportar</p>
+          <h3>Arquivos da nota</h3>
+        </div>
+        <button class="icon-close-button" type="button" data-close-modal="import-export" aria-label="Fechar">×</button>
+      </div>
+      <div class="import-export-grid">
+        <section class="io-card">
+          <h4>Importar</h4>
+          <p class="note-meta">Suporta <code>.txt</code>, <code>.md</code> básico e <code>.tcnote.json</code>.</p>
+          <input id="import-file-input" type="file" accept=".txt,.md,.markdown,.json,.tcnote.json">
+          <button id="import-confirm-button" class="primary-button" type="button">Importar arquivo</button>
+        </section>
+        <section class="io-card">
+          <h4>Exportar</h4>
+          <p id="export-preview" class="note-meta">Selecione uma nota para habilitar a exportação.</p>
+          <div class="io-actions">
+            <button id="export-json-button" class="secondary-button" type="button">.tcnote.json</button>
+            <button id="export-markdown-button" class="secondary-button" type="button">Markdown</button>
+            <button id="export-html-button" class="secondary-button" type="button">HTML</button>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <div id="file-picker-modal" class="modal hidden" aria-hidden="true"></div>
+
+  <div id="confirm-modal" class="modal hidden" aria-hidden="true">
+    <div class="modal-backdrop" data-close-modal="confirm"></div>
+    <div class="modal-card modal-card-compact">
+      <div class="modal-header">
+        <div>
+          <p id="confirm-eyebrow" class="eyebrow">Confirmacao</p>
+          <h3 id="confirm-title">Tem certeza?</h3>
+        </div>
+        <button class="icon-close-button" type="button" data-close-modal="confirm" aria-label="Fechar">×</button>
+      </div>
+      <p id="confirm-description" class="confirm-description">Confirme para continuar.</p>
+      <div class="confirm-actions">
+        <button id="confirm-cancel-button" class="secondary-button" type="button">Cancelar</button>
+        <button id="confirm-accept-button" class="ghost-danger-button" type="button">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- === MENUS DE CONTEXTO & BARRA DE BUSCA (ESTRUTURAS OCULTAS) === -->
+
+  <!-- 1. Sidebar Context Menu -->
+  <div id="sidebar-context-menu" class="tcloud-context-menu hidden">
+    <ul class="context-menu-list">
+      <li class="context-menu-item" data-action="open-tab">Abrir em nova aba</li>
+      <li class="context-menu-item" data-action="favorite">Favoritar</li>
+      <li class="context-menu-item" data-action="duplicate">Duplicar</li>
+      <li class="context-menu-divider"></li>
+      <li class="context-menu-item danger" data-action="delete">Excluir</li>
+    </ul>
+  </div>
+
+  <!-- 2. Editor Context Menu -->
+  <div id="editor-context-menu" class="tcloud-context-menu hidden">
+    <ul class="context-menu-list">
+      <li class="context-menu-item" data-action="copy">Copiar</li>
+      <li class="context-menu-item" data-action="cut">Recortar</li>
+      <li class="context-menu-item" data-action="paste">Colar</li>
+      <li class="context-menu-divider"></li>
+      <li class="context-menu-item" data-action="duplicate-block">Duplicar bloco</li>
+      <li class="context-menu-item danger" data-action="delete-block">Excluir bloco</li>
+    </ul>
+  </div>
+
+  <!-- 3. Barra de Busca Flutuante (Cmd/Ctrl + F) -->
+  <div id="search-bar-floating" class="tcloud-floating-search hidden">
+    <div class="search-input-wrapper">
+      <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      <input type="text" id="floating-search-input" placeholder="Buscar na nota..." autocomplete="off">
+    </div>
+    <div class="search-controls">
+      <span id="search-counter" class="search-counter">0/0</span>
+      <button class="search-btn" id="search-prev" title="Anterior (Shift+Enter)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15"></polyline></svg>
+      </button>
+      <button class="search-btn" id="search-next" title="Próximo (Enter)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+      </button>
+      <div class="search-divider"></div>
+      <button class="search-btn" id="search-close" title="Fechar (Esc)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+    </div>
+  </div>
+
+  <script src="/static/tcloud-app-runtime.js?v=notes-layout-20260519b"></script>
+  <script src="./vendor/editorjs/core/editorjs.umd.js"></script>
+  <script src="./vendor/editorjs/paragraph/paragraph.umd.js"></script>
+  <script src="./vendor/editorjs/header/header.umd.js"></script>
+  <script src="./vendor/editorjs/list/editorjs-list.umd.js"></script>
+  <script type="module" src="./script.js?v=notes-layout-20260519b"></script>
+</body>
+</html>

@@ -5,6 +5,8 @@
         refreshPromise: null,
         refreshWaiters: [],
         lastFocusSignalAt: 0,
+        windowActionHandlers: new Set(),
+        lastWindowActions: null,
     };
 
     function flushWaiters() {
@@ -21,6 +23,7 @@
             flushRefreshWaiters(null, state.session);
         }
         window.dispatchEvent(new CustomEvent('tcloud-app-session-changed', { detail: state.session }));
+        replayWindowActions();
     }
 
     function waitForSession() {
@@ -47,6 +50,29 @@
             },
             window.location.origin
         );
+    }
+
+    function postWindowActions(config) {
+        let target = window.parent;
+        try {
+            if (window.top && window.top !== window) {
+                target = window.top;
+            }
+        } catch (error) {
+            target = window.parent;
+        }
+        target.postMessage(
+            {
+                type: 'tcloud-window-actions:set',
+                ...(config || {}),
+            },
+            window.location.origin
+        );
+    }
+
+    function replayWindowActions() {
+        if (!state.lastWindowActions) return;
+        postWindowActions(state.lastWindowActions);
     }
 
     function notifyWindowFocus(reason) {
@@ -145,6 +171,20 @@
         }
         if (event.data.type === 'tcloud-app-session-error') {
             flushRefreshWaiters(new Error(event.data.error || 'Nao foi possivel renovar sessao do app.'));
+            return;
+        }
+        if (event.data.type === 'tcloud-window-action') {
+            const detail = {
+                actionId: String(event.data.actionId || ''),
+                menuItemId: String(event.data.menuItemId || ''),
+            };
+            state.windowActionHandlers.forEach((handler) => {
+                try {
+                    handler(detail);
+                } catch (error) {
+                    console.error('Falha ao executar acao da janela', error);
+                }
+            });
         }
     });
 
@@ -188,9 +228,28 @@
             shellAction('shell.showToast', { message, kind, duration });
         },
 
+        closeWindowMenus() {
+            shellAction('shell.closeWindowMenus', {});
+        },
+
         focusWindow() {
             notifyWindowFocus('api');
         },
+
+        setWindowActions(config) {
+            state.lastWindowActions = { ...(config || {}) };
+            postWindowActions(state.lastWindowActions);
+        },
+
+        onWindowAction(handler) {
+            if (typeof handler !== 'function') return () => {};
+            state.windowActionHandlers.add(handler);
+            return () => state.windowActionHandlers.delete(handler);
+        },
     };
     wireWindowFocusSignals();
+    window.addEventListener('pageshow', replayWindowActions);
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) replayWindowActions();
+    });
 })();

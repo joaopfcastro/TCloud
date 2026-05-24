@@ -1,0 +1,4 @@
+@editorjs/editorjs 2.31.6
+@editorjs/paragraph 2.11.7
+@editorjs/header 2.8.9
+@editorjs/list 2.0.9

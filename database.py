@@ -39,6 +39,10 @@ class Database:
         self._finder_sessions = None
         self._app_sessions = None
         self._desktop_window_sessions = None
+        self._notes = None
+        self._note_revisions = None
+        self._note_property_schema = None
+        self._note_views = None
 
     @staticmethod
     def _visible_files_filter(extra: dict | None = None) -> dict:
@@ -61,6 +65,10 @@ class Database:
         self._finder_sessions = self._db["finder_sessions"]
         self._app_sessions = self._db["app_sessions"]
         self._desktop_window_sessions = self._db["desktop_window_sessions"]
+        self._notes = self._db["notes"]
+        self._note_revisions = self._db["note_revisions"]
+        self._note_property_schema = self._db["note_property_schema"]
+        self._note_views = self._db["note_views"]
 
         # Create indexes
         await self._files.create_index("path", unique=True)
@@ -98,6 +106,21 @@ class Database:
         await self._app_sessions.create_index("updated_at")
         await self._desktop_window_sessions.create_index("owner_id", unique=True)
         await self._desktop_window_sessions.create_index("updated_at")
+        await self._notes.create_index([("owner_id", 1), ("deleted_at", 1), ("updated_at", -1)])
+        await self._notes.create_index([("owner_id", 1), ("_id", 1)], unique=True)
+        await self._notes.create_index([("owner_id", 1), ("favorite", 1), ("deleted_at", 1), ("updated_at", -1)])
+        await self._notes.create_index([("owner_id", 1), ("tags", 1), ("deleted_at", 1), ("updated_at", -1)])
+        await self._notes.create_index([("owner_id", 1), ("attachments.path", 1)])
+        await self._notes.create_index([("owner_id", 1), ("outgoing_links", 1)])
+        await self._notes.create_index([("owner_id", 1), ("backlinks", 1)])
+        await self._notes.create_index([("owner_id", 1), ("properties", 1)])
+        await self._notes.create_index([("title", "text"), ("search_text", "text")])
+        await self._note_revisions.create_index([("owner_id", 1), ("note_id", 1), ("version", -1)], unique=True)
+        await self._note_revisions.create_index([("owner_id", 1), ("note_id", 1), ("saved_at", -1)])
+        await self._note_property_schema.create_index([("owner_id", 1), ("position", 1)])
+        await self._note_property_schema.create_index([("owner_id", 1), ("name", 1)])
+        await self._note_views.create_index([("owner_id", 1), ("position", 1)])
+        await self._note_views.create_index([("owner_id", 1), ("updated_at", -1)])
 
         # Ensure root directory exists
         root = await self._directories.find_one({"path": "/"})
@@ -117,6 +140,22 @@ class Database:
         if self._client:
             self._client.close()
             logger.info("🔌 MongoDB disconnected")
+
+    @property
+    def notes_collection(self):
+        return self._notes
+
+    @property
+    def note_revisions_collection(self):
+        return self._note_revisions
+
+    @property
+    def note_property_schema_collection(self):
+        return self._note_property_schema
+
+    @property
+    def note_views_collection(self):
+        return self._note_views
 
     # ===================== FILE OPERATIONS =====================
 

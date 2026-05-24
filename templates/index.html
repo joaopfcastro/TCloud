@@ -3552,18 +3552,22 @@
 
 
         .app-viewer-header {
-            height: var(--tcloud-window-titlebar-height, 38px);
-            min-height: var(--tcloud-window-titlebar-height, 38px);
+            height: var(--tcloud-window-titlebar-height, 46px);
+            min-height: var(--tcloud-window-titlebar-height, 46px);
             background: var(--bg-header);
             border-bottom: 1px solid var(--border);
             display: flex;
             align-items: center;
             justify-content: flex-start;
-            padding: 0 12px;
+            padding: 0 18px;
             flex-shrink: 0;
-            gap: 10px;
+            gap: 18px;
             position: relative;
             overflow: hidden;
+        }
+
+        .generic-app-window .app-viewer-header {
+            overflow: visible;
         }
 
         .app-viewer-toolbar {
@@ -3690,6 +3694,115 @@
             overflow: hidden;
             white-space: nowrap;
             line-height: 1;
+        }
+
+        .app-viewer-generic-status {
+            display: none;
+            align-items: center;
+            gap: 12px;
+            min-width: 0;
+            margin-left: 8px;
+            color: var(--text-secondary);
+            font-size: 12px;
+            font-weight: 500;
+            line-height: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .app-viewer-generic-status.active {
+            display: inline-flex;
+        }
+
+        .app-viewer-generic-status .status-divider {
+            width: 1px;
+            height: 18px;
+            background: var(--border);
+            flex: 0 0 auto;
+        }
+
+        .app-viewer-generic-actions {
+            display: none;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 6px;
+            min-width: 0;
+            margin-left: auto;
+            overflow: visible;
+        }
+
+        .app-viewer-generic-actions.active {
+            display: flex;
+        }
+
+        .app-viewer-generic-actions .app-viewer-action[aria-pressed="true"] {
+            background: var(--hover);
+            color: var(--text-primary);
+        }
+
+        .app-viewer-header-spacer:has(+ .app-viewer-close) {
+            flex: 1 1 auto;
+        }
+
+        .app-viewer-generic-actions.active + .app-viewer-header-spacer,
+        .app-viewer-generic-status.active + .app-viewer-generic-actions + .app-viewer-header-spacer {
+            flex: 0 1 12px;
+        }
+
+        .app-viewer-generic-actions.active ~ .app-viewer-close {
+            margin-left: 0;
+        }
+
+        .app-viewer-generic-menu {
+            position: relative;
+            display: inline-flex;
+        }
+
+        .app-viewer-generic-menu-toggle[aria-expanded="true"] {
+            background: var(--hover);
+        }
+
+        .app-viewer-generic-menu-panel {
+            position: absolute;
+            top: calc(100% + 8px);
+            right: 0;
+            z-index: 120;
+            width: 210px;
+            padding: 6px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: #2C2C2E;
+            box-shadow: 0 18px 44px rgba(0, 0, 0, 0.5);
+        }
+
+        .app-viewer-generic-menu-panel[hidden] {
+            display: none;
+        }
+
+        .app-viewer-generic-menu-item {
+            width: 100%;
+            min-height: 30px;
+            border: 0;
+            border-radius: 7px;
+            background: transparent;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 9px;
+            font-size: 13px;
+            font-weight: 500;
+            text-align: left;
+            cursor: pointer;
+        }
+
+        .app-viewer-generic-menu-item:hover {
+            background: var(--hover);
+        }
+
+        .app-viewer-generic-menu-item.danger {
+            color: #ff9f9a;
         }
 
         .app-viewer-title i {
@@ -3959,8 +4072,8 @@
         }
 
         .app-viewer-action {
-            height: 28px;
-            min-width: 28px;
+            height: 34px;
+            min-width: 34px;
             border: none;
             border-radius: 8px;
             color: var(--text-primary);
@@ -3969,9 +4082,9 @@
             align-items: center;
             justify-content: center;
             gap: 6px;
-            padding: 0 9px;
+            padding: 0 12px;
             cursor: pointer;
-            font-size: 13px;
+            font-size: 13.5px;
             font-weight: 500;
             white-space: nowrap;
             line-height: 1;
@@ -4543,7 +4656,7 @@
             cursor: pointer;
         }
     </style>
-    <link rel="stylesheet" href="/static/tcloud-window-manager.css">
+    <link rel="stylesheet" href="/static/tcloud-window-manager.css?v=notes-layout-20260519b">
     <script src="/static/tcloud-window-manager.js"></script>
     <script src="/static/tcloud-desktop-windows.js"></script>
 </head>
@@ -4714,6 +4827,8 @@
                         <i class="ph ph-squares-four"></i>
                         <span>App</span>
                     </div>
+                    <div class="app-viewer-generic-status" data-app-window-status></div>
+                    <div class="app-viewer-generic-actions" data-app-window-actions></div>
                     <div class="app-viewer-header-spacer"></div>
                     <div class="app-viewer-close" onclick="closeApp()" title="Fechar">
                         <i class="ph ph-x"></i>
@@ -24183,6 +24298,11 @@
                 actions.innerHTML = '';
             }
             const viewer = document.getElementById('app-viewer');
+            clearGenericWindowActions({
+                element: viewer,
+                frame: document.getElementById('app-viewer-frame'),
+                windowId: 'app-viewer',
+            });
             viewer?.classList.remove('pdf-toolbar-compact', 'pdf-toolbar-ultra-compact', 'pdf-tools-home-mode', 'pdf-tools-reader-mode');
             closePdfToolsOverflowMenu();
             clearAppViewerTabs();
@@ -24595,6 +24715,8 @@
                         <i class="ph ph-app-window" data-generic-window-icon></i>
                         <span data-generic-window-title>App</span>
                     </div>
+                    <div class="app-viewer-generic-status" data-generic-window-status></div>
+                    <div class="app-viewer-generic-actions" data-generic-window-actions></div>
                 </div>
                 <iframe class="app-viewer-frame generic-app-frame"
                         sandbox="allow-scripts allow-same-origin allow-forms"
@@ -24634,6 +24756,196 @@
                     window.location.origin
                 );
             }
+        }
+
+        function closeGenericWindowMenus(except = null) {
+            document.querySelectorAll('.app-viewer-generic-menu.open').forEach((menu) => {
+                if (menu === except) return;
+                menu.classList.remove('open');
+                const toggle = menu.querySelector('.app-viewer-generic-menu-toggle');
+                const panel = menu.querySelector('.app-viewer-generic-menu-panel');
+                if (toggle) toggle.setAttribute('aria-expanded', 'false');
+                if (panel) panel.hidden = true;
+            });
+        }
+
+        function sendGenericWindowAction(entry, actionId, menuItemId = '') {
+            if (!entry?.frame?.contentWindow) return;
+            entry.frame.contentWindow.postMessage(
+                {
+                    type: 'tcloud-window-action',
+                    actionId: String(actionId || ''),
+                    menuItemId: String(menuItemId || ''),
+                },
+                window.location.origin
+            );
+        }
+
+        function windowActionRoots(entry) {
+            if (!entry?.element) return;
+            return {
+                statusRoot: entry.element.querySelector('[data-generic-window-status], [data-app-window-status]'),
+                actionsRoot: entry.element.querySelector('[data-generic-window-actions], [data-app-window-actions]'),
+            };
+        }
+
+        function renderGenericWindowActions(entry, payload = {}) {
+            if (!entry?.element) return;
+            const { statusRoot, actionsRoot } = windowActionRoots(entry) || {};
+            if (!statusRoot || !actionsRoot) return;
+            entry.lastWindowActions = { ...(payload || {}) };
+
+            const statusText = String(payload.statusText || '').trim();
+            const hintText = String(payload.hintText || '').trim();
+            statusRoot.innerHTML = '';
+            statusRoot.classList.toggle('active', Boolean(statusText || hintText));
+            if (statusText) {
+                const status = document.createElement('span');
+                status.textContent = statusText;
+                statusRoot.appendChild(status);
+            }
+            if (statusText && hintText) {
+                const divider = document.createElement('span');
+                divider.className = 'status-divider';
+                divider.setAttribute('aria-hidden', 'true');
+                statusRoot.appendChild(divider);
+            }
+            if (hintText) {
+                const hint = document.createElement('span');
+                hint.textContent = hintText;
+                statusRoot.appendChild(hint);
+            }
+
+            const actions = Array.isArray(payload.actions) ? payload.actions : [];
+            const actionsJson = JSON.stringify(actions);
+            if (entry.element._lastActionsJson !== actionsJson) {
+                entry.element._lastActionsJson = actionsJson;
+                actionsRoot.innerHTML = '';
+                actionsRoot.classList.toggle('active', actions.length > 0);
+                actions.forEach((action) => {
+                    const actionId = String(action?.id || '').trim();
+                    if (!actionId) return;
+                    const label = String(action?.label || actionId).trim();
+                    const icon = String(action?.icon || '').trim();
+                    const variant = String(action?.variant || '').trim();
+                    const menuItems = Array.isArray(action?.menuItems) ? action.menuItems : [];
+                    if (menuItems.length) {
+                        const menu = document.createElement('div');
+                        menu.className = 'app-viewer-generic-menu';
+                        const toggle = document.createElement('button');
+                        toggle.type = 'button';
+                        toggle.className = `app-viewer-action app-viewer-generic-menu-toggle${variant ? ` ${variant}` : ''}`;
+                        toggle.setAttribute('aria-label', label);
+                        toggle.setAttribute('aria-haspopup', 'menu');
+                        toggle.setAttribute('aria-expanded', 'false');
+                        toggle.title = label;
+                        toggle.innerHTML = `${icon ? `<i class="ph ${escapeHtml(icon)}"></i>` : ''}<span>${escapeHtml(label)}</span>`;
+                        const panel = document.createElement('div');
+                        panel.className = 'app-viewer-generic-menu-panel';
+                        panel.setAttribute('role', 'menu');
+                        panel.hidden = true;
+                        menuItems.forEach((item) => {
+                            const itemId = String(item?.id || '').trim();
+                            if (!itemId) return;
+                            const button = document.createElement('button');
+                            button.type = 'button';
+                            button.className = `app-viewer-generic-menu-item${String(item?.variant || '') === 'danger' ? ' danger' : ''}`;
+                            button.disabled = Boolean(item?.disabled);
+                            button.setAttribute('role', 'menuitem');
+                            button.innerHTML = `${item?.icon ? `<i class="ph ${escapeHtml(String(item.icon))}"></i>` : ''}<span>${escapeHtml(String(item?.label || itemId))}</span>`;
+                            button.addEventListener('click', (event) => {
+                                event.stopPropagation();
+                                closeGenericWindowMenus();
+                                sendGenericWindowAction(entry, actionId, itemId);
+                            });
+                            panel.appendChild(button);
+                        });
+                        const setMenuOpen = (open) => {
+                            if (open) closeGenericWindowMenus(menu);
+                            panel.hidden = !open;
+                            toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+                            menu.classList.toggle('open', open);
+                        };
+                        const toggleMenuOpen = () => setMenuOpen(panel.hidden);
+                        let pointerOpenedMenu = false;
+                        toggle.addEventListener('pointerdown', (event) => {
+                            if (event.button !== undefined && event.button !== 0) return;
+                            event.preventDefault();
+                            event.stopPropagation();
+                            pointerOpenedMenu = true;
+                            toggleMenuOpen();
+                        });
+                        toggle.addEventListener('mousedown', (event) => {
+                            if (event.button !== 0 || pointerOpenedMenu) return;
+                            event.preventDefault();
+                            event.stopPropagation();
+                            pointerOpenedMenu = true;
+                            toggleMenuOpen();
+                        });
+                        toggle.addEventListener('click', (event) => {
+                            event.stopPropagation();
+                            if (pointerOpenedMenu) {
+                                pointerOpenedMenu = false;
+                                return;
+                            }
+                            toggleMenuOpen();
+                        });
+                        toggle.addEventListener('keydown', (event) => {
+                            if (event.key !== 'ArrowDown' && event.key !== 'Enter' && event.key !== ' ') return;
+                            event.preventDefault();
+                            setMenuOpen(true);
+                            panel.querySelector('button:not(:disabled)')?.focus();
+                        });
+                        panel.addEventListener('keydown', (event) => {
+                            const items = Array.from(panel.querySelectorAll('button:not(:disabled)'));
+                            const index = items.indexOf(document.activeElement);
+                            if (event.key === 'Escape') {
+                                event.preventDefault();
+                                closeGenericWindowMenus();
+                                toggle.focus();
+                            } else if (event.key === 'ArrowDown' && items.length) {
+                                event.preventDefault();
+                                items[(index + 1 + items.length) % items.length].focus();
+                            } else if (event.key === 'ArrowUp' && items.length) {
+                                event.preventDefault();
+                                items[(index - 1 + items.length) % items.length].focus();
+                            }
+                        });
+                        menu.appendChild(toggle);
+                        menu.appendChild(panel);
+                        actionsRoot.appendChild(menu);
+                        return;
+                    }
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.className = `app-viewer-action${variant ? ` ${variant}` : ''}`;
+                    button.disabled = Boolean(action?.disabled);
+                    button.title = label;
+                    button.setAttribute('aria-label', label);
+                    if (action?.pressed !== undefined) button.setAttribute('aria-pressed', action.pressed ? 'true' : 'false');
+                    button.innerHTML = `${icon ? `<i class="ph ${escapeHtml(icon)}"></i>` : ''}<span>${escapeHtml(label)}</span>`;
+                    button.addEventListener('click', (event) => {
+                        event.stopPropagation();
+                        sendGenericWindowAction(entry, actionId);
+                    });
+                    actionsRoot.appendChild(button);
+                });
+            }
+        }
+
+        function clearGenericWindowActions(entry) {
+            if (!entry?.element) return;
+            const { statusRoot, actionsRoot } = windowActionRoots(entry) || {};
+            if (statusRoot) {
+                statusRoot.innerHTML = '';
+                statusRoot.classList.remove('active');
+            }
+            if (actionsRoot) {
+                actionsRoot.innerHTML = '';
+                actionsRoot.classList.remove('active');
+            }
+            entry.lastWindowActions = null;
+            entry.element._lastActionsJson = null;
         }
 
         function syncGenericAppWindowState(record) {
@@ -24682,6 +24994,7 @@
             entry.element.classList.remove('active', 'fullscreen', 'is-focused', 'is-window-maximized', 'is-window-snapped', 'is-window-minimized');
             entry.element.hidden = true;
             entry.frame.src = 'about:blank';
+            clearGenericWindowActions(entry);
             genericAppWindows.delete(appId);
             entry.element.remove();
             updateSidebarActive();
@@ -25034,6 +25347,12 @@
                     window.TCloudWindowManager?.focus?.(finderShellEntry.id);
                     return;
                 }
+                if (action === 'shell.closeWindowMenus') {
+                    closeGenericWindowMenus();
+                    closePdfToolsTabListMenu();
+                    closeFinderTabOverflowMenu();
+                    return;
+                }
             }
             const frame = document.getElementById('app-viewer-frame');
             const genericEntry = findGenericAppEntryBySource(event.source);
@@ -25050,6 +25369,10 @@
                     });
                     return;
                 }
+                if (data.type === 'tcloud-window-actions:set') {
+                    renderGenericWindowActions(genericEntry, data);
+                    return;
+                }
                 if (data.type !== 'tcloud-shell-action') return;
 
                 const action = String(data.action || '').trim();
@@ -25062,6 +25385,12 @@
                 if (action === 'shell.openApp') {
                     const targetApp = installedApps.find((item) => item.id === payload.appId);
                     if (targetApp) openApp(targetApp);
+                    return;
+                }
+                if (action === 'shell.closeWindowMenus') {
+                    closeGenericWindowMenus();
+                    closePdfToolsTabListMenu();
+                    closeFinderTabOverflowMenu();
                     return;
                 }
                 if (action === 'shell.closeApp') {
@@ -25083,6 +25412,15 @@
                         { duration: Number(payload.duration || 3000) }
                     );
                 }
+                return;
+            }
+
+            if (isAppViewerFrame && data.type === 'tcloud-window-actions:set') {
+                renderGenericWindowActions({
+                    element: document.getElementById('app-viewer'),
+                    frame,
+                    windowId: 'app-viewer',
+                }, data);
                 return;
             }
 
@@ -25114,6 +25452,13 @@
             if (action === 'shell.openApp') {
                 const targetApp = installedApps.find((item) => item.id === payload.appId);
                 if (targetApp) openApp(targetApp);
+                return;
+            }
+
+            if (action === 'shell.closeWindowMenus') {
+                closeGenericWindowMenus();
+                closePdfToolsTabListMenu();
+                closeFinderTabOverflowMenu();
                 return;
             }
 
@@ -25150,11 +25495,15 @@
             if (!event.target?.closest?.('.finder-tab-overflow')) {
                 closeFinderTabOverflowMenu();
             }
+            if (!event.target?.closest?.('.app-viewer-generic-menu')) {
+                closeGenericWindowMenus();
+            }
         });
 
         document.addEventListener('keydown', (event) => {
             if (event.key === 'Escape') closePdfToolsTabListMenu();
             if (event.key === 'Escape') closeFinderTabOverflowMenu();
+            if (event.key === 'Escape') closeGenericWindowMenus();
         });
 
         window.addEventListener('resize', schedulePdfToolsToolbarDensity);

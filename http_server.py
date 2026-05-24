@@ -61,6 +61,7 @@ from media_track_labels import (
     looks_like_technical_track_label as _looks_like_technical_track_label,
     normalize_language_code as _shared_normalize_language_code,
 )
+from notes_service import NotesService
 
 logger = logging.getLogger("tcloud.http")
 _PERCENT_ENCODED_PATH_RE = re.compile(r"%[0-9A-Fa-f]{2}")
@@ -1150,6 +1151,7 @@ class TCloudHTTPServer:
             runtime_dir=Config.RUNTIME_DIR,
         )
         self._archive_service = ArchiveService(file_manager)
+        self._notes_service = NotesService(self._file_manager._db, self._file_manager)
         self._audio_variant_dir = Config.CACHE_DIR / "audio_variants"
         self._audio_variant_dir.mkdir(parents=True, exist_ok=True)
         self._audio_variant_locks: dict[str, asyncio.Lock] = {}
@@ -1273,6 +1275,34 @@ class TCloudHTTPServer:
         self._app.router.add_post("/api/apps/{app_id}/runtime/session", self._handle_api_app_runtime_session)
         self._app.router.add_post("/api/apps/runtime/execute", self._handle_api_apps_runtime_execute)
         self._app.router.add_get("/api/apps/runtime/file", self._handle_api_apps_runtime_file)
+        self._app.router.add_get("/api/notes", self._handle_api_notes_list)
+        self._app.router.add_post("/api/notes", self._handle_api_notes_create)
+        self._app.router.add_get("/api/notes/tags", self._handle_api_notes_tags)
+        self._app.router.add_get("/api/notes/properties/schema", self._handle_api_notes_properties_schema_get)
+        self._app.router.add_put("/api/notes/properties/schema", self._handle_api_notes_properties_schema_put)
+        self._app.router.add_post("/api/notes/properties", self._handle_api_notes_property_create)
+        self._app.router.add_patch("/api/notes/properties/{property_id}", self._handle_api_notes_property_patch)
+        self._app.router.add_delete("/api/notes/properties/{property_id}", self._handle_api_notes_property_delete)
+        self._app.router.add_get("/api/notes/views", self._handle_api_notes_views_list)
+        self._app.router.add_post("/api/notes/views", self._handle_api_notes_view_create)
+        self._app.router.add_get("/api/notes/views/{view_id}", self._handle_api_notes_view_get)
+        self._app.router.add_patch("/api/notes/views/{view_id}", self._handle_api_notes_view_patch)
+        self._app.router.add_delete("/api/notes/views/{view_id}", self._handle_api_notes_view_delete)
+        self._app.router.add_post("/api/notes/views/{view_id}/duplicate", self._handle_api_notes_view_duplicate)
+        self._app.router.add_post("/api/notes/query", self._handle_api_notes_query)
+        self._app.router.add_get("/api/notes/relations/search", self._handle_api_notes_relations_search)
+        self._app.router.add_get("/api/notes/{note_id}/backlinks", self._handle_api_notes_backlinks)
+        self._app.router.add_get("/api/notes/{note_id}", self._handle_api_notes_get)
+        self._app.router.add_put("/api/notes/{note_id}/content", self._handle_api_notes_put_content)
+        self._app.router.add_get("/api/notes/{note_id}/attachments", self._handle_api_notes_attachments)
+        self._app.router.add_get("/api/notes/{note_id}/export", self._handle_api_notes_export)
+        self._app.router.add_post("/api/notes/{note_id}/backup", self._handle_api_notes_backup)
+        self._app.router.add_post("/api/notes/import", self._handle_api_notes_import)
+        self._app.router.add_post("/api/notes/{note_id}/restore", self._handle_api_notes_restore)
+        self._app.router.add_get("/api/notes/{note_id}/revisions", self._handle_api_notes_revisions)
+        self._app.router.add_post("/api/notes/{note_id}/revisions/{version}/restore", self._handle_api_notes_restore_revision)
+        self._app.router.add_patch("/api/notes/{note_id}", self._handle_api_notes_patch)
+        self._app.router.add_delete("/api/notes/{note_id}", self._handle_api_notes_delete)
         self._app.router.add_get("/api/window_layouts", self._handle_api_window_layouts)
         self._app.router.add_get("/api/window_layouts/{window_id}", self._handle_api_window_layout_get)
         self._app.router.add_put("/api/window_layouts/{window_id}", self._handle_api_window_layout_put)
@@ -8413,6 +8443,19 @@ except Exception as e:
                 },
             }
 
+        if function_id == "thumbnail.fetch":
+            path = str(payload.get("path") or "").strip()
+            if not path:
+                raise ValueError("path ausente")
+            allowed, reason = self._authorize_runtime_permission_path(app, session_payload, "thumbnails.read", path)
+            if not allowed:
+                raise PermissionError(reason)
+            runtime_token = str(payload.get("runtime_token") or "").strip()
+            thumb_url = f"/api/thumbnail?path={quote(path, safe='')}"
+            if runtime_token:
+                thumb_url += f"&token={quote(runtime_token, safe='')}"
+            return {"url": thumb_url}
+
         if function_id == "search.query":
             query = str(payload.get("query") or payload.get("q") or "").strip().lower()
             if not query:
@@ -8528,6 +8571,231 @@ except Exception as e:
                 payload,
             )
 
+        if function_id == "notes.list":
+            return await self._notes_service.list_notes(
+                self._runtime_owner_id(session_payload),
+                query=str(payload.get("query") or payload.get("q") or "").strip(),
+                limit=payload.get("limit", 100),
+                include_deleted=bool(payload.get("include_deleted", False)),
+                favorite=True if str(payload.get("favorite", "")).strip().lower() in {"1", "true", "yes"} else None,
+                tag=str(payload.get("tag") or "").strip(),
+                deleted=str(payload.get("deleted") or "").strip(),
+                archived=str(payload.get("archived") or "").strip(),
+            )
+
+        if function_id == "notes.get":
+            note_id = str(payload.get("note_id") or payload.get("id") or "").strip()
+            if not note_id:
+                raise ValueError("note_id ausente")
+            result = await self._notes_service.get_note(
+                self._runtime_owner_id(session_payload),
+                note_id,
+                include_deleted=bool(payload.get("include_deleted", False)),
+            )
+            if not result:
+                raise FileNotFoundError("nota nao encontrada")
+            return result
+
+        if function_id == "notes.create":
+            return await self._notes_service.create_note(
+                self._runtime_owner_id(session_payload),
+                title=str(payload.get("title") or "").strip(),
+                content=payload.get("content"),
+                properties=payload.get("properties"),
+            )
+
+        if function_id == "notes.update":
+            note_id = str(payload.get("note_id") or payload.get("id") or "").strip()
+            if not note_id:
+                raise ValueError("note_id ausente")
+            result = await self._notes_service.update_note(
+                self._runtime_owner_id(session_payload),
+                note_id,
+                payload,
+            )
+            if not result:
+                raise FileNotFoundError("nota nao encontrada")
+            return result
+
+        if function_id == "notes.delete":
+            note_id = str(payload.get("note_id") or payload.get("id") or "").strip()
+            if not note_id:
+                raise ValueError("note_id ausente")
+            result = await self._notes_service.delete_note(self._runtime_owner_id(session_payload), note_id)
+            if not result:
+                raise FileNotFoundError("nota nao encontrada")
+            return result
+
+        if function_id == "notes.tags":
+            return await self._notes_service.list_tags(self._runtime_owner_id(session_payload))
+
+        if function_id == "notes.restore":
+            note_id = str(payload.get("note_id") or payload.get("id") or "").strip()
+            if not note_id:
+                raise ValueError("note_id ausente")
+            result = await self._notes_service.restore_note(self._runtime_owner_id(session_payload), note_id)
+            if not result:
+                raise FileNotFoundError("nota nao encontrada")
+            return result
+
+        if function_id == "notes.revisions":
+            note_id = str(payload.get("note_id") or payload.get("id") or "").strip()
+            if not note_id:
+                raise ValueError("note_id ausente")
+            result = await self._notes_service.list_revisions(
+                self._runtime_owner_id(session_payload),
+                note_id,
+                limit=payload.get("limit", 50),
+            )
+            if not result:
+                raise FileNotFoundError("nota nao encontrada")
+            return result
+
+        if function_id == "notes.restoreRevision":
+            note_id = str(payload.get("note_id") or payload.get("id") or "").strip()
+            version = payload.get("version")
+            if not note_id:
+                raise ValueError("note_id ausente")
+            result = await self._notes_service.restore_revision(
+                self._runtime_owner_id(session_payload),
+                note_id,
+                version,
+            )
+            if not result:
+                raise FileNotFoundError("nota ou revisao nao encontrada")
+            return result
+
+        if function_id == "notes.attachments":
+            note_id = str(payload.get("note_id") or payload.get("id") or "").strip()
+            if not note_id:
+                raise ValueError("note_id ausente")
+            result = await self._notes_service.list_attachments(self._runtime_owner_id(session_payload), note_id)
+            if not result:
+                raise FileNotFoundError("nota nao encontrada")
+            return result
+
+        if function_id == "notes.import":
+            file_name = str(payload.get("file_name") or payload.get("filename") or "").strip()
+            text_content = str(payload.get("text_content") or payload.get("content") or "")
+            if not file_name:
+                raise ValueError("file_name ausente")
+            return await self._notes_service.import_note(
+                self._runtime_owner_id(session_payload),
+                file_name=file_name,
+                text_content=text_content,
+            )
+
+        if function_id == "notes.export":
+            note_id = str(payload.get("note_id") or payload.get("id") or "").strip()
+            export_format = str(payload.get("format") or "json").strip()
+            if not note_id:
+                raise ValueError("note_id ausente")
+            result = await self._notes_service.export_note(
+                self._runtime_owner_id(session_payload),
+                note_id,
+                export_format,
+            )
+            if not result:
+                raise FileNotFoundError("nota nao encontrada")
+            return result
+
+        if function_id == "notes.backup":
+            note_id = str(payload.get("note_id") or payload.get("id") or "").strip()
+            if not note_id:
+                raise ValueError("note_id ausente")
+            result = await self._notes_service.backup_note(self._runtime_owner_id(session_payload), note_id)
+            if not result:
+                raise FileNotFoundError("nota nao encontrada")
+            return result
+
+        if function_id == "notes.query":
+            return await self._notes_service.query_notes(self._runtime_owner_id(session_payload), payload)
+
+        if function_id == "notes.properties.getSchema":
+            return await self._notes_service.get_property_schema(self._runtime_owner_id(session_payload))
+
+        if function_id == "notes.properties.updateSchema":
+            return await self._notes_service.update_property_schema(self._runtime_owner_id(session_payload), payload)
+
+        if function_id == "notes.properties.create":
+            return await self._notes_service.create_property(self._runtime_owner_id(session_payload), payload)
+
+        if function_id == "notes.properties.update":
+            property_id = str(payload.get("property_id") or payload.get("id") or "").strip()
+            if not property_id:
+                raise ValueError("property_id ausente")
+            result = await self._notes_service.update_property(self._runtime_owner_id(session_payload), property_id, payload)
+            if not result:
+                raise FileNotFoundError("propriedade nao encontrada")
+            return result
+
+        if function_id == "notes.properties.delete":
+            property_id = str(payload.get("property_id") or payload.get("id") or "").strip()
+            if not property_id:
+                raise ValueError("property_id ausente")
+            result = await self._notes_service.delete_property(self._runtime_owner_id(session_payload), property_id)
+            if not result:
+                raise FileNotFoundError("propriedade nao encontrada")
+            return result
+
+        if function_id == "notes.views.list":
+            return await self._notes_service.list_views(self._runtime_owner_id(session_payload))
+
+        if function_id == "notes.views.create":
+            return await self._notes_service.create_view(self._runtime_owner_id(session_payload), payload)
+
+        if function_id == "notes.views.get":
+            view_id = str(payload.get("view_id") or payload.get("id") or "").strip()
+            if not view_id:
+                raise ValueError("view_id ausente")
+            result = await self._notes_service.get_view(self._runtime_owner_id(session_payload), view_id)
+            if not result:
+                raise FileNotFoundError("view nao encontrada")
+            return result
+
+        if function_id == "notes.views.update":
+            view_id = str(payload.get("view_id") or payload.get("id") or "").strip()
+            if not view_id:
+                raise ValueError("view_id ausente")
+            result = await self._notes_service.update_view(self._runtime_owner_id(session_payload), view_id, payload)
+            if not result:
+                raise FileNotFoundError("view nao encontrada")
+            return result
+
+        if function_id == "notes.views.delete":
+            view_id = str(payload.get("view_id") or payload.get("id") or "").strip()
+            if not view_id:
+                raise ValueError("view_id ausente")
+            result = await self._notes_service.delete_view(self._runtime_owner_id(session_payload), view_id)
+            if not result:
+                raise FileNotFoundError("view nao encontrada")
+            return result
+
+        if function_id == "notes.views.duplicate":
+            view_id = str(payload.get("view_id") or payload.get("id") or "").strip()
+            if not view_id:
+                raise ValueError("view_id ausente")
+            result = await self._notes_service.duplicate_view(self._runtime_owner_id(session_payload), view_id)
+            if not result:
+                raise FileNotFoundError("view nao encontrada")
+            return result
+
+        if function_id == "notes.relations.search":
+            return await self._notes_service.search_relations(
+                self._runtime_owner_id(session_payload),
+                query=str(payload.get("query") or payload.get("q") or "").strip(),
+                limit=payload.get("limit", 20),
+            )
+
+        if function_id == "notes.backlinks":
+            note_id = str(payload.get("note_id") or payload.get("id") or "").strip()
+            if not note_id:
+                raise ValueError("note_id ausente")
+            result = await self._notes_service.list_backlinks(self._runtime_owner_id(session_payload), note_id)
+            if not result:
+                raise FileNotFoundError("nota nao encontrada")
+            return result
+
         if function_id == "storage.pinOffline":
             path = str(payload.get("path") or "").strip()
             if not path:
@@ -8635,7 +8903,7 @@ except Exception as e:
             return web.json_response({"error": reason, "code": reason.upper()}, status=status)
 
         try:
-            if function_id == "files.getStreamUrl":
+            if function_id == "files.getStreamUrl" or function_id == "thumbnail.fetch":
                 payload = {**payload, "runtime_token": token}
             result = await self._dispatch_runtime_function(app, function_id, payload, session_payload)
             append_audit_event(
@@ -8647,6 +8915,8 @@ except Exception as e:
             return web.json_response({"ok": True, "result": result})
         except NotImplementedError as exc:
             return web.json_response({"error": str(exc)}, status=501)
+        except FileNotFoundError as exc:
+            return web.json_response({"error": str(exc)}, status=404)
         except PermissionError as exc:
             return web.json_response({"error": str(exc)}, status=403)
         except ValueError as exc:
@@ -8660,6 +8930,405 @@ except Exception as e:
                 details={"function": function_id, "error": str(exc)},
             )
             return web.json_response({"error": str(exc)}, status=500)
+
+    async def _handle_api_notes_list(self, request):
+        try:
+            payload = await self._notes_service.list_notes(
+                self._request_owner_id(request),
+                query=str(request.query.get("q") or request.query.get("query") or "").strip(),
+                limit=request.query.get("limit", 100),
+                include_deleted=str(request.query.get("include_deleted") or "").strip().lower() in {"1", "true", "yes"},
+                favorite=True if str(request.query.get("favorite") or "").strip().lower() in {"1", "true", "yes"} else None,
+                tag=str(request.query.get("tag") or "").strip(),
+                deleted=str(request.query.get("deleted") or "").strip(),
+                archived=str(request.query.get("archived") or "").strip(),
+            )
+            return web.json_response({"ok": True, **payload})
+        except ValueError as exc:
+            return web.json_response({"ok": False, "error": str(exc)}, status=400)
+        except Exception as exc:
+            logger.error(f"Notes list failed: {exc}", exc_info=True)
+            return web.json_response({"ok": False, "error": str(exc)}, status=500)
+
+    async def _handle_api_notes_tags(self, request):
+        try:
+            payload = await self._notes_service.list_tags(self._request_owner_id(request))
+            return web.json_response({"ok": True, **payload})
+        except Exception as exc:
+            logger.error(f"Notes tags failed: {exc}", exc_info=True)
+            return web.json_response({"ok": False, "error": str(exc)}, status=500)
+
+    async def _handle_api_notes_create(self, request):
+        try:
+            payload = await request.json()
+        except Exception:
+            return web.json_response({"ok": False, "error": "JSON invalido"}, status=400)
+
+        try:
+            result = await self._notes_service.create_note(
+                self._request_owner_id(request),
+                title=str((payload or {}).get("title") or "").strip(),
+                content=(payload or {}).get("content"),
+                properties=(payload or {}).get("properties"),
+            )
+            return web.json_response({"ok": True, **result})
+        except ValueError as exc:
+            return web.json_response({"ok": False, "error": str(exc)}, status=400)
+        except Exception as exc:
+            logger.error(f"Notes create failed: {exc}", exc_info=True)
+            return web.json_response({"ok": False, "error": str(exc)}, status=500)
+
+    async def _handle_api_notes_properties_schema_get(self, request):
+        try:
+            return web.json_response({"ok": True, **await self._notes_service.get_property_schema(self._request_owner_id(request))})
+        except Exception as exc:
+            logger.error(f"Notes property schema get failed: {exc}", exc_info=True)
+            return web.json_response({"ok": False, "error": str(exc)}, status=500)
+
+    async def _handle_api_notes_properties_schema_put(self, request):
+        try:
+            payload = await request.json()
+            result = await self._notes_service.update_property_schema(self._request_owner_id(request), payload)
+            return web.json_response({"ok": True, **result})
+        except ValueError as exc:
+            return web.json_response({"ok": False, "error": str(exc)}, status=400)
+        except Exception as exc:
+            logger.error(f"Notes property schema put failed: {exc}", exc_info=True)
+            return web.json_response({"ok": False, "error": str(exc)}, status=500)
+
+    async def _handle_api_notes_property_create(self, request):
+        try:
+            payload = await request.json()
+            return web.json_response({"ok": True, **await self._notes_service.create_property(self._request_owner_id(request), payload)})
+        except ValueError as exc:
+            return web.json_response({"ok": False, "error": str(exc)}, status=400)
+        except Exception as exc:
+            logger.error(f"Notes property create failed: {exc}", exc_info=True)
+            return web.json_response({"ok": False, "error": str(exc)}, status=500)
+
+    async def _handle_api_notes_property_patch(self, request):
+        try:
+            payload = await request.json()
+            result = await self._notes_service.update_property(self._request_owner_id(request), request.match_info.get("property_id"), payload)
+            if not result:
+                return web.json_response({"ok": False, "error": "propriedade nao encontrada"}, status=404)
+            return web.json_response({"ok": True, **result})
+        except ValueError as exc:
+            return web.json_response({"ok": False, "error": str(exc)}, status=400)
+        except Exception as exc:
+            logger.error(f"Notes property patch failed: {exc}", exc_info=True)
+            return web.json_response({"ok": False, "error": str(exc)}, status=500)
+
+    async def _handle_api_notes_property_delete(self, request):
+        try:
+            result = await self._notes_service.delete_property(self._request_owner_id(request), request.match_info.get("property_id"))
+            if not result:
+                return web.json_response({"ok": False, "error": "propriedade nao encontrada"}, status=404)
+            return web.json_response({"ok": True, **result})
+        except Exception as exc:
+            logger.error(f"Notes property delete failed: {exc}", exc_info=True)
+            return web.json_response({"ok": False, "error": str(exc)}, status=500)
+
+    async def _handle_api_notes_views_list(self, request):
+        try:
+            return web.json_response({"ok": True, **await self._notes_service.list_views(self._request_owner_id(request))})
+        except Exception as exc:
+            logger.error(f"Notes views list failed: {exc}", exc_info=True)
+            return web.json_response({"ok": False, "error": str(exc)}, status=500)
+
+    async def _handle_api_notes_view_create(self, request):
+        try:
+            payload = await request.json()
+            return web.json_response({"ok": True, **await self._notes_service.create_view(self._request_owner_id(request), payload)})
+        except ValueError as exc:
+            return web.json_response({"ok": False, "error": str(exc)}, status=400)
+        except Exception as exc:
+            logger.error(f"Notes view create failed: {exc}", exc_info=True)
+            return web.json_response({"ok": False, "error": str(exc)}, status=500)
+
+    async def _handle_api_notes_view_get(self, request):
+        try:
+            result = await self._notes_service.get_view(self._request_owner_id(request), request.match_info.get("view_id"))
+            if not result:
+                return web.json_response({"ok": False, "error": "view nao encontrada"}, status=404)
+            return web.json_response({"ok": True, **result})
+        except Exception as exc:
+            logger.error(f"Notes view get failed: {exc}", exc_info=True)
+            return web.json_response({"ok": False, "error": str(exc)}, status=500)
+
+    async def _handle_api_notes_view_patch(self, request):
+        try:
+            payload = await request.json()
+            result = await self._notes_service.update_view(self._request_owner_id(request), request.match_info.get("view_id"), payload)
+            if not result:
+                return web.json_response({"ok": False, "error": "view nao encontrada"}, status=404)
+            return web.json_response({"ok": True, **result})
+        except ValueError as exc:
+            return web.json_response({"ok": False, "error": str(exc)}, status=400)
+        except Exception as exc:
+            logger.error(f"Notes view patch failed: {exc}", exc_info=True)
+            return web.json_response({"ok": False, "error": str(exc)}, status=500)
+
+    async def _handle_api_notes_view_delete(self, request):
+        try:
+            result = await self._notes_service.delete_view(self._request_owner_id(request), request.match_info.get("view_id"))
+            if not result:
+                return web.json_response({"ok": False, "error": "view nao encontrada"}, status=404)
+            return web.json_response({"ok": True, **result})
+        except Exception as exc:
+            logger.error(f"Notes view delete failed: {exc}", exc_info=True)
+            return web.json_response({"ok": False, "error": str(exc)}, status=500)
+
+    async def _handle_api_notes_view_duplicate(self, request):
+        try:
+            result = await self._notes_service.duplicate_view(self._request_owner_id(request), request.match_info.get("view_id"))
+            if not result:
+                return web.json_response({"ok": False, "error": "view nao encontrada"}, status=404)
+            return web.json_response({"ok": True, **result})
+        except Exception as exc:
+            logger.error(f"Notes view duplicate failed: {exc}", exc_info=True)
+            return web.json_response({"ok": False, "error": str(exc)}, status=500)
+
+    async def _handle_api_notes_query(self, request):
+        try:
+            payload = await request.json()
+            return web.json_response({"ok": True, **await self._notes_service.query_notes(self._request_owner_id(request), payload)})
+        except ValueError as exc:
+            return web.json_response({"ok": False, "error": str(exc)}, status=400)
+        except Exception as exc:
+            logger.error(f"Notes query failed: {exc}", exc_info=True)
+            return web.json_response({"ok": False, "error": str(exc)}, status=500)
+
+    async def _handle_api_notes_relations_search(self, request):
+        try:
+            result = await self._notes_service.search_relations(
+                self._request_owner_id(request),
+                query=str(request.query.get("q") or request.query.get("query") or "").strip(),
+                limit=request.query.get("limit", 20),
+            )
+            return web.json_response({"ok": True, **result})
+        except Exception as exc:
+            logger.error(f"Notes relation search failed: {exc}", exc_info=True)
+            return web.json_response({"ok": False, "error": str(exc)}, status=500)
+
+    async def _handle_api_notes_backlinks(self, request):
+        try:
+            result = await self._notes_service.list_backlinks(self._request_owner_id(request), request.match_info.get("note_id"))
+            if not result:
+                return web.json_response({"ok": False, "error": "nota nao encontrada"}, status=404)
+            return web.json_response({"ok": True, **result})
+        except Exception as exc:
+            logger.error(f"Notes backlinks failed: {exc}", exc_info=True)
+            return web.json_response({"ok": False, "error": str(exc)}, status=500)
+
+    async def _handle_api_notes_get(self, request):
+        note_id = str(request.match_info.get("note_id") or "").strip()
+        if not note_id:
+            return web.json_response({"ok": False, "error": "note_id ausente"}, status=400)
+
+        try:
+            include_deleted = str(request.query.get("include_deleted") or "").strip().lower() in {"1", "true", "yes"}
+            result = await self._notes_service.get_note(self._request_owner_id(request), note_id, include_deleted=include_deleted)
+            if not result:
+                return web.json_response({"ok": False, "error": "nota nao encontrada"}, status=404)
+            return web.json_response({"ok": True, **result})
+        except Exception as exc:
+            logger.error(f"Notes get failed: {exc}", exc_info=True)
+            return web.json_response({"ok": False, "error": str(exc)}, status=500)
+
+    async def _handle_api_notes_put_content(self, request):
+        note_id = str(request.match_info.get("note_id") or "").strip()
+        if not note_id:
+            return web.json_response({"ok": False, "error": "note_id ausente"}, status=400)
+
+        try:
+            payload = await request.json()
+        except Exception:
+            return web.json_response({"ok": False, "error": "JSON invalido"}, status=400)
+
+        try:
+            result = await self._notes_service.update_note(
+                self._request_owner_id(request),
+                note_id,
+                {"content": (payload or {}).get("content")},
+            )
+            if not result:
+                return web.json_response({"ok": False, "error": "nota nao encontrada"}, status=404)
+            return web.json_response({"ok": True, **result})
+        except ValueError as exc:
+            return web.json_response({"ok": False, "error": str(exc)}, status=400)
+        except Exception as exc:
+            logger.error(f"Notes put content failed: {exc}", exc_info=True)
+            return web.json_response({"ok": False, "error": str(exc)}, status=500)
+
+    async def _handle_api_notes_attachments(self, request):
+        note_id = str(request.match_info.get("note_id") or "").strip()
+        if not note_id:
+            return web.json_response({"ok": False, "error": "note_id ausente"}, status=400)
+
+        try:
+            result = await self._notes_service.list_attachments(self._request_owner_id(request), note_id)
+            if not result:
+                return web.json_response({"ok": False, "error": "nota nao encontrada"}, status=404)
+            return web.json_response({"ok": True, **result})
+        except Exception as exc:
+            logger.error(f"Notes attachments failed: {exc}", exc_info=True)
+            return web.json_response({"ok": False, "error": str(exc)}, status=500)
+
+    async def _handle_api_notes_import(self, request):
+        try:
+            payload = await request.json()
+        except Exception:
+            return web.json_response({"ok": False, "error": "JSON invalido"}, status=400)
+
+        try:
+            result = await self._notes_service.import_note(
+                self._request_owner_id(request),
+                file_name=str((payload or {}).get("file_name") or (payload or {}).get("filename") or "").strip(),
+                text_content=str((payload or {}).get("text_content") or (payload or {}).get("content") or ""),
+            )
+            return web.json_response({"ok": True, **result})
+        except (ValueError, json.JSONDecodeError) as exc:
+            return web.json_response({"ok": False, "error": str(exc)}, status=400)
+        except Exception as exc:
+            logger.error(f"Notes import failed: {exc}", exc_info=True)
+            return web.json_response({"ok": False, "error": str(exc)}, status=500)
+
+    async def _handle_api_notes_export(self, request):
+        note_id = str(request.match_info.get("note_id") or "").strip()
+        export_format = str(request.query.get("format") or "json").strip().lower()
+        if not note_id:
+            return web.json_response({"ok": False, "error": "note_id ausente"}, status=400)
+
+        try:
+            result = await self._notes_service.export_note(self._request_owner_id(request), note_id, export_format)
+            if not result:
+                return web.json_response({"ok": False, "error": "nota nao encontrada"}, status=404)
+            return web.Response(
+                text=result["content"],
+                content_type=result["content_type"].split(";", 1)[0],
+                charset="utf-8",
+                headers={
+                    "Content-Disposition": f'attachment; filename="{result["filename"]}"',
+                },
+            )
+        except ValueError as exc:
+            return web.json_response({"ok": False, "error": str(exc)}, status=400)
+        except Exception as exc:
+            logger.error(f"Notes export failed: {exc}", exc_info=True)
+            return web.json_response({"ok": False, "error": str(exc)}, status=500)
+
+    async def _handle_api_notes_backup(self, request):
+        note_id = str(request.match_info.get("note_id") or "").strip()
+        if not note_id:
+            return web.json_response({"ok": False, "error": "note_id ausente"}, status=400)
+
+        try:
+            result = await self._notes_service.backup_note(self._request_owner_id(request), note_id)
+            if not result:
+                return web.json_response({"ok": False, "error": "nota nao encontrada"}, status=404)
+            return web.json_response({"ok": True, **result})
+        except NotImplementedError as exc:
+            return web.json_response({"ok": False, "error": str(exc), "todo": True}, status=501)
+        except ValueError as exc:
+            return web.json_response({"ok": False, "error": str(exc)}, status=400)
+        except Exception as exc:
+            logger.error(f"Notes backup failed: {exc}", exc_info=True)
+            return web.json_response({"ok": False, "error": str(exc)}, status=500)
+
+    async def _handle_api_notes_restore(self, request):
+        note_id = str(request.match_info.get("note_id") or "").strip()
+        if not note_id:
+            return web.json_response({"ok": False, "error": "note_id ausente"}, status=400)
+
+        try:
+            result = await self._notes_service.restore_note(self._request_owner_id(request), note_id)
+            if not result:
+                return web.json_response({"ok": False, "error": "nota nao encontrada"}, status=404)
+            return web.json_response({"ok": True, **result})
+        except ValueError as exc:
+            return web.json_response({"ok": False, "error": str(exc)}, status=400)
+        except Exception as exc:
+            logger.error(f"Notes restore failed: {exc}", exc_info=True)
+            return web.json_response({"ok": False, "error": str(exc)}, status=500)
+
+    async def _handle_api_notes_revisions(self, request):
+        note_id = str(request.match_info.get("note_id") or "").strip()
+        if not note_id:
+            return web.json_response({"ok": False, "error": "note_id ausente"}, status=400)
+
+        try:
+            result = await self._notes_service.list_revisions(
+                self._request_owner_id(request),
+                note_id,
+                limit=request.query.get("limit", 50),
+            )
+            if not result:
+                return web.json_response({"ok": False, "error": "nota nao encontrada"}, status=404)
+            return web.json_response({"ok": True, **result})
+        except ValueError as exc:
+            return web.json_response({"ok": False, "error": str(exc)}, status=400)
+        except Exception as exc:
+            logger.error(f"Notes revisions failed: {exc}", exc_info=True)
+            return web.json_response({"ok": False, "error": str(exc)}, status=500)
+
+    async def _handle_api_notes_restore_revision(self, request):
+        note_id = str(request.match_info.get("note_id") or "").strip()
+        version = request.match_info.get("version")
+        if not note_id:
+            return web.json_response({"ok": False, "error": "note_id ausente"}, status=400)
+
+        try:
+            result = await self._notes_service.restore_revision(
+                self._request_owner_id(request),
+                note_id,
+                int(version or 0),
+            )
+            if not result:
+                return web.json_response({"ok": False, "error": "nota ou revisao nao encontrada"}, status=404)
+            return web.json_response({"ok": True, **result})
+        except ValueError as exc:
+            return web.json_response({"ok": False, "error": str(exc)}, status=400)
+        except Exception as exc:
+            logger.error(f"Notes restore revision failed: {exc}", exc_info=True)
+            return web.json_response({"ok": False, "error": str(exc)}, status=500)
+
+    async def _handle_api_notes_patch(self, request):
+        note_id = str(request.match_info.get("note_id") or "").strip()
+        if not note_id:
+            return web.json_response({"ok": False, "error": "note_id ausente"}, status=400)
+
+        try:
+            payload = await request.json()
+        except Exception:
+            return web.json_response({"ok": False, "error": "JSON invalido"}, status=400)
+
+        try:
+            result = await self._notes_service.update_note(self._request_owner_id(request), note_id, payload)
+            if not result:
+                return web.json_response({"ok": False, "error": "nota nao encontrada"}, status=404)
+            return web.json_response({"ok": True, **result})
+        except ValueError as exc:
+            return web.json_response({"ok": False, "error": str(exc)}, status=400)
+        except Exception as exc:
+            logger.error(f"Notes patch failed: {exc}", exc_info=True)
+            return web.json_response({"ok": False, "error": str(exc)}, status=500)
+
+    async def _handle_api_notes_delete(self, request):
+        note_id = str(request.match_info.get("note_id") or "").strip()
+        if not note_id:
+            return web.json_response({"ok": False, "error": "note_id ausente"}, status=400)
+
+        try:
+            result = await self._notes_service.delete_note(self._request_owner_id(request), note_id)
+            if not result:
+                return web.json_response({"ok": False, "error": "nota nao encontrada"}, status=404)
+            return web.json_response({"ok": True, **result})
+        except ValueError as exc:
+            return web.json_response({"ok": False, "error": str(exc)}, status=400)
+        except Exception as exc:
+            logger.error(f"Notes delete failed: {exc}", exc_info=True)
+            return web.json_response({"ok": False, "error": str(exc)}, status=500)
 
     async def _handle_api_settings_schema(self, request):
         return web.json_response(Config.settings_schema())

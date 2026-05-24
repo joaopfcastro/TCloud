@@ -122,6 +122,90 @@
     overflow: visible !important;
 }
 
+.tcloud-window[data-app-id="notes"] {
+    --tcloud-window-titlebar-height: 48px;
+}
+
+.tcloud-window[data-app-id="notes"] .app-viewer-header {
+    gap: 14px !important;
+    padding: 0 14px !important;
+    background: #323232 !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+    container-type: inline-size;
+    z-index: 40;
+    overflow: visible !important;
+}
+
+.tcloud-window[data-app-id="notes"] .app-viewer-title {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 9px !important;
+    min-width: 148px;
+    height: 32px !important;
+    line-height: 1 !important;
+}
+
+.tcloud-window[data-app-id="notes"] .app-viewer-title i {
+    font-size: 16px;
+    color: #0a84ff;
+}
+
+.tcloud-window[data-app-id="notes"] .app-viewer-title span {
+    overflow: hidden;
+    font-size: 14px;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tcloud-window[data-app-id="notes"] .app-viewer-generic-status {
+    flex: 1 1 auto;
+    min-width: 90px;
+    margin-left: 0;
+    font-size: 13px;
+}
+
+.tcloud-window[data-app-id="notes"] .app-viewer-generic-actions {
+    flex: 0 0 auto;
+    gap: 10px;
+}
+
+.tcloud-window[data-app-id="notes"] .app-viewer-action {
+    height: 36px;
+    min-width: 36px;
+    padding: 0 13px;
+    border-radius: 10px;
+    line-height: 1;
+}
+
+.tcloud-window[data-app-id="notes"] .app-viewer-generic-menu-panel {
+    z-index: 160;
+    right: 4px;
+    max-width: min(240px, calc(100vw - 28px));
+}
+
+@container (max-width: 760px) {
+    .tcloud-window[data-app-id="notes"] .app-viewer-generic-status {
+        display: none;
+    }
+}
+
+@container (max-width: 620px) {
+    .tcloud-window[data-app-id="notes"] .app-viewer-title span,
+    .tcloud-window[data-app-id="notes"] .app-viewer-action span {
+        display: none;
+    }
+
+    .tcloud-window[data-app-id="notes"] .app-viewer-title {
+        min-width: 32px;
+    }
+
+    .tcloud-window[data-app-id="notes"] .app-viewer-action {
+        width: 36px;
+        padding: 0;
+    }
+}
+
 .app-viewer-window-dot {
     appearance: none;
     -webkit-appearance: none;
