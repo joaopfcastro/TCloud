@@ -196,9 +196,41 @@
 }
 
 .tcloud-window[data-app-id="notes"] .app-viewer-generic-menu-panel {
-    z-index: 160;
+    z-index: 2400;
     right: auto;
     max-width: min(240px, calc(100vw - 28px));
+    pointer-events: auto;
+}
+
+.window-actions-overflow-menu {
+    position: fixed;
+    z-index: 2400;
+    pointer-events: auto;
+}
+
+.window-actions-overflow-item {
+    width: 100%;
+    min-height: 30px;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 9px;
+    font-size: 13px;
+    font-weight: 500;
+    text-align: left;
+    cursor: pointer;
+}
+
+.window-actions-overflow-item:hover {
+    background: var(--hover);
+}
+
+.window-actions-overflow-item.danger {
+    color: #ff9f9a;
 }
 
 @container (max-width: 760px) {

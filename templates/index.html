@@ -3770,11 +3770,12 @@
             top: 0;
             left: 0;
             right: auto;
-            z-index: 120;
+            z-index: 2400;
             width: 210px;
             max-width: calc(100vw - 24px);
             max-height: calc(100vh - 72px);
             overflow-y: auto;
+            pointer-events: auto;
             padding: 6px;
             border: 1px solid var(--border);
             border-radius: 10px;
@@ -3786,7 +3787,12 @@
             display: none;
         }
 
-        .app-viewer-generic-menu-item {
+        .window-actions-overflow-menu {
+            z-index: 2400;
+        }
+
+        .app-viewer-generic-menu-item,
+        .window-actions-overflow-item {
             width: 100%;
             min-height: 30px;
             border: 0;
@@ -3803,11 +3809,13 @@
             cursor: pointer;
         }
 
-        .app-viewer-generic-menu-item:hover {
+        .app-viewer-generic-menu-item:hover,
+        .window-actions-overflow-item:hover {
             background: var(--hover);
         }
 
-        .app-viewer-generic-menu-item.danger {
+        .app-viewer-generic-menu-item.danger,
+        .window-actions-overflow-item.danger {
             color: #ff9f9a;
         }
 
@@ -24801,7 +24809,7 @@
         }
 
         function attachGenericWindowMenuPanel(entry, panel) {
-            const host = window.TCloudWindowManager?.getWindowRoot?.() || document.body;
+            const host = document.body;
             panel.dataset.windowMenuOwner = genericWindowMenuOwner(entry);
             if (panel.parentNode !== host) host.appendChild(panel);
         }
@@ -24809,9 +24817,18 @@
         function positionGenericWindowMenuPanel(toggle, panel) {
             if (!toggle || !panel || panel.hidden) return;
             const rect = toggle.getBoundingClientRect();
-            const width = Math.min(panel.offsetWidth || 210, Math.max(180, window.innerWidth - 24));
-            const left = Math.max(12, Math.min(window.innerWidth - width - 12, rect.right - width));
-            const top = Math.max(48, Math.min(window.innerHeight - 48, rect.bottom + 8));
+            const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 1024;
+            const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 768;
+            const width = Math.min(Math.max(panel.offsetWidth || 210, 180), Math.max(180, viewportWidth - 24));
+            panel.style.width = `${width}px`;
+            const height = Math.min(panel.offsetHeight || 120, Math.max(80, viewportHeight - 24));
+            const left = Math.max(12, Math.min(viewportWidth - width - 12, rect.right - width));
+            const belowTop = rect.bottom + 8;
+            const aboveTop = rect.top - height - 8;
+            const shouldOpenAbove = belowTop + height > viewportHeight - 12 && aboveTop >= 12;
+            const top = shouldOpenAbove
+                ? aboveTop
+                : Math.max(12, Math.min(viewportHeight - height - 12, belowTop));
             panel.style.width = `${width}px`;
             panel.style.left = `${left}px`;
             panel.style.top = `${top}px`;
@@ -25002,7 +25019,7 @@
                         toggle.title = label;
                         toggle.innerHTML = `${icon ? `<i class="ph ${escapeHtml(icon)}"></i>` : ''}<span>${escapeHtml(label)}</span>`;
                         const panel = document.createElement('div');
-                        panel.className = 'app-viewer-generic-menu-panel';
+                        panel.className = 'app-viewer-generic-menu-panel window-actions-overflow-menu';
                         panel.setAttribute('role', 'menu');
                         panel.hidden = true;
                         menu._genericMenuPanel = panel;
@@ -25011,7 +25028,7 @@
                             if (!itemId) return;
                             const button = document.createElement('button');
                             button.type = 'button';
-                            button.className = `app-viewer-generic-menu-item${String(item?.variant || '') === 'danger' ? ' danger' : ''}`;
+                            button.className = `app-viewer-generic-menu-item window-actions-overflow-item${String(item?.variant || '') === 'danger' ? ' danger' : ''}`;
                             button.disabled = Boolean(item?.disabled);
                             button.setAttribute('role', 'menuitem');
                             button.innerHTML = `${item?.icon ? `<i class="ph ${escapeHtml(String(item.icon))}"></i>` : ''}<span>${escapeHtml(String(item?.label || itemId))}</span>`;
@@ -25090,6 +25107,7 @@
                     button.innerHTML = `${icon ? `<i class="ph ${escapeHtml(icon)}"></i>` : ''}<span>${escapeHtml(label)}</span>`;
                     button.addEventListener('click', (event) => {
                         event.stopPropagation();
+                        closeGenericWindowMenus();
                         sendGenericWindowAction(entry, actionId);
                     });
                     actionsRoot.appendChild(button);
@@ -25099,6 +25117,7 @@
 
         function clearGenericWindowActions(entry) {
             if (!entry?.element) return;
+            cleanupGenericWindowMenuPanels(entry);
             const { statusRoot, actionsRoot } = windowActionRoots(entry) || {};
             if (statusRoot) {
                 statusRoot.innerHTML = '';
@@ -25508,6 +25527,7 @@
                     return;
                 }
                 if (action === 'shell.focusWindow') {
+                    closeGenericWindowMenus();
                     window.TCloudWindowManager?.focus?.(finderShellEntry.id);
                     return;
                 }
@@ -25542,6 +25562,7 @@
                 const action = String(data.action || '').trim();
                 const payload = data.payload || {};
                 if (action === 'shell.focusWindow') {
+                    closeGenericWindowMenus();
                     const windowId = resolveWindowIdForMessageSource(event.source, payload) || genericEntry.windowId;
                     if (windowId) window.TCloudWindowManager?.focus?.(windowId);
                     return;
@@ -25608,6 +25629,7 @@
             const payload = data.payload || {};
 
             if (action === 'shell.focusWindow') {
+                closeGenericWindowMenus();
                 const windowId = resolveWindowIdForMessageSource(event.source, payload);
                 if (windowId) window.TCloudWindowManager?.focus?.(windowId);
                 return;
@@ -25672,6 +25694,7 @@
 
         window.addEventListener('resize', schedulePdfToolsToolbarDensity);
         window.addEventListener('resize', () => renderFinderTabs());
+        window.addEventListener('resize', () => closeGenericWindowMenus());
 
         // Load apps on startup
         if (isTopLevelDesktopShell()) {
