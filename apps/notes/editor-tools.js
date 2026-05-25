@@ -9,49 +9,259 @@ function editableText(initialValue, className, placeholder) {
 }
 
 const TEXT_COLORS = [
-  ["Default", ""],
-  ["Cinza", "#9B9B9B"],
-  ["Marrom", "#BA8564"],
-  ["Laranja", "#FF8C42"],
-  ["Amarelo", "#E6C547"],
-  ["Verde", "#5BB98C"],
+  ["Automático", ""],
+  ["Roxo", "#6C5CE7"],
   ["Azul", "#5A9BD5"],
-  ["Roxo", "#A57FC9"],
-  ["Rosa", "#D96C9B"],
+  ["Verde", "#5BB98C"],
+  ["Amarelo", "#E6C547"],
+  ["Laranja", "#FF8C42"],
   ["Vermelho", "#E06B65"],
+  ["Rosa", "#D96C9B"],
+  ["Cinza", "#B5BAC1"],
+  ["Branco", "#F5F5F7"],
+  ["Grafite", "#2C2F33"],
 ];
 
 const BG_COLORS = [
-  ["Default", ""],
-  ["Cinza", "#9B9B9B33"],
-  ["Marrom", "#BA856433"],
-  ["Laranja", "#FF8C4233"],
-  ["Amarelo", "#E6C54733"],
-  ["Verde", "#5BB98C33"],
-  ["Azul", "#5A9BD533"],
-  ["Roxo", "#A57FC933"],
-  ["Rosa", "#D96C9B33"],
-  ["Vermelho", "#E06B6533"],
+  ["Sem fundo", ""],
+  ["Roxo", "#2D265F"],
+  ["Azul", "#1D4265"],
+  ["Verde", "#214D3B"],
+  ["Amarelo", "#4B4019"],
+  ["Laranja", "#56331E"],
+  ["Vermelho", "#5A2A2A"],
+  ["Rosa", "#542B43"],
+  ["Cinza", "#3A3F45"],
+  ["Branco", "#F5F5F7"],
+  ["Grafite", "#2C2F33"],
 ];
 
-function isHex(value) {
-  return /^#[0-9a-f]{6}$/i.test(String(value || ""));
+const RECENT_COLORS_KEY = "tcloud.notes.recentColors";
+
+function normalizeHex(value) {
+  if (!value) return "";
+  let raw = String(value).trim().replace(/^#/, "");
+  if (/^[0-9a-f]{3}$/i.test(raw)) {
+    raw = raw.split("").map((char) => char + char).join("");
+  }
+  if (!/^[0-9a-f]{6}$/i.test(raw)) return "";
+  return `#${raw.toUpperCase()}`;
 }
 
-function wrapRange(range, style) {
-  if (!range || range.collapsed) return;
+function cssColorToHex(value) {
+  const normalized = normalizeHex(value);
+  if (normalized) return normalized;
+  const match = String(value || "").match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([.\d]+))?/i);
+  if (!match) return "";
+  if (match[4] !== undefined && Number(match[4]) === 0) return "";
+  return `#${match.slice(1, 4).map((part) => Number(part).toString(16).padStart(2, "0")).join("").toUpperCase()}`;
+}
+
+function isTextInputTarget(target) {
+  return target?.matches?.("input, textarea, select, [contenteditable='true']");
+}
+
+function nodeToElement(node) {
+  if (!node) return null;
+  return node.nodeType === Node.TEXT_NODE ? node.parentElement : node;
+}
+
+function isNodeInsideEditor(node) {
+  const element = nodeToElement(node);
+  return Boolean(element?.closest?.(".editorjs-host, #editorjs, .codex-editor"));
+}
+
+function isRangeInsideEditor(range) {
+  if (!range || range.collapsed) return false;
+  return isNodeInsideEditor(range.startContainer) && isNodeInsideEditor(range.endContainer);
+}
+
+function restoreSelection(range) {
+  if (!isRangeInsideEditor(range)) return false;
+  const selection = window.getSelection();
+  selection?.removeAllRanges();
+  selection?.addRange(range);
+  return true;
+}
+
+function getCleanupRoot(range) {
+  const element = nodeToElement(range?.commonAncestorContainer);
+  return element?.closest?.("[contenteditable='true'], .ce-block__content, .editorjs-host") || element;
+}
+
+function sanitizeStyledElement(element) {
+  if (!element?.style) return;
+  const color = cssColorToHex(element.style.color);
+  const backgroundColor = cssColorToHex(element.style.backgroundColor);
+  element.removeAttribute("style");
+  if (color) element.style.color = color;
+  if (backgroundColor) element.style.backgroundColor = backgroundColor;
+}
+
+function sanitizeInlineStyles(root) {
+  if (!root?.querySelectorAll) return;
+  root.querySelectorAll("[style]").forEach(sanitizeStyledElement);
+}
+
+function unwrapElement(element) {
+  const parent = element.parentNode;
+  if (!parent) return;
+  while (element.firstChild) parent.insertBefore(element.firstChild, element);
+  parent.removeChild(element);
+}
+
+function unwrapEmptySpans(root) {
+  if (!root?.querySelectorAll) return;
+  Array.from(root.querySelectorAll("span")).reverse().forEach((span) => {
+    const hasUsefulAttribute = Array.from(span.attributes).some((attribute) => {
+      return attribute.name !== "style" && attribute.name !== "data-tcloud-temp";
+    });
+    if (!hasUsefulAttribute && !span.getAttribute("style")) {
+      unwrapElement(span);
+    }
+  });
+}
+
+function spansCanMerge(left, right) {
+  if (!left || !right || left.tagName !== "SPAN" || right.tagName !== "SPAN") return false;
+  if (left.className || right.className) return false;
+  return left.getAttribute("style") === right.getAttribute("style");
+}
+
+function mergeAdjacentSpans(root) {
+  if (!root?.querySelectorAll) return;
+  let didMerge = true;
+  while (didMerge) {
+    didMerge = false;
+    root.querySelectorAll("span").forEach((span) => {
+      const next = span.nextSibling;
+      if (next?.nodeType === Node.ELEMENT_NODE && spansCanMerge(span, next)) {
+        while (next.firstChild) span.appendChild(next.firstChild);
+        next.remove();
+        didMerge = true;
+      }
+    });
+  }
+}
+
+function cleanupInlineSpans(root) {
+  if (!root) return;
+  sanitizeInlineStyles(root);
+  unwrapEmptySpans(root);
+  mergeAdjacentSpans(root);
+  root.normalize?.();
+}
+
+function patchFragmentStyles(fragment, stylePatch) {
+  if (!fragment?.querySelectorAll) return;
+  fragment.querySelectorAll("[style]").forEach((element) => {
+    sanitizeStyledElement(element);
+    if (Object.prototype.hasOwnProperty.call(stylePatch, "color")) {
+      element.style.color = "";
+    }
+    if (Object.prototype.hasOwnProperty.call(stylePatch, "backgroundColor")) {
+      element.style.backgroundColor = "";
+    }
+    if (!element.getAttribute("style")) element.removeAttribute("style");
+  });
+}
+
+function applyInlineStyle(range, stylePatch) {
+  if (!isRangeInsideEditor(range)) return null;
+  const cleanupRoot = getCleanupRoot(range);
+  const activeRange = range.cloneRange();
+  const fragment = activeRange.extractContents();
+  patchFragmentStyles(fragment, stylePatch);
+
+  const style = {};
+  if (Object.prototype.hasOwnProperty.call(stylePatch, "color") && stylePatch.color) {
+    style.color = normalizeHex(stylePatch.color);
+  }
+  if (Object.prototype.hasOwnProperty.call(stylePatch, "backgroundColor") && stylePatch.backgroundColor) {
+    style.backgroundColor = normalizeHex(stylePatch.backgroundColor);
+  }
+
   const span = document.createElement("span");
+  span.dataset.tcloudTemp = "true";
   Object.assign(span.style, style);
-  span.appendChild(range.extractContents());
-  range.insertNode(span);
+  span.appendChild(fragment);
+  activeRange.insertNode(span);
+
   const selection = window.getSelection();
   selection?.removeAllRanges();
   const nextRange = document.createRange();
   nextRange.selectNodeContents(span);
   selection?.addRange(nextRange);
+  span.removeAttribute("data-tcloud-temp");
+  cleanupInlineSpans(cleanupRoot || span.parentElement);
+  return nextRange.cloneRange();
+}
+
+function positionPopover(anchorEl, popoverEl) {
+  if (!anchorEl || !popoverEl) return;
+  const margin = 12;
+  const gap = 8;
+  const anchor = anchorEl.getBoundingClientRect();
+  const popover = popoverEl.getBoundingClientRect();
+  const viewport = window.visualViewport;
+  const viewportWidth = viewport?.width || window.innerWidth;
+  const viewportHeight = viewport?.height || window.innerHeight;
+  const offsetLeft = viewport?.offsetLeft || 0;
+  const offsetTop = viewport?.offsetTop || 0;
+
+  let left = anchor.left + anchor.width / 2 - popover.width / 2;
+  left = Math.max(margin + offsetLeft, Math.min(left, offsetLeft + viewportWidth - popover.width - margin));
+
+  const spaceBelow = offsetTop + viewportHeight - anchor.bottom;
+  const spaceAbove = anchor.top - offsetTop;
+  let top;
+  if (spaceBelow >= popover.height + gap || spaceBelow >= spaceAbove) {
+    top = anchor.bottom + gap;
+    popoverEl.dataset.placement = "bottom";
+  } else {
+    top = anchor.top - popover.height - gap;
+    popoverEl.dataset.placement = "top";
+  }
+  top = Math.max(margin + offsetTop, Math.min(top, offsetTop + viewportHeight - popover.height - margin));
+
+  popoverEl.style.left = `${Math.round(left)}px`;
+  popoverEl.style.top = `${Math.round(top)}px`;
+}
+
+function readRecentColors() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(RECENT_COLORS_KEY) || "[]");
+    return Array.isArray(parsed) ? parsed.map(normalizeHex).filter(Boolean).slice(0, 8) : [];
+  } catch (error) {
+    return [];
+  }
+}
+
+function saveRecentColor(hex) {
+  const normalized = normalizeHex(hex);
+  if (!normalized) return;
+  const colors = [normalized, ...readRecentColors().filter((color) => color !== normalized)].slice(0, 8);
+  localStorage.setItem(RECENT_COLORS_KEY, JSON.stringify(colors));
+}
+
+function rgbToHex(value) {
+  return cssColorToHex(value);
+}
+
+function getSelectedInlineState(range) {
+  const element = nodeToElement(range?.startContainer);
+  if (!element) return { color: "", backgroundColor: "" };
+  const styled = element.closest("span[style]") || element;
+  const computed = window.getComputedStyle(styled);
+  return {
+    color: rgbToHex(styled.style?.color || computed.color),
+    backgroundColor: rgbToHex(styled.style?.backgroundColor || computed.backgroundColor),
+  };
 }
 
 class ColorInlineTool {
+  static openTool = null;
+
   static get isInline() {
     return true;
   }
@@ -60,18 +270,54 @@ class ColorInlineTool {
     return { span: { style: true } };
   }
 
-  constructor({ api }) {
+  constructor({ api, config = {} }) {
     this.api = api;
+    this.config = config;
     this.button = null;
     this.popover = null;
+    this.paletteGrid = null;
+    this.recentGrid = null;
+    this.clearButton = null;
+    this.hexInput = null;
+    this.colorInput = null;
+    this.preview = null;
+    this.error = null;
+    this.modeButtons = {};
     this.savedRange = null;
-    this.onSelectionChange = () => {
-      const selection = window.getSelection();
-      if (selection?.rangeCount && !selection.getRangeAt(0).collapsed) {
-        this.savedRange = selection.getRangeAt(0).cloneRange();
+    this.activeColorMode = "text";
+    this.currentHex = "#6C5CE7";
+    this.reposition = () => {
+      if (this.popover?.classList.contains("is-open")) positionPopover(this.button, this.popover);
+    };
+    this.closeOnOutsidePointer = (event) => {
+      if (!this.popover?.classList.contains("is-open")) return;
+      if (this.popover.contains(event.target) || this.button?.contains(event.target)) return;
+      this.closePopover();
+    };
+    this.closeOnEscape = (event) => {
+      if (event.key === "Escape" && this.popover?.classList.contains("is-open")) {
+        event.preventDefault();
+        this.closePopover();
       }
     };
+    this.onSelectionChange = () => {
+      const selection = window.getSelection();
+      if (selection?.rangeCount) {
+        const range = selection.getRangeAt(0);
+        if (!range.collapsed && isRangeInsideEditor(range)) {
+          this.savedRange = range.cloneRange();
+          return;
+        }
+      }
+      if (!this.popover?.classList.contains("is-open")) this.savedRange = null;
+    };
     document.addEventListener("selectionchange", this.onSelectionChange);
+    document.addEventListener("pointerdown", this.closeOnOutsidePointer, true);
+    document.addEventListener("keydown", this.closeOnEscape, true);
+    window.addEventListener("resize", this.reposition, { passive: true });
+    window.addEventListener("scroll", this.reposition, true);
+    window.visualViewport?.addEventListener("resize", this.reposition, { passive: true });
+    window.visualViewport?.addEventListener("scroll", this.reposition, { passive: true });
   }
 
   render() {
@@ -81,22 +327,24 @@ class ColorInlineTool {
     this.button.type = "button";
     this.button.className = "ce-inline-tool tcloud-color-tool-button";
     this.button.title = "Cor";
+    this.button.setAttribute("aria-label", "Abrir cores");
+    this.button.setAttribute("aria-haspopup", "dialog");
+    this.button.setAttribute("aria-expanded", "false");
     this.button.textContent = "A";
     this.popover = this.renderPopover();
     wrapper.append(this.button);
-    document.querySelectorAll(".tcloud-color-popover:not(.is-open)").forEach((node) => node.remove());
-    document.body.appendChild(this.popover);
-    this.button.addEventListener("mousedown", (event) => {
+    this.button.addEventListener("pointerdown", (event) => {
       event.preventDefault();
       this.saveSelection();
     });
     this.button.addEventListener("click", (event) => {
       event.preventDefault();
       this.saveSelection();
-      const rect = this.button.getBoundingClientRect();
-      this.popover.style.left = `${Math.max(12, rect.right - 246)}px`;
-      this.popover.style.top = `${Math.max(12, rect.top - 292)}px`;
-      this.popover.classList.toggle("is-open");
+      if (this.popover.classList.contains("is-open")) {
+        this.closePopover();
+      } else {
+        this.openPopover();
+      }
     });
     return wrapper;
   }
@@ -104,86 +352,293 @@ class ColorInlineTool {
   renderPopover() {
     const popover = document.createElement("div");
     popover.className = "tcloud-color-popover";
-    popover.addEventListener("mousedown", (event) => event.preventDefault());
-    popover.append(this.renderPalette("Texto", TEXT_COLORS, "color"));
-    popover.append(this.renderPalette("Fundo", BG_COLORS, "backgroundColor"));
+    popover.setAttribute("role", "dialog");
+    popover.setAttribute("aria-label", "Cores do texto selecionado");
+    popover.addEventListener("pointerdown", (event) => {
+      if (!isTextInputTarget(event.target)) event.preventDefault();
+    });
 
-    const custom = document.createElement("div");
-    custom.className = "tcloud-color-custom";
-    const colorInput = document.createElement("input");
-    colorInput.type = "color";
-    colorInput.value = "#5A9BD5";
-    const hexInput = document.createElement("input");
-    hexInput.type = "text";
-    hexInput.value = "#5A9BD5";
-    hexInput.maxLength = 7;
-    const apply = document.createElement("button");
-    apply.type = "button";
-    apply.textContent = "HEX";
-    const applyHex = () => {
-      const hex = String(hexInput.value || "").trim();
-      if (isHex(hex)) this.applyStyle({ color: hex });
-    };
-    colorInput.addEventListener("input", () => {
-      hexInput.value = colorInput.value.toUpperCase();
-      this.applyStyle({ color: colorInput.value });
+    const header = document.createElement("div");
+    header.className = "tcloud-color-header";
+    const title = document.createElement("span");
+    title.textContent = "Cor";
+    const modes = document.createElement("div");
+    modes.className = "tcloud-color-mode";
+    [
+      ["text", "Texto"],
+      ["background", "Fundo"],
+    ].forEach(([mode, label]) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = label;
+      button.setAttribute("aria-pressed", mode === this.activeColorMode ? "true" : "false");
+      button.addEventListener("pointerdown", (event) => event.preventDefault());
+      button.addEventListener("click", () => this.setMode(mode));
+      this.modeButtons[mode] = button;
+      modes.appendChild(button);
     });
-    hexInput.addEventListener("keydown", (event) => {
-      if (event.key === "Enter") applyHex();
-    });
-    apply.addEventListener("click", applyHex);
-    custom.append(colorInput, hexInput, apply);
-    popover.append(custom);
+    header.append(title, modes);
+
+    this.clearButton = document.createElement("button");
+    this.clearButton.type = "button";
+    this.clearButton.className = "tcloud-color-clear";
+    this.clearButton.addEventListener("pointerdown", (event) => event.preventDefault());
+    this.clearButton.addEventListener("click", () => this.clearActiveMode());
+
+    this.paletteGrid = document.createElement("div");
+    this.paletteGrid.className = "tcloud-color-grid";
+
+    const presetSection = document.createElement("section");
+    presetSection.className = "tcloud-color-section";
+    const presetLabel = document.createElement("span");
+    presetLabel.textContent = "Paleta";
+    presetSection.append(presetLabel, this.paletteGrid);
+
+    const custom = this.renderCustomControls();
+
+    this.recentGrid = document.createElement("div");
+    this.recentGrid.className = "tcloud-color-grid tcloud-color-grid-recent";
+    const recentSection = document.createElement("section");
+    recentSection.className = "tcloud-color-section tcloud-color-recent-section";
+    const recentLabel = document.createElement("span");
+    recentLabel.textContent = "Recentes";
+    recentSection.append(recentLabel, this.recentGrid);
+
+    popover.append(header, this.clearButton, presetSection, custom, recentSection);
+    this.updatePopoverState();
     return popover;
   }
 
-  renderPalette(title, colors, styleKey) {
-    const section = document.createElement("section");
-    section.className = "tcloud-color-section";
+  renderCustomControls() {
+    const custom = document.createElement("section");
+    custom.className = "tcloud-color-section tcloud-color-custom";
     const label = document.createElement("span");
-    label.textContent = title;
-    const grid = document.createElement("div");
-    grid.className = "tcloud-color-grid";
+    label.textContent = "Personalizada";
+    const row = document.createElement("div");
+    row.className = "tcloud-color-hex-row";
+
+    this.preview = document.createElement("button");
+    this.preview.type = "button";
+    this.preview.className = "tcloud-color-preview";
+    this.preview.title = "Abrir seletor visual";
+    this.preview.setAttribute("aria-label", "Abrir seletor visual de cor");
+
+    this.colorInput = document.createElement("input");
+    this.colorInput.type = "color";
+    this.colorInput.value = this.currentHex;
+    this.colorInput.setAttribute("aria-label", "Seletor visual de cor");
+
+    this.hexInput = document.createElement("input");
+    this.hexInput.type = "text";
+    this.hexInput.className = "tcloud-color-hex-input";
+    this.hexInput.value = this.currentHex;
+    this.hexInput.placeholder = "#6C5CE7";
+    this.hexInput.maxLength = 7;
+    this.hexInput.setAttribute("aria-label", "Cor hexadecimal");
+
+    const apply = document.createElement("button");
+    apply.type = "button";
+    apply.className = "tcloud-color-apply";
+    apply.textContent = "Aplicar";
+
+    this.error = document.createElement("span");
+    this.error.className = "tcloud-color-error";
+    this.error.textContent = "HEX inválido";
+
+    this.preview.appendChild(this.colorInput);
+    this.preview.addEventListener("pointerdown", (event) => event.preventDefault());
+    this.preview.addEventListener("click", () => this.colorInput.click());
+    this.colorInput.addEventListener("input", () => {
+      this.setHexValue(this.colorInput.value, { validate: true });
+    });
+    this.hexInput.addEventListener("input", () => this.setHexValue(this.hexInput.value, { validate: false }));
+    this.hexInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        this.applyCustomHex();
+      }
+      if (event.key === "Escape") {
+        event.preventDefault();
+        this.closePopover();
+      }
+    });
+    apply.addEventListener("pointerdown", (event) => event.preventDefault());
+    apply.addEventListener("click", () => this.applyCustomHex());
+
+    row.append(this.preview, this.hexInput, apply);
+    custom.append(label, row, this.error);
+    return custom;
+  }
+
+  renderSwatches(grid, colors, { includeEmpty = false } = {}) {
+    grid.innerHTML = "";
     colors.forEach(([name, hex]) => {
+      if (!includeEmpty && !hex) return;
       const button = document.createElement("button");
       button.type = "button";
-      button.title = `${title}: ${name}`;
+      button.title = name;
+      button.setAttribute("aria-label", name);
       button.dataset.colorName = name;
-      button.innerHTML = `<span class="tcloud-color-swatch"></span>`;
+      button.dataset.colorValue = hex;
+      button.innerHTML = '<span class="tcloud-color-swatch"></span>';
       const swatch = button.querySelector(".tcloud-color-swatch");
-      if (hex) swatch.style.background = hex;
+      if (hex) {
+        swatch.style.background = hex;
+      } else {
+        swatch.classList.add("is-empty");
+      }
+      button.addEventListener("pointerdown", (event) => event.preventDefault());
       button.addEventListener("click", () => {
-        if (styleKey === "color") this.setColor(hex);
-        if (styleKey === "backgroundColor") this.setHighlight(hex);
+        if (hex) {
+          this.applyActiveColor(hex);
+        } else {
+          this.clearActiveMode();
+        }
       });
       grid.appendChild(button);
     });
-    section.append(label, grid);
-    return section;
+  }
+
+  setMode(mode) {
+    this.activeColorMode = mode === "background" ? "background" : "text";
+    this.updatePopoverState();
+  }
+
+  setHexValue(value, { validate }) {
+    const normalized = normalizeHex(value);
+    const shouldShowInvalid = Boolean((validate || String(value || "").trim().length >= 3) && !normalized);
+    if (validate || normalized) {
+      this.currentHex = normalized || this.currentHex;
+      this.hexInput.value = normalized || value;
+      if (normalized) this.colorInput.value = normalized;
+    }
+    this.preview.style.background = normalized || this.currentHex;
+    this.hexInput.classList.toggle("is-invalid", shouldShowInvalid);
+    this.error.classList.toggle("is-visible", shouldShowInvalid);
+  }
+
+  updatePopoverState() {
+    if (!this.paletteGrid) return;
+    const isBackground = this.activeColorMode === "background";
+    this.modeButtons.text?.setAttribute("aria-pressed", isBackground ? "false" : "true");
+    this.modeButtons.background?.setAttribute("aria-pressed", isBackground ? "true" : "false");
+    this.clearButton.textContent = isBackground ? "Sem fundo" : "Automático";
+    this.clearButton.setAttribute("aria-label", isBackground ? "Remover destaque" : "Remover cor do texto");
+    this.renderSwatches(this.paletteGrid, isBackground ? BG_COLORS : TEXT_COLORS);
+    const recentColors = readRecentColors().map((hex) => [hex, hex]);
+    this.renderSwatches(this.recentGrid, recentColors);
+    this.recentGrid.parentElement?.classList.toggle("is-empty", !recentColors.length);
+    this.markActiveSwatches();
+  }
+
+  markActiveSwatches() {
+    const state = getSelectedInlineState(this.savedRange);
+    const active = this.activeColorMode === "background" ? state.backgroundColor : state.color;
+    this.popover?.querySelectorAll(".tcloud-color-grid button").forEach((button) => {
+      button.classList.toggle("is-active", Boolean(active && button.dataset.colorValue === active));
+    });
   }
 
   saveSelection() {
     const selection = window.getSelection();
-    if (selection?.rangeCount) this.savedRange = selection.getRangeAt(0).cloneRange();
+    if (!selection?.rangeCount) return;
+    const range = selection.getRangeAt(0);
+    if (isRangeInsideEditor(range)) this.savedRange = range.cloneRange();
+  }
+
+  openPopover() {
+    if (!this.savedRange || !isRangeInsideEditor(this.savedRange)) this.saveSelection();
+    if (!this.savedRange) return;
+    if (ColorInlineTool.openTool && ColorInlineTool.openTool !== this) {
+      ColorInlineTool.openTool.closePopover();
+    }
+    document.querySelectorAll(".tcloud-color-popover").forEach((node) => {
+      if (node === this.popover) return;
+      node.remove();
+    });
+    if (!this.popover.isConnected) document.body.appendChild(this.popover);
+    const state = getSelectedInlineState(this.savedRange);
+    this.currentHex = state.color || "#6C5CE7";
+    this.popover.classList.add("is-open");
+    ColorInlineTool.openTool = this;
+    this.button?.classList.add("is-active");
+    this.button?.setAttribute("aria-expanded", "true");
+    this.setHexValue(this.currentHex, { validate: false });
+    this.updatePopoverState();
+    this.popover.style.visibility = "hidden";
+    positionPopover(this.button, this.popover);
+    requestAnimationFrame(() => {
+      positionPopover(this.button, this.popover);
+      this.popover.style.visibility = "";
+    });
+  }
+
+  closePopover() {
+    this.popover?.classList.remove("is-open");
+    if (ColorInlineTool.openTool === this) ColorInlineTool.openTool = null;
+    this.button?.classList.remove("is-active");
+    this.button?.setAttribute("aria-expanded", "false");
+    this.hexInput?.classList.remove("is-invalid");
+    this.error?.classList.remove("is-visible");
+    this.popover?.remove();
   }
 
   applyStyle(style) {
     const range = this.savedRange;
-    if (!range) return;
-    const cleanStyle = {};
-    if (Object.prototype.hasOwnProperty.call(style, "color")) cleanStyle.color = style.color || "";
-    if (Object.prototype.hasOwnProperty.call(style, "backgroundColor")) cleanStyle.backgroundColor = style.backgroundColor || "";
-    wrapRange(range, cleanStyle);
-    this.popover?.classList.remove("is-open");
+    if (!range || !restoreSelection(range)) return;
+    const nextRange = applyInlineStyle(range, style);
+    if (nextRange) this.savedRange = nextRange;
+    this.notifyEditorChanged();
+    this.closePopover();
     this.api?.toolbar?.close?.();
   }
 
+  applyActiveColor(hex) {
+    const normalized = normalizeHex(hex);
+    if (!normalized) return;
+    saveRecentColor(normalized);
+    if (this.activeColorMode === "background") {
+      this.applyStyle({ backgroundColor: normalized });
+    } else {
+      this.applyStyle({ color: normalized });
+    }
+  }
+
+  applyCustomHex() {
+    const normalized = normalizeHex(this.hexInput?.value);
+    if (!normalized) {
+      this.hexInput?.classList.add("is-invalid");
+      this.error?.classList.add("is-visible");
+      return;
+    }
+    this.setHexValue(normalized, { validate: false });
+    this.applyActiveColor(normalized);
+  }
+
+  clearActiveMode() {
+    if (this.activeColorMode === "background") {
+      this.applyStyle({ backgroundColor: null });
+    } else {
+      this.applyStyle({ color: null });
+    }
+  }
+
+  notifyEditorChanged() {
+    const activeBlock = nodeToElement(this.savedRange?.commonAncestorContainer)?.closest?.("[contenteditable='true']");
+    activeBlock?.dispatchEvent(new InputEvent("input", {
+      bubbles: true,
+      inputType: "formatSetBlockTextColor",
+      data: null,
+    }));
+    this.config?.onInlineChange?.();
+  }
+
   setColor(hex) {
-    this.applyStyle({ color: hex || "" });
+    this.applyStyle({ color: normalizeHex(hex) || null });
   }
 
   setHighlight(hex) {
-    this.applyStyle({ backgroundColor: hex || "" });
+    this.applyStyle({ backgroundColor: normalizeHex(hex) || null });
   }
 
   surround(range) {
@@ -192,7 +647,21 @@ class ColorInlineTool {
 
   checkState(selection) {
     const node = selection?.anchorNode?.parentElement;
-    this.button?.classList.toggle("ce-inline-tool--active", Boolean(node?.closest("span[style]")));
+    const isActive = Boolean(node?.closest("span[style]"));
+    this.button?.classList.toggle("ce-inline-tool--active", isActive);
+    this.button?.classList.toggle("is-active", this.popover?.classList.contains("is-open"));
+  }
+
+  destroy() {
+    document.removeEventListener("selectionchange", this.onSelectionChange);
+    document.removeEventListener("pointerdown", this.closeOnOutsidePointer, true);
+    document.removeEventListener("keydown", this.closeOnEscape, true);
+    window.removeEventListener("resize", this.reposition);
+    window.removeEventListener("scroll", this.reposition, true);
+    window.visualViewport?.removeEventListener("resize", this.reposition);
+    window.visualViewport?.removeEventListener("scroll", this.reposition);
+    if (ColorInlineTool.openTool === this) ColorInlineTool.openTool = null;
+    this.popover?.remove();
   }
 }
 

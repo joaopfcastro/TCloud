@@ -207,6 +207,17 @@ export class EditorAdapter {
         },
         textColor: {
           class: TextColorTool,
+          config: {
+            onInlineChange: () => {
+              if (this.rendering) return;
+              Promise.resolve(this.onChange()).catch((error) => {
+                console.warn("Falha ao registrar alteracao inline", error);
+              });
+              if (!this.isUndoingOrRedoing) {
+                this.triggerHistorySave();
+              }
+            },
+          },
         },
         todo: {
           class: TodoTool,
