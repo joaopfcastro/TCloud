@@ -74,11 +74,18 @@ export function saveSidebarUiState({ expandedFolderIds, sidebarCollapsed = false
 }
 
 export function buildFolderOptions(folders = []) {
-  const sorted = [...folders].sort(byPositionThenName);
-  return [
-    { id: "", label: "Raiz" },
-    ...sorted.map((folder) => ({ id: folder.id, label: folder.name || "Nova pasta" })),
-  ];
+  const tree = buildTree(folders, []);
+  const options = [{ id: "", label: "Raiz" }];
+  const walk = (parentId = "", depth = 0) => {
+    const children = (tree.foldersByParent.get(parentId) || []).sort(byPositionThenName);
+    children.forEach((folder) => {
+      const prefix = depth ? `${"  ".repeat(depth)}↳ ` : "";
+      options.push({ id: folder.id, label: `${prefix}${folder.name || "Nova pasta"}` });
+      walk(folder.id, depth + 1);
+    });
+  };
+  walk("");
+  return options;
 }
 
 export function isFolderDescendant(folderId, targetParentId, folders = []) {
@@ -143,6 +150,7 @@ function renderFolderNode(folder, tree, options = {}, depth = 0) {
   row.draggable = true;
   row.setAttribute("role", "treeitem");
   row.setAttribute("aria-expanded", expanded ? "true" : "false");
+  if (selected) row.setAttribute("aria-current", "page");
   row.style.setProperty("--tree-depth", String(depth));
   row.innerHTML = `
     <button class="tree-disclosure" type="button" aria-label="${expanded ? "Recolher pasta" : "Expandir pasta"}">
@@ -162,6 +170,11 @@ function renderFolderNode(folder, tree, options = {}, depth = 0) {
     options.onFolderToggle?.(folder.id);
   });
   row.querySelector(".tree-folder-label")?.addEventListener("click", () => options.onFolderSelect?.(folder.id));
+  row.querySelector(".tree-folder-label")?.addEventListener("dblclick", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    options.onFolderRename?.(folder.id);
+  });
   row.querySelector('[data-folder-action="note"]')?.addEventListener("click", (event) => {
     event.stopPropagation();
     options.onCreateNoteInFolder?.(folder.id);
@@ -230,6 +243,12 @@ export function renderSidebarTree(root, data = {}, options = {}) {
   if (!root) return;
   root.innerHTML = "";
   root.setAttribute("role", "tree");
+  root.oncontextmenu = (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+    if (target.closest(".tree-folder, .tree-note")) return;
+    options.onEmptyContextMenu?.(event);
+  };
 
   const view = options.view || "active";
   const query = String(options.query || "").trim();
@@ -246,6 +265,12 @@ export function renderSidebarTree(root, data = {}, options = {}) {
     renderFlatNotes(favorites, root, options, "Nenhuma nota favorita", "Marque uma nota com estrela para ela aparecer aqui.");
     return;
   }
+  if (view === "recent") {
+    const section = createSection("Recentes", { active: true });
+    root.appendChild(section);
+    renderFlatNotes(recent, root, options, "Nenhuma nota recente", "As notas editadas recentemente aparecerão aqui.");
+    return;
+  }
   if (view === "archived") {
     const section = createSection("Arquivadas", { active: true });
     root.appendChild(section);
@@ -257,12 +282,6 @@ export function renderSidebarTree(root, data = {}, options = {}) {
     root.appendChild(section);
     renderFlatNotes(trash, root, options, "Nada na lixeira", "Notas excluídas aparecerão aqui antes da exclusão definitiva.");
     return;
-  }
-
-  if (!query && favorites.length) {
-    const section = createSection("Favoritas", { muted: `${favorites.length}`, view: "favorites" });
-    root.appendChild(section);
-    favorites.slice(0, 5).forEach((note) => root.appendChild(renderNoteRow(note, options, 0)));
   }
 
   const workspace = createSection("Minhas notas", { muted: `${notes.length}`, active: view === "active" });
@@ -283,22 +302,4 @@ export function renderSidebarTree(root, data = {}, options = {}) {
     rootFolders.forEach((folder) => root.appendChild(renderFolderNode(folder, tree, options, 0)));
     rootNotes.forEach((note) => root.appendChild(renderNoteRow(note, options, 0)));
   }
-
-  if (!query && recent.length) {
-    const section = createSection("Recentes", { muted: `${recent.length}` });
-    root.appendChild(section);
-    recent.slice(0, 6).forEach((note) => root.appendChild(renderNoteRow(note, options, 0)));
-  }
-
-  const footer = document.createElement("div");
-  footer.className = "sidebar-smart-footer";
-  footer.innerHTML = `
-    <button type="button" class="filter-tab${view === "archived" ? " is-active" : ""}" data-smart-view="archived"><i class="ph ph-archive"></i><span>Arquivadas</span><small>${archived.length}</small></button>
-    <button type="button" class="filter-tab${view === "trash" ? " is-active" : ""}" data-smart-view="trash"><i class="ph ph-trash"></i><span>Lixeira</span><small>${trash.length}</small></button>
-  `;
-  root.appendChild(footer);
-
-  root.querySelectorAll("[data-smart-view]").forEach((button) => {
-    button.addEventListener("click", () => options.onSmartView?.(button.dataset.smartView));
-  });
 }

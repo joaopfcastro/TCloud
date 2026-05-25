@@ -177,6 +177,14 @@ export class NotesApi {
     return apiJson("/api/notes/move", { method: "POST", body: JSON.stringify(payload) });
   }
 
+  async moveItem(item = {}, targetFolderId = null, extra = {}) {
+    return this.moveItems({
+      ...extra,
+      items: [item],
+      target_folder_id: targetFolderId || null,
+    });
+  }
+
   async get(noteId, { includeDeleted = false } = {}) {
     if (await detectRuntimeMode()) {
       return window.TCloudApp.call("notes.get", { note_id: noteId, include_deleted: includeDeleted });

@@ -6,7 +6,7 @@
   <title>TCloud Notes</title>
   <script src="https://unpkg.com/@phosphor-icons/web"></script>
   <link rel="icon" href="data:,">
-  <link rel="stylesheet" href="./style.css?v=notes-workspace-folders-20260525">
+  <link rel="stylesheet" href="./style.css?v=notes-stabilize-folders-20260525">
 </head>
 <body>
   <div class="notes-app">
@@ -23,7 +23,7 @@
 
           <div class="sidebar-create-actions">
             <button id="new-note-button" class="primary-button" type="button"><i class="ph ph-plus"></i> Nova nota</button>
-            <button id="new-folder-button" class="secondary-button icon-create-button" type="button" aria-label="Nova pasta"><i class="ph ph-folder-plus"></i></button>
+            <button id="new-folder-button" class="secondary-button folder-create-button" type="button" aria-label="Nova pasta"><i class="ph ph-folder-plus"></i><span>Nova pasta</span></button>
           </div>
 
           <label class="search-shell" for="search-input">
@@ -34,6 +34,7 @@
           <nav class="filter-tabs" role="tablist" aria-label="Filtros principais">
             <button id="filter-all" class="filter-tab is-active" type="button" data-view="active"><i class="ph ph-note"></i> <span>Minhas Notas</span></button>
             <button id="filter-favorites" class="filter-tab" type="button" data-view="favorites"><i class="ph ph-star"></i> <span>Favoritas</span></button>
+            <button id="filter-recent" class="filter-tab" type="button" data-view="recent"><i class="ph ph-clock"></i> <span>Recentes</span></button>
             <button id="filter-archived" class="filter-tab" type="button" data-view="archived"><i class="ph ph-archive"></i> <span>Arquivadas</span></button>
             <button id="filter-trash" class="filter-tab" type="button" data-view="trash"><i class="ph ph-trash"></i> <span>Lixeira</span></button>
           </nav>
@@ -209,6 +210,47 @@
 
   <div id="file-picker-modal" class="modal hidden" aria-hidden="true"></div>
 
+  <div id="move-item-modal" class="modal hidden" aria-hidden="true">
+    <div class="modal-backdrop" data-close-modal="move-item"></div>
+    <div class="modal-card modal-card-compact">
+      <div class="modal-header">
+        <div>
+          <p class="eyebrow">Mover</p>
+          <h3 id="move-item-title">Mover para...</h3>
+        </div>
+        <button class="icon-close-button" type="button" data-close-modal="move-item" aria-label="Fechar"><i class="ph ph-x"></i></button>
+      </div>
+      <p id="move-item-description" class="confirm-description">Escolha o destino.</p>
+      <div id="move-destination-list" class="destination-list" role="listbox" aria-label="Destinos"></div>
+      <div class="confirm-actions">
+        <button id="move-item-cancel-button" class="secondary-button" type="button"><i class="ph ph-x"></i> Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="folder-name-modal" class="modal hidden" aria-hidden="true">
+    <div class="modal-backdrop" data-close-modal="folder-name"></div>
+    <div class="modal-card modal-card-compact">
+      <div class="modal-header">
+        <div>
+          <p id="folder-name-eyebrow" class="eyebrow">Pasta</p>
+          <h3 id="folder-name-title">Nova pasta</h3>
+        </div>
+        <button class="icon-close-button" type="button" data-close-modal="folder-name" aria-label="Fechar"><i class="ph ph-x"></i></button>
+      </div>
+      <p id="folder-name-description" class="confirm-description">Crie uma pasta para organizar suas notas.</p>
+      <label class="form-field" for="folder-name-input">
+        <span>Nome</span>
+        <input id="folder-name-input" type="text" autocomplete="off" maxlength="80" placeholder="Nome da pasta">
+      </label>
+      <p id="folder-name-error" class="form-error hidden">Informe um nome para a pasta.</p>
+      <div class="confirm-actions">
+        <button id="folder-name-cancel-button" class="secondary-button" type="button"><i class="ph ph-x"></i> Cancelar</button>
+        <button id="folder-name-submit-button" class="primary-button" type="button"><i class="ph ph-check"></i> Salvar</button>
+      </div>
+    </div>
+  </div>
+
   <div id="confirm-modal" class="modal hidden" aria-hidden="true">
     <div class="modal-backdrop" data-close-modal="confirm"></div>
     <div class="modal-card modal-card-compact">
@@ -272,6 +314,6 @@
   <script src="./vendor/editorjs/paragraph/paragraph.umd.js"></script>
   <script src="./vendor/editorjs/header/header.umd.js"></script>
   <script src="./vendor/editorjs/list/editorjs-list.umd.js"></script>
-  <script type="module" src="./script.js?v=notes-workspace-folders-20260525"></script>
+  <script type="module" src="./script.js?v=notes-stabilize-folders-20260525"></script>
 </body>
 </html>

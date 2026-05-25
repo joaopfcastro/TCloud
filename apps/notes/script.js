@@ -179,6 +179,8 @@ const state = {
   },
   modal: "",
   pendingConfirmAction: null,
+  folderNameRequest: null,
+  moveDestinationRequest: null,
   slashMenu: {
     open: false,
     index: 0,
@@ -238,6 +240,7 @@ const els = {
   noteTags: document.getElementById("note-tags"),
   filterAll: document.getElementById("filter-all"),
   filterFavorites: document.getElementById("filter-favorites"),
+  filterRecent: document.getElementById("filter-recent"),
   filterArchived: document.getElementById("filter-archived"),
   filterTrash: document.getElementById("filter-trash"),
   templatesModal: document.getElementById("templates-modal"),
@@ -260,6 +263,19 @@ const els = {
   confirmDescription: document.getElementById("confirm-description"),
   confirmCancelButton: document.getElementById("confirm-cancel-button"),
   confirmAcceptButton: document.getElementById("confirm-accept-button"),
+  moveItemModal: document.getElementById("move-item-modal"),
+  moveItemTitle: document.getElementById("move-item-title"),
+  moveItemDescription: document.getElementById("move-item-description"),
+  moveDestinationList: document.getElementById("move-destination-list"),
+  moveItemCancelButton: document.getElementById("move-item-cancel-button"),
+  folderNameModal: document.getElementById("folder-name-modal"),
+  folderNameEyebrow: document.getElementById("folder-name-eyebrow"),
+  folderNameTitle: document.getElementById("folder-name-title"),
+  folderNameDescription: document.getElementById("folder-name-description"),
+  folderNameInput: document.getElementById("folder-name-input"),
+  folderNameError: document.getElementById("folder-name-error"),
+  folderNameCancelButton: document.getElementById("folder-name-cancel-button"),
+  folderNameSubmitButton: document.getElementById("folder-name-submit-button"),
   slashMenu: document.getElementById("slash-menu"),
   noteCover: document.getElementById("note-cover"),
   noteCoverButton: document.getElementById("note-cover-button"),
@@ -600,8 +616,10 @@ function currentArchivedFilter() {
 function listSummaryText() {
   const pieces = [];
   if (state.filters.view === "favorites") pieces.push("Favoritas");
+  else if (state.filters.view === "recent") pieces.push("Recentes");
   else if (state.filters.view === "archived") pieces.push("Arquivadas");
   else if (state.filters.view === "trash") pieces.push("Lixeira");
+  else if (state.selectedFolderId) pieces.push(currentFolderLabel());
   else pieces.push("Minhas Notas");
 
   if (state.filters.tag) pieces.push(`#${state.filters.tag}`);
@@ -689,6 +707,11 @@ function folderPath(folderId) {
 function currentFolderLabel(folderId = state.selectedFolderId) {
   const path = folderPath(folderId);
   return path.length ? path.map((folder) => folder.name).join(" / ") : "Minhas notas";
+}
+
+function folderTargetForCreation(folderId = state.selectedFolderId) {
+  const safeFolderId = normalizeFolderId(folderId);
+  return state.filters.view === "active" && safeFolderId ? safeFolderId : "";
 }
 
 function persistSidebarState() {
@@ -910,6 +933,13 @@ function renderEmptyState() {
     els.emptyTemplateGrid.classList.add("hidden");
     return;
   }
+  if (state.filters.view === "recent") {
+    els.emptyEyebrow.textContent = "Recentes";
+    els.emptyTitle.textContent = "Nenhuma nota recente";
+    els.emptyDescription.innerHTML = "As notas editadas recentemente aparecerão aqui.";
+    els.emptyTemplateGrid.classList.add("hidden");
+    return;
+  }
   if (state.selectedFolderId) {
     els.emptyEyebrow.textContent = currentFolderLabel();
     els.emptyTitle.textContent = "Esta pasta está vazia";
@@ -943,17 +973,42 @@ function setEditorVisibility(visible) {
 function renderActiveFilterTabs() {
   els.filterAll.classList.toggle("is-active", state.filters.view === "active");
   els.filterFavorites.classList.toggle("is-active", state.filters.view === "favorites");
+  els.filterRecent?.classList.toggle("is-active", state.filters.view === "recent");
   els.filterArchived.classList.toggle("is-active", state.filters.view === "archived");
   els.filterTrash.classList.toggle("is-active", state.filters.view === "trash");
   [
     [els.filterAll, "active"],
     [els.filterFavorites, "favorites"],
+    [els.filterRecent, "recent"],
     [els.filterArchived, "archived"],
     [els.filterTrash, "trash"],
   ].forEach(([button, view]) => {
     button?.setAttribute("aria-selected", state.filters.view === view ? "true" : "false");
     if (state.filters.view === view) button?.setAttribute("aria-current", "page");
     else button?.removeAttribute("aria-current");
+  });
+
+  const counts = {
+    active: state.tree.notes?.length || 0,
+    favorites: state.tree.favorites?.length || 0,
+    recent: state.tree.recent?.length || 0,
+    archived: state.tree.archived?.length || 0,
+    trash: state.tree.trash?.length || 0,
+  };
+  [
+    [els.filterAll, counts.active],
+    [els.filterFavorites, counts.favorites],
+    [els.filterRecent, counts.recent],
+    [els.filterArchived, counts.archived],
+    [els.filterTrash, counts.trash],
+  ].forEach(([button, count]) => {
+    if (!button) return;
+    let badge = button.querySelector("small");
+    if (!badge) {
+      badge = document.createElement("small");
+      button.appendChild(badge);
+    }
+    badge.textContent = String(count);
   });
 }
 
@@ -1030,6 +1085,7 @@ function renderNotesList() {
     onNoteContextMenu: openNoteContextMenu,
     onFolderToggle: toggleFolderExpanded,
     onFolderSelect: setSelectedFolder,
+    onFolderRename: (folderId) => renameFolder(folderId).catch(handleUnexpectedError),
     onCreateNoteInFolder: (folderId) => createBlankNote(folderId).catch(handleUnexpectedError),
     onFolderContextMenu: openFolderContextMenu,
     onEmptyContextMenu: openSidebarEmptyContextMenu,
@@ -1135,6 +1191,8 @@ async function loadNotes({ preserveSelection = true } = {}) {
     state.folders = state.tree.folders;
     state.notes = state.filters.view === "favorites"
       ? state.tree.favorites
+      : state.filters.view === "recent"
+        ? state.tree.recent
       : state.filters.view === "archived"
         ? state.tree.archived
         : state.filters.view === "trash"
@@ -1476,66 +1534,88 @@ function openShareDialog() {
   });
 }
 
-function promptFolderDestination({ excludeFolderId = "", title = "Mover para..." } = {}) {
+function resolveMoveDestinationRequest(value) {
+  const request = state.moveDestinationRequest;
+  state.moveDestinationRequest = null;
+  if (request?.resolve) request.resolve(value);
+}
+
+function chooseFolderDestination({ excludeFolderId = "", title = "Mover para...", description = "Escolha uma pasta ou a raiz." } = {}) {
   const options = buildFolderOptions(state.folders).filter((option) => {
     if (!excludeFolderId) return true;
     if (option.id === excludeFolderId) return false;
     return !isFolderDescendant(excludeFolderId, option.id, state.folders);
   });
-  const message = [
-    title,
-    "",
-    ...options.map((option, index) => `${index}. ${option.label}`),
-    "",
-    "Digite o número do destino.",
-  ].join("\n");
-  const answer = window.prompt(message, "0");
-  if (answer === null) return null;
-  const option = options[Number(answer)];
-  if (!option) {
-    showToast("Destino inválido.", "error");
-    return null;
-  }
-  return option.id || "";
+  return new Promise((resolve) => {
+    state.moveDestinationRequest = { resolve };
+    els.moveItemTitle.textContent = title;
+    els.moveItemDescription.textContent = description;
+    els.moveDestinationList.innerHTML = "";
+    options.forEach((option) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "destination-item";
+      button.dataset.folderId = option.id || "";
+      button.setAttribute("role", "option");
+      button.innerHTML = `
+        <i class="ph ${option.id ? "ph-folder-simple" : "ph-house"}" aria-hidden="true"></i>
+        <span>${escapeHtml(option.label)}</span>
+      `;
+      button.addEventListener("click", () => {
+        resolveMoveDestinationRequest(option.id || "");
+        closeModal();
+      });
+      els.moveDestinationList.appendChild(button);
+    });
+    openModal("move-item");
+    window.setTimeout(() => els.moveDestinationList.querySelector("button")?.focus(), 0);
+  });
 }
 
 async function createFolder(parentId = state.selectedFolderId) {
   const safeParentId = normalizeFolderId(parentId);
-  const name = window.prompt(safeParentId ? "Nome da subpasta" : "Nome da nova pasta", "Nova pasta");
+  const name = await openFolderNameModal({ mode: "create", parentId: safeParentId });
   if (name === null) return;
-  const trimmedName = String(name || "").trim();
-  if (!trimmedName) return;
-  setSaveState("saving");
-  const response = await state.api.createFolder({ name: trimmedName, parent_id: safeParentId || null, icon: "folder" });
-  if (response.folder?.id) {
-    state.selectedFolderId = response.folder.id;
-    state.expandedFolderIds.add(response.folder.id);
-    if (safeParentId) state.expandedFolderIds.add(safeParentId);
-    persistSidebarState();
+  try {
+    setSaveState("saving");
+    const response = await state.api.createFolder({ name, parent_id: safeParentId || null, icon: "folder" });
+    if (response.folder?.id) {
+      state.filters.view = "active";
+      state.selectedFolderId = response.folder.id;
+      state.expandedFolderIds.add(response.folder.id);
+      if (safeParentId) state.expandedFolderIds.add(safeParentId);
+      persistSidebarState();
+    }
+    await loadNotes({ preserveSelection: true });
+    setSaveState("saved", { at: Date.now() });
+    showToast("Pasta criada.", "success");
+  } catch (error) {
+    setSaveState("error", { error: error.message || "Erro ao criar pasta" });
+    throw error;
   }
-  await loadNotes({ preserveSelection: true });
-  setSaveState("saved", { at: Date.now() });
-  showToast("Pasta criada.", "success");
 }
 
 async function renameFolder(folderId) {
   const folder = findFolderById(folderId);
   if (!folder) return;
-  const name = window.prompt("Renomear pasta", folder.name || "Nova pasta");
+  const name = await openFolderNameModal({ mode: "rename", folder, parentId: folder.parent_id || "" });
   if (name === null) return;
-  const trimmedName = String(name || "").trim();
-  if (!trimmedName) return;
-  setSaveState("saving");
-  await state.api.updateFolder(folder.id, { name: trimmedName });
-  await loadNotes({ preserveSelection: true });
-  setSaveState("saved", { at: Date.now() });
-  showToast("Pasta renomeada.", "success");
+  try {
+    setSaveState("saving");
+    await state.api.updateFolder(folder.id, { name });
+    await loadNotes({ preserveSelection: true });
+    setSaveState("saved", { at: Date.now() });
+    showToast("Pasta renomeada.", "success");
+  } catch (error) {
+    setSaveState("error", { error: error.message || "Erro ao renomear pasta" });
+    throw error;
+  }
 }
 
 async function moveFolder(folderId) {
   const folder = findFolderById(folderId);
   if (!folder) return;
-  const targetFolderId = promptFolderDestination({
+  const targetFolderId = await chooseFolderDestination({
     excludeFolderId: folder.id,
     title: `Mover "${folder.name || "Nova pasta"}" para...`,
   });
@@ -1576,7 +1656,7 @@ async function deleteFolder(folderId) {
 async function moveNoteToFolder(noteId) {
   const note = findNoteById(noteId);
   if (!note || currentMenuContext(note).noteTrashed) return;
-  const targetFolderId = promptFolderDestination({ title: `Mover "${note.title || "Sem título"}" para...` });
+  const targetFolderId = await chooseFolderDestination({ title: `Mover "${note.title || "Sem título"}" para...` });
   if (targetFolderId === null) return;
   setSaveState("saving");
   await state.api.moveItems({ items: [{ type: "note", id: note.id }], target_folder_id: targetFolderId || null });
@@ -1616,7 +1696,7 @@ function collapseAllFolders() {
   renderNotesList();
 }
 
-function commandContext({ note = state.currentNote, folder = null, targetFolderId = state.selectedFolderId } = {}) {
+function commandContext({ note = state.currentNote, folder = null, targetFolderId = folderTargetForCreation() } = {}) {
   return {
     ...currentMenuContext(note),
     note,
@@ -2063,14 +2143,24 @@ function openModal(name) {
   els.templatesModal.classList.toggle("hidden", name !== "templates");
   els.revisionsModal.classList.toggle("hidden", name !== "revisions");
   els.importExportModal.classList.toggle("hidden", name !== "import-export");
+  els.moveItemModal?.classList.toggle("hidden", name !== "move-item");
+  els.folderNameModal?.classList.toggle("hidden", name !== "folder-name");
   els.confirmModal.classList.toggle("hidden", name !== "confirm");
 }
 
 function closeModal() {
+  if (state.modal === "folder-name") {
+    resolveFolderNameRequest(null);
+  }
+  if (state.modal === "move-item") {
+    resolveMoveDestinationRequest(null);
+  }
   state.modal = "";
   els.templatesModal.classList.add("hidden");
   els.revisionsModal.classList.add("hidden");
   els.importExportModal.classList.add("hidden");
+  els.moveItemModal?.classList.add("hidden");
+  els.folderNameModal?.classList.add("hidden");
   els.confirmModal.classList.add("hidden");
   state.pendingConfirmAction = null;
 }
@@ -2105,6 +2195,46 @@ function askConfirmation({ eyebrow = "Confirmacao", title, description, acceptLa
   els.confirmAcceptButton.textContent = acceptLabel;
   els.confirmAcceptButton.className = acceptKind === "danger" ? "ghost-danger-button" : "primary-button";
   openModal("confirm");
+}
+
+function resolveFolderNameRequest(value) {
+  const request = state.folderNameRequest;
+  state.folderNameRequest = null;
+  if (request?.resolve) request.resolve(value);
+}
+
+function openFolderNameModal({ mode = "create", parentId = "", folder = null } = {}) {
+  return new Promise((resolve) => {
+    const safeParentId = normalizeFolderId(parentId);
+    const parentLabel = currentFolderLabel(safeParentId);
+    state.folderNameRequest = { resolve, mode, parentId: safeParentId, folderId: folder?.id || "" };
+    els.folderNameEyebrow.textContent = mode === "rename" ? "Renomear pasta" : safeParentId ? "Nova subpasta" : "Nova pasta";
+    els.folderNameTitle.textContent = mode === "rename" ? "Renomear pasta" : safeParentId ? "Criar subpasta" : "Criar pasta";
+    els.folderNameDescription.textContent = mode === "rename"
+      ? "Atualize o nome desta pasta."
+      : `Destino: ${parentLabel}`;
+    els.folderNameInput.value = mode === "rename" ? (folder?.name || "") : "";
+    els.folderNameInput.placeholder = safeParentId ? "Nome da subpasta" : "Nome da pasta";
+    els.folderNameError.classList.add("hidden");
+    els.folderNameError.textContent = "Informe um nome para a pasta.";
+    openModal("folder-name");
+    window.setTimeout(() => {
+      els.folderNameInput.focus();
+      els.folderNameInput.select();
+    }, 0);
+  });
+}
+
+function submitFolderNameModal() {
+  const value = els.folderNameInput.value.trim();
+  if (!value) {
+    els.folderNameError.textContent = "Informe um nome para a pasta.";
+    els.folderNameError.classList.remove("hidden");
+    els.folderNameInput.focus();
+    return;
+  }
+  resolveFolderNameRequest(value);
+  closeModal();
 }
 
 async function runPendingConfirmAction() {
@@ -2566,20 +2696,29 @@ function wireEvents() {
   document.getElementById("bulk-purge-btn")?.addEventListener("click", () => handleBulkAction("bulk-purge.run").catch(handleUnexpectedError));
   document.getElementById("bulk-clear-btn")?.addEventListener("click", () => handleBulkAction("bulk-clear.run").catch(handleUnexpectedError));
 
-  els.newNoteButton.addEventListener("click", () => createBlankNote().catch(handleUnexpectedError));
-  els.newFolderButton?.addEventListener("click", () => createFolder(state.selectedFolderId).catch(handleUnexpectedError));
+  els.newNoteButton.addEventListener("click", () => runNotesCommand("note.create", { targetFolderId: folderTargetForCreation() }).catch(handleUnexpectedError));
+  els.newFolderButton?.addEventListener("click", () => runNotesCommand("folder.create", { targetFolderId: folderTargetForCreation() }).catch(handleUnexpectedError));
   els.sidebarToggleButton?.addEventListener("click", () => setSidebarCollapsed(true));
   els.sidebarOpenButton?.addEventListener("click", () => setSidebarCollapsed(!state.ui.sidebarCollapsed));
   els.templatesButton?.addEventListener("click", () => openModal("templates"));
   els.importButton?.addEventListener("click", () => openImportExportModal().catch(handleUnexpectedError));
-  els.exportButton?.addEventListener("click", () => openImportExportModal().catch(handleUnexpectedError));
+  els.exportButton?.addEventListener("click", () => runNotesCommand("note.export").catch(handleUnexpectedError));
   els.backupButton?.addEventListener("click", () => backupCurrentNote().catch(handleUnexpectedError));
-  els.deleteButton?.addEventListener("click", () => deleteCurrentNote().catch(handleUnexpectedError));
-  els.restoreNoteButton?.addEventListener("click", () => restoreCurrentNote().catch(handleUnexpectedError));
-  els.revisionsButton?.addEventListener("click", () => openRevisionsModal().catch(handleUnexpectedError));
-  els.archiveButton?.addEventListener("click", () => toggleArchive().catch(handleUnexpectedError));
-  els.favoriteButton.addEventListener("click", () => toggleFavorite().catch(handleUnexpectedError));
+  els.deleteButton?.addEventListener("click", () => runNotesCommand("note.trash").catch(handleUnexpectedError));
+  els.restoreNoteButton?.addEventListener("click", () => runNotesCommand("note.restore").catch(handleUnexpectedError));
+  els.revisionsButton?.addEventListener("click", () => runNotesCommand("note.revisions").catch(handleUnexpectedError));
+  els.archiveButton?.addEventListener("click", () => runNotesCommand(state.currentNote?.archived ? "note.unarchive" : "note.archive").catch(handleUnexpectedError));
+  els.favoriteButton.addEventListener("click", () => runNotesCommand("note.favorite.toggle").catch(handleUnexpectedError));
   els.noteMoreButton?.addEventListener("click", openNoteMoreMenu);
+  els.folderNameCancelButton?.addEventListener("click", closeModal);
+  els.folderNameSubmitButton?.addEventListener("click", submitFolderNameModal);
+  els.moveItemCancelButton?.addEventListener("click", closeModal);
+  els.folderNameInput?.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      submitFolderNameModal();
+    }
+  });
   document.querySelectorAll("[data-cover-action]").forEach((button) => {
     button.addEventListener("click", () => applyCoverAction(button.dataset.coverAction).catch(handleUnexpectedError));
   });
@@ -2615,6 +2754,10 @@ function wireEvents() {
   });
   els.filterFavorites.addEventListener("click", () => {
     state.filters.view = "favorites";
+    loadNotes({ preserveSelection: false }).catch(handleUnexpectedError);
+  });
+  els.filterRecent?.addEventListener("click", () => {
+    state.filters.view = "recent";
     loadNotes({ preserveSelection: false }).catch(handleUnexpectedError);
   });
   els.filterArchived.addEventListener("click", () => {
@@ -3120,7 +3263,7 @@ function openSidebarEmptyContextMenu(event) {
     "folder.create",
     "sidebar.expandAll",
     "sidebar.collapseAll",
-  ], { targetFolderId: state.selectedFolderId });
+  ], { targetFolderId: folderTargetForCreation() });
   renderContextMenuActions(els.sidebarContextMenu, actions);
   showContextMenuAt(els.sidebarContextMenu, event.pageX || event.clientX, event.pageY || event.clientY);
 }
@@ -3188,7 +3331,10 @@ function renderContextMenuActions(menu, actions) {
     const item = document.createElement("li");
     item.className = `context-menu-item${action.variant === "danger" ? " danger" : ""}`;
     item.dataset.action = action.id;
-    if (action.disabled) item.classList.add("is-disabled");
+    if (action.disabled) {
+      item.classList.add("is-disabled");
+      item.setAttribute("aria-disabled", "true");
+    }
     item.innerHTML = `${action.icon ? `<i class="ph ${escapeHtml(action.icon.replace(/^ph\s+/, ""))}" aria-hidden="true"></i>` : ""}<span>${escapeHtml(action.label)}</span>`;
     list.appendChild(item);
   });
@@ -3281,6 +3427,7 @@ function wireContextMenus() {
   els.sidebarContextMenu?.addEventListener("click", (event) => {
     const item = event.target.closest(".context-menu-item");
     if (!item) return;
+    if (item.classList.contains("is-disabled") || item.getAttribute("aria-disabled") === "true") return;
     const action = item.dataset.action;
     const noteId = state.contextMenuTargetNoteId;
     const folderId = state.contextMenuTargetFolderId;
@@ -3289,7 +3436,7 @@ function wireContextMenus() {
     } else if (folderId) {
       runNotesCommand(action, { folder: findFolderById(folderId) }).catch(handleUnexpectedError);
     } else {
-      runNotesCommand(action, { targetFolderId: state.selectedFolderId }).catch(handleUnexpectedError);
+      runNotesCommand(action, { targetFolderId: folderTargetForCreation() }).catch(handleUnexpectedError);
     }
     hideAllContextMenus();
   });
@@ -3298,6 +3445,7 @@ function wireContextMenus() {
   els.editorContextMenu?.addEventListener("click", (event) => {
     const item = event.target.closest(".context-menu-item");
     if (!item) return;
+    if (item.classList.contains("is-disabled") || item.getAttribute("aria-disabled") === "true") return;
     const action = item.dataset.action;
     console.log(`[Editor Context Menu] Ação disparada: ${action}`);
 

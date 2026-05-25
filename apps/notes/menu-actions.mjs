@@ -105,7 +105,6 @@ export function buildBulkSelectionActions(context = {}) {
 
 const SIDEBAR_NOTE_COMMANDS = [
   "note.open",
-  "note.openTab",
   "note.rename",
   "note.duplicate",
   "note.move",

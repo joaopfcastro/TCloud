@@ -1341,6 +1341,7 @@ class NotesService:
         folder_cursor = self._db.note_folders_collection.find(folder_query).sort([("position", 1), ("name", 1)])
         async for folder in folder_cursor:
             folders.append(self._serialize_folder(folder))
+        folders_by_id = {folder.get("id"): folder for folder in folders if folder.get("id")}
 
         projection = {
             "_id": 1,
@@ -1391,6 +1392,33 @@ class NotesService:
             notes.append(serialized)
             if serialized.get("favorite"):
                 favorites.append(serialized)
+
+        if safe_query:
+            async def include_folder_path(folder_id: str | None):
+                current_folder_id = self._nullable_id(folder_id)
+                visited: set[str] = set()
+                while current_folder_id and current_folder_id not in visited:
+                    visited.add(current_folder_id)
+                    if current_folder_id in folders_by_id:
+                        current_folder_id = self._nullable_id(folders_by_id[current_folder_id].get("parent_id"))
+                        continue
+                    folder_doc = await self._db.note_folders_collection.find_one({
+                        "_id": current_folder_id,
+                        "owner_id": safe_owner_id,
+                        "deleted_at": None,
+                    })
+                    if not folder_doc:
+                        break
+                    serialized_folder = self._serialize_folder(folder_doc)
+                    folders_by_id[serialized_folder["id"]] = serialized_folder
+                    current_folder_id = self._nullable_id(serialized_folder.get("parent_id"))
+
+            for note in notes:
+                await include_folder_path(note.get("folder_id"))
+            folders = sorted(
+                folders_by_id.values(),
+                key=lambda item: (self._position_value(item.get("position")), str(item.get("name") or "").casefold()),
+            )
 
         notes.sort(key=lambda item: (self._position_value(item.get("position")), str(item.get("title") or "").casefold()))
         favorites.sort(key=lambda item: str(item.get("updated_at") or ""), reverse=True)

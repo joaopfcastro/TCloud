@@ -258,6 +258,9 @@ export async function runCommand(id, context = {}) {
   if (!command) return false;
   if (command.isVisible && !command.isVisible(context)) return false;
   if (command.isEnabled && !command.isEnabled(context)) return false;
-  await command.run(context);
+  if (typeof command.run !== "function") {
+    throw new Error(`Comando sem ação: ${id}`);
+  }
+  await command.run({ ...context, actions: context.actions || {} });
   return true;
 }
