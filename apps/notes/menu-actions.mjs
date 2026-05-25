@@ -1,3 +1,5 @@
+import { getAvailableCommands } from "./commands.js";
+
 function toIdSet(value) {
   if (value instanceof Set) return value;
   if (Array.isArray(value)) return new Set(value);
@@ -101,59 +103,35 @@ export function buildBulkSelectionActions(context = {}) {
   return actions;
 }
 
-function favoriteAction(note) {
-  return {
-    id: "favorite.run",
-    label: note?.favorite ? "Desfavoritar" : "Favoritar",
-    icon: note?.favorite ? "ph-star" : "ph-star",
-  };
-}
+const SIDEBAR_NOTE_COMMANDS = [
+  "note.open",
+  "note.openTab",
+  "note.rename",
+  "note.duplicate",
+  "note.move",
+  "note.favorite.toggle",
+  "note.archive",
+  "note.unarchive",
+  "note.restore",
+  "note.deletePermanent",
+  "note.trash",
+];
 
-function archiveAction(archived) {
-  return {
-    id: "archive.run",
-    label: archived ? "Desarquivar" : "Arquivar",
-    icon: archived ? "ph-archive-tray" : "ph-archive",
-  };
-}
-
-function activeNoteActions(note, context, { includeOpen = false, includeInfo = false } = {}) {
-  const actions = [];
-  if (includeOpen && !context.noteArchived) {
-    actions.push({ id: "open-tab.run", label: "Abrir em nova aba", icon: "ph-arrow-square-out" });
-  }
-  actions.push(favoriteAction(note));
-  if (!context.noteArchived) {
-    actions.push({ id: "duplicate.run", label: "Duplicar nota", icon: "ph-copy-simple" });
-  }
-  actions.push(archiveAction(context.noteArchived));
-  actions.push({ id: "copy-link.run", label: "Copiar link da nota", icon: "ph-link-simple" });
-  actions.push({ id: "revisions.open", label: "Histórico da nota", icon: "ph-clock-counter-clockwise" });
-  if (includeInfo) {
-    actions.push({ id: "info.open", label: "Informações da nota", icon: "ph-info" });
-  }
-  actions.push({
-    id: "delete.run",
-    label: "Mover para lixeira",
-    icon: "ph-trash",
-    variant: "danger",
-    separatorBefore: true,
-  });
-  return actions;
-}
-
-function trashedNoteActions() {
-  return [
-    { id: "restore.run", label: "Restaurar", icon: "ph-arrow-counter-clockwise", variant: "primary" },
-    {
-      id: "purge.run",
-      label: "Excluir definitivamente",
-      icon: "ph-trash",
-      variant: "danger",
-      separatorBefore: true,
-    },
-  ];
-}
+const EDITOR_MORE_COMMANDS = [
+  "note.rename",
+  "note.duplicate",
+  "note.move",
+  "note.favorite.toggle",
+  "note.archive",
+  "note.unarchive",
+  "note.restore",
+  "note.deletePermanent",
+  "note.copyLink",
+  "note.revisions",
+  "note.info",
+  "note.export",
+  "note.trash",
+];
 
 export function buildNoteMenuActions(note, options = {}) {
   const context = getNoteContext(note, options);
@@ -161,13 +139,11 @@ export function buildNoteMenuActions(note, options = {}) {
     return buildBulkSelectionActions(context);
   }
   if (!note) return [];
-  if (context.noteTrashed) return trashedNoteActions();
-  return activeNoteActions(note, context, { includeOpen: true });
+  return getAvailableCommands(SIDEBAR_NOTE_COMMANDS, { ...context, note });
 }
 
 export function buildEditorMoreActions(note, options = {}) {
   const context = getNoteContext(note, options);
   if (!note) return [];
-  if (context.noteTrashed) return trashedNoteActions();
-  return activeNoteActions(note, context, { includeInfo: true });
+  return getAvailableCommands(EDITOR_MORE_COMMANDS, { ...context, note });
 }

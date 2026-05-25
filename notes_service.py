@@ -119,6 +119,126 @@ class NotesService:
         raw = re.sub(r"[^a-zA-Z0-9_-]+", "_", str(value or "").strip()).strip("_")
         return (raw[:80] if raw else f"prop_{uuid.uuid4().hex[:10]}")
 
+    @staticmethod
+    def _nullable_id(value) -> str | None:
+        text = str(value or "").strip()
+        if not text or text.lower() in {"null", "none", "root", "raiz"}:
+            return None
+        return text
+
+    @classmethod
+    def _position_value(cls, value, *, fallback: int = 0) -> int:
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return int(fallback or 0)
+
+    @classmethod
+    def _folder_name(cls, value) -> str:
+        name = re.sub(r"\s+", " ", str(value or "").strip())
+        return name[:80] or "Nova pasta"
+
+    @classmethod
+    def _folder_icon(cls, value) -> str:
+        icon = str(value or "").strip()
+        return icon[:8] or "folder"
+
+    @classmethod
+    def _note_position(cls, note: dict | None) -> int:
+        if not isinstance(note, dict):
+            return 0
+        if "position" in note:
+            return cls._position_value(note.get("position"))
+        timestamp = note.get("updated_at") or note.get("created_at")
+        if hasattr(timestamp, "timestamp"):
+            return int(timestamp.timestamp() * 1000)
+        return 0
+
+    @classmethod
+    def _serialize_folder(cls, folder: dict | None) -> dict | None:
+        if not folder:
+            return None
+        return {
+            "id": str(folder.get("_id") or ""),
+            "owner_id": str(folder.get("owner_id") or ""),
+            "name": cls._folder_name(folder.get("name")),
+            "parent_id": cls._nullable_id(folder.get("parent_id")),
+            "icon": cls._folder_icon(folder.get("icon")),
+            "position": cls._position_value(folder.get("position")),
+            "created_at": cls._to_iso(folder.get("created_at")),
+            "updated_at": cls._to_iso(folder.get("updated_at")),
+            "deleted_at": cls._to_iso(folder.get("deleted_at")),
+        }
+
+    async def _folder_exists(self, owner_id: str, folder_id: str | None) -> bool:
+        safe_folder_id = self._nullable_id(folder_id)
+        if not safe_folder_id:
+            return True
+        return bool(await self._db.note_folders_collection.find_one({
+            "_id": safe_folder_id,
+            "owner_id": self._owner_id(owner_id),
+            "deleted_at": None,
+        }, {"_id": 1}))
+
+    async def _require_folder(self, owner_id: str, folder_id: str | None) -> str | None:
+        safe_folder_id = self._nullable_id(folder_id)
+        if not safe_folder_id:
+            return None
+        if not await self._folder_exists(owner_id, safe_folder_id):
+            raise ValueError("pasta de notas nao encontrada")
+        return safe_folder_id
+
+    async def _folder_descendant_ids(self, owner_id: str, folder_id: str) -> set[str]:
+        safe_owner_id = self._owner_id(owner_id)
+        root_id = str(folder_id or "").strip()
+        descendants: set[str] = set()
+        frontier = [root_id]
+        while frontier:
+            cursor = self._db.note_folders_collection.find({
+                "owner_id": safe_owner_id,
+                "parent_id": {"$in": frontier},
+                "deleted_at": None,
+            }, {"_id": 1})
+            next_frontier = []
+            async for item in cursor:
+                item_id = str(item.get("_id") or "")
+                if item_id and item_id not in descendants:
+                    descendants.add(item_id)
+                    next_frontier.append(item_id)
+            frontier = next_frontier
+        return descendants
+
+    async def _assert_valid_folder_parent(self, owner_id: str, folder_id: str | None, parent_id: str | None) -> str | None:
+        safe_parent_id = await self._require_folder(owner_id, parent_id)
+        safe_folder_id = str(folder_id or "").strip()
+        if safe_folder_id and safe_parent_id == safe_folder_id:
+            raise ValueError("pasta nao pode ser movida para dentro dela mesma")
+        if safe_folder_id and safe_parent_id:
+            descendants = await self._folder_descendant_ids(owner_id, safe_folder_id)
+            if safe_parent_id in descendants:
+                raise ValueError("pasta nao pode ser movida para dentro de uma subpasta dela")
+        return safe_parent_id
+
+    async def _next_note_position(self, owner_id: str, folder_id: str | None) -> int:
+        safe_owner_id = self._owner_id(owner_id)
+        safe_folder_id = self._nullable_id(folder_id)
+        latest = await self._db.notes_collection.find_one(
+            {"owner_id": safe_owner_id, "folder_id": safe_folder_id},
+            {"position": 1},
+            sort=[("position", -1)],
+        )
+        return self._position_value((latest or {}).get("position"), fallback=0) + 1000
+
+    async def _next_folder_position(self, owner_id: str, parent_id: str | None) -> int:
+        safe_owner_id = self._owner_id(owner_id)
+        safe_parent_id = self._nullable_id(parent_id)
+        latest = await self._db.note_folders_collection.find_one(
+            {"owner_id": safe_owner_id, "parent_id": safe_parent_id, "deleted_at": None},
+            {"position": 1},
+            sort=[("position", -1)],
+        )
+        return self._position_value((latest or {}).get("position"), fallback=0) + 1000
+
     @classmethod
     def _normalize_property_options(cls, options) -> list[dict]:
         normalized = []
@@ -528,6 +648,9 @@ class NotesService:
             "version": int(note.get("version") or 1),
             "favorite": bool(note.get("favorite", False)),
             "archived": bool(note.get("archived", False)),
+            "folder_id": cls._nullable_id(note.get("folder_id")),
+            "previous_folder_id": cls._nullable_id(note.get("previous_folder_id")),
+            "position": cls._note_position(note),
             "cover": cover,
             "icon": icon,
             "tags": cls._normalize_tags(note.get("tags")),
@@ -1118,6 +1241,7 @@ class NotesService:
         tag: str = "",
         deleted: str | None = None,
         archived: str | None = None,
+        folder_id: str | None = None,
     ) -> dict:
         safe_owner_id = self._owner_id(owner_id)
         safe_limit = max(1, min(int(limit or 100), 200))
@@ -1136,6 +1260,8 @@ class NotesService:
 
         if favorite is True:
             mongo_query["favorite"] = True
+        if folder_id is not None:
+            mongo_query["folder_id"] = self._nullable_id(folder_id)
         if safe_tag:
             mongo_query["tags"] = {"$elemMatch": {"$regex": f"^{re.escape(safe_tag)}$", "$options": "i"}}
         if archived_mode in {"only", "true", "1", "yes"}:
@@ -1151,6 +1277,9 @@ class NotesService:
             "version": 1,
             "favorite": 1,
             "archived": 1,
+            "folder_id": 1,
+            "previous_folder_id": 1,
+            "position": 1,
             "cover": 1,
             "icon": 1,
             "tags": 1,
@@ -1183,6 +1312,7 @@ class NotesService:
                 "tag": safe_tag,
                 "deleted": deleted_mode or ("all" if include_deleted else "active"),
                 "archived": archived_mode or "all",
+                "folder_id": self._nullable_id(folder_id),
             },
         }
 
@@ -1199,8 +1329,233 @@ class NotesService:
             tags.append({"tag": str(item.get("tag") or ""), "count": int(item.get("count") or 0)})
         return {"tags": tags}
 
-    async def create_note(self, owner_id: str, *, title: str = "", content: dict | None = None, properties: dict | None = None) -> dict:
+    async def list_tree(self, owner_id: str, *, query: str = "", limit: int = 300) -> dict:
         safe_owner_id = self._owner_id(owner_id)
+        safe_query = str(query or "").strip()
+        safe_limit = max(20, min(int(limit or 300), 500))
+
+        folders = []
+        folder_query = {"owner_id": safe_owner_id, "deleted_at": None}
+        if safe_query:
+            folder_query["name"] = {"$regex": re.escape(safe_query), "$options": "i"}
+        folder_cursor = self._db.note_folders_collection.find(folder_query).sort([("position", 1), ("name", 1)])
+        async for folder in folder_cursor:
+            folders.append(self._serialize_folder(folder))
+
+        projection = {
+            "_id": 1,
+            "title": 1,
+            "excerpt": 1,
+            "content": 1,
+            "version": 1,
+            "favorite": 1,
+            "archived": 1,
+            "folder_id": 1,
+            "previous_folder_id": 1,
+            "position": 1,
+            "cover": 1,
+            "icon": 1,
+            "tags": 1,
+            "properties": 1,
+            "outgoing_links": 1,
+            "backlinks": 1,
+            "attachments": 1,
+            "created_at": 1,
+            "updated_at": 1,
+            "deleted_at": 1,
+        }
+        notes_query = {"owner_id": safe_owner_id}
+        if safe_query:
+            escaped = re.escape(safe_query)
+            notes_query["$or"] = [
+                {"title": {"$regex": escaped, "$options": "i"}},
+                {"search_text": {"$regex": escaped, "$options": "i"}},
+                {"tags": {"$elemMatch": {"$regex": escaped, "$options": "i"}}},
+            ]
+
+        notes = []
+        favorites = []
+        archived = []
+        trash = []
+        cursor = self._db.notes_collection.find(notes_query, projection).sort("updated_at", -1).limit(safe_limit)
+        async for note in cursor:
+            serialized = self._serialize_note(note, include_content=False)
+            if not serialized:
+                continue
+            if serialized.get("deleted_at"):
+                trash.append(serialized)
+                continue
+            if serialized.get("archived"):
+                archived.append(serialized)
+                continue
+            notes.append(serialized)
+            if serialized.get("favorite"):
+                favorites.append(serialized)
+
+        notes.sort(key=lambda item: (self._position_value(item.get("position")), str(item.get("title") or "").casefold()))
+        favorites.sort(key=lambda item: str(item.get("updated_at") or ""), reverse=True)
+        archived.sort(key=lambda item: str(item.get("updated_at") or ""), reverse=True)
+        trash.sort(key=lambda item: str(item.get("updated_at") or ""), reverse=True)
+        recent = sorted(notes, key=lambda item: str(item.get("updated_at") or ""), reverse=True)[:8]
+
+        return {
+            "folders": folders,
+            "notes": notes,
+            "favorites": favorites,
+            "recent": recent,
+            "archived": archived,
+            "trash": trash,
+            "query": safe_query,
+        }
+
+    async def create_folder(self, owner_id: str, payload: dict | None = None) -> dict:
+        safe_owner_id = self._owner_id(owner_id)
+        payload = dict(payload or {})
+        parent_id = await self._assert_valid_folder_parent(safe_owner_id, None, payload.get("parent_id"))
+        position = self._position_value(payload.get("position"), fallback=await self._next_folder_position(safe_owner_id, parent_id))
+        now = self._now()
+        folder = {
+            "_id": str(uuid.uuid4()),
+            "owner_id": safe_owner_id,
+            "name": self._folder_name(payload.get("name")),
+            "parent_id": parent_id,
+            "icon": self._folder_icon(payload.get("icon")),
+            "position": position,
+            "created_at": now,
+            "updated_at": now,
+            "deleted_at": None,
+        }
+        await self._db.note_folders_collection.insert_one(folder)
+        return {"folder": self._serialize_folder(folder)}
+
+    async def update_folder(self, owner_id: str, folder_id: str, payload: dict | None = None) -> dict | None:
+        safe_owner_id = self._owner_id(owner_id)
+        safe_folder_id = str(folder_id or "").strip()
+        if not safe_folder_id:
+            raise ValueError("folder_id ausente")
+        existing = await self._db.note_folders_collection.find_one({
+            "_id": safe_folder_id,
+            "owner_id": safe_owner_id,
+            "deleted_at": None,
+        })
+        if not existing:
+            return None
+
+        payload = dict(payload or {})
+        update_payload = {"updated_at": self._now()}
+        if "name" in payload:
+            update_payload["name"] = self._folder_name(payload.get("name"))
+        if "icon" in payload:
+            update_payload["icon"] = self._folder_icon(payload.get("icon"))
+        if "position" in payload:
+            update_payload["position"] = self._position_value(payload.get("position"), fallback=self._position_value(existing.get("position")))
+        if "parent_id" in payload:
+            update_payload["parent_id"] = await self._assert_valid_folder_parent(safe_owner_id, safe_folder_id, payload.get("parent_id"))
+
+        doc = await self._db.note_folders_collection.find_one_and_update(
+            {"_id": safe_folder_id, "owner_id": safe_owner_id, "deleted_at": None},
+            {"$set": update_payload},
+            return_document=ReturnDocument.AFTER,
+        )
+        return {"folder": self._serialize_folder(doc)}
+
+    async def delete_folder(self, owner_id: str, folder_id: str, *, mode: str = "move_to_root") -> dict | None:
+        safe_owner_id = self._owner_id(owner_id)
+        safe_folder_id = str(folder_id or "").strip()
+        if not safe_folder_id:
+            raise ValueError("folder_id ausente")
+        existing = await self._db.note_folders_collection.find_one({
+            "_id": safe_folder_id,
+            "owner_id": safe_owner_id,
+            "deleted_at": None,
+        })
+        if not existing:
+            return None
+
+        mode = str(mode or "move_to_root").strip()
+        if mode not in {"move_to_root", "move_notes_to_trash"}:
+            raise ValueError("modo de exclusao de pasta invalido")
+
+        now = self._now()
+        folder_ids = {safe_folder_id, *(await self._folder_descendant_ids(safe_owner_id, safe_folder_id))}
+        if mode == "move_notes_to_trash":
+            await self._db.notes_collection.update_many(
+                {"owner_id": safe_owner_id, "folder_id": {"$in": list(folder_ids)}, "deleted_at": None},
+                [
+                    {
+                        "$set": {
+                            "previous_folder_id": "$folder_id",
+                            "folder_id": None,
+                            "deleted_at": now,
+                            "updated_at": now,
+                        }
+                    }
+                ],
+            )
+        else:
+            await self._db.notes_collection.update_many(
+                {"owner_id": safe_owner_id, "folder_id": {"$in": list(folder_ids)}, "deleted_at": None},
+                {"$set": {"folder_id": None, "updated_at": now}},
+            )
+
+        result = await self._db.note_folders_collection.update_many(
+            {"owner_id": safe_owner_id, "_id": {"$in": list(folder_ids)}, "deleted_at": None},
+            {"$set": {"deleted_at": now, "updated_at": now}},
+        )
+        return {"folder_id": safe_folder_id, "deleted": True, "deleted_folders": int(result.modified_count or 0), "mode": mode}
+
+    async def move_items(self, owner_id: str, payload: dict | None = None) -> dict:
+        safe_owner_id = self._owner_id(owner_id)
+        payload = dict(payload or {})
+        target_folder_id = await self._require_folder(safe_owner_id, payload.get("target_folder_id"))
+        items = payload.get("items") if isinstance(payload.get("items"), list) else []
+        position = payload.get("position")
+        moved = []
+
+        for index, item in enumerate(items):
+            if not isinstance(item, dict):
+                continue
+            item_type = str(item.get("type") or "").strip().lower()
+            item_id = str(item.get("id") or item.get("note_id") or item.get("folder_id") or "").strip()
+            if not item_id:
+                continue
+            next_position = self._position_value(position, fallback=(index + 1) * 1000) if position is not None else None
+            if item_type == "note":
+                update_payload = {"folder_id": target_folder_id, "updated_at": self._now()}
+                if next_position is not None:
+                    update_payload["position"] = next_position
+                result = await self._db.notes_collection.update_one(
+                    {"_id": item_id, "owner_id": safe_owner_id, "deleted_at": None},
+                    {"$set": update_payload},
+                )
+                if result.modified_count:
+                    moved.append({"type": "note", "id": item_id, "folder_id": target_folder_id})
+            elif item_type == "folder":
+                await self._assert_valid_folder_parent(safe_owner_id, item_id, target_folder_id)
+                update_payload = {"parent_id": target_folder_id, "updated_at": self._now()}
+                if next_position is not None:
+                    update_payload["position"] = next_position
+                result = await self._db.note_folders_collection.update_one(
+                    {"_id": item_id, "owner_id": safe_owner_id, "deleted_at": None},
+                    {"$set": update_payload},
+                )
+                if result.modified_count:
+                    moved.append({"type": "folder", "id": item_id, "parent_id": target_folder_id})
+
+        return {"moved": moved, "target_folder_id": target_folder_id}
+
+    async def create_note(
+        self,
+        owner_id: str,
+        *,
+        title: str = "",
+        content: dict | None = None,
+        properties: dict | None = None,
+        folder_id: str | None = None,
+        position: int | None = None,
+    ) -> dict:
+        safe_owner_id = self._owner_id(owner_id)
+        safe_folder_id = await self._require_folder(safe_owner_id, folder_id)
         normalized_title = self._trimmed_title(title)
         normalized_content = self._normalize_content(content)
         attachments = self._extract_attachments(normalized_content)
@@ -1218,6 +1573,9 @@ class NotesService:
             "version": 1,
             "favorite": False,
             "archived": False,
+            "folder_id": safe_folder_id,
+            "previous_folder_id": None,
+            "position": self._position_value(position, fallback=await self._next_note_position(safe_owner_id, safe_folder_id)),
             "cover": self._normalize_cover(None),
             "icon": self._normalize_icon(None),
             "tags": tags,
@@ -1287,6 +1645,8 @@ class NotesService:
         )
         next_favorite = self._as_bool(payload.get("favorite"), default=bool(existing.get("favorite", False))) if "favorite" in payload else bool(existing.get("favorite", False))
         next_archived = self._as_bool(payload.get("archived"), default=bool(existing.get("archived", False))) if "archived" in payload else bool(existing.get("archived", False))
+        next_folder_id = await self._require_folder(safe_owner_id, payload.get("folder_id")) if "folder_id" in payload else self._nullable_id(existing.get("folder_id"))
+        next_position = self._position_value(payload.get("position"), fallback=self._note_position(existing)) if "position" in payload else self._note_position(existing)
         existing_cover, existing_icon = self._normalize_note_appearance(existing)
         next_cover = self._normalize_cover(payload.get("cover")) if "cover" in payload else existing_cover
         next_icon = self._normalize_icon(payload.get("icon")) if "icon" in payload else existing_icon
@@ -1299,10 +1659,12 @@ class NotesService:
         properties_changed = json.dumps(next_properties, ensure_ascii=False, sort_keys=True) != json.dumps(existing.get("properties") or {}, ensure_ascii=False, sort_keys=True)
         favorite_changed = next_favorite != bool(existing.get("favorite", False))
         archived_changed = next_archived != bool(existing.get("archived", False))
+        folder_changed = next_folder_id != self._nullable_id(existing.get("folder_id"))
+        position_changed = next_position != self._note_position(existing)
         cover_changed = json.dumps(next_cover, ensure_ascii=False, sort_keys=True) != json.dumps(existing_cover, ensure_ascii=False, sort_keys=True)
         icon_changed = json.dumps(next_icon, ensure_ascii=False, sort_keys=True) != json.dumps(existing_icon, ensure_ascii=False, sort_keys=True)
 
-        if not any((title_changed, content_changed, tags_changed, properties_changed, favorite_changed, archived_changed, cover_changed, icon_changed)):
+        if not any((title_changed, content_changed, tags_changed, properties_changed, favorite_changed, archived_changed, folder_changed, position_changed, cover_changed, icon_changed)):
             return {"note": self._serialize_note(existing), "saved_content": False}
 
         now = self._now()
@@ -1315,6 +1677,8 @@ class NotesService:
             "properties": next_properties,
             "favorite": next_favorite,
             "archived": next_archived,
+            "folder_id": next_folder_id,
+            "position": next_position,
             "cover": next_cover,
             "icon": next_icon,
             "attachments": next_attachments,
@@ -1344,7 +1708,7 @@ class NotesService:
                     reason=revision_reason,
                 )
             )
-        elif any((title_changed, tags_changed, properties_changed, favorite_changed, archived_changed, cover_changed, icon_changed)):
+        elif any((title_changed, tags_changed, properties_changed, favorite_changed, archived_changed, folder_changed, position_changed, cover_changed, icon_changed)):
             update_payload["version"] = next_version
 
         doc = await self._db.notes_collection.find_one_and_update(
@@ -1369,9 +1733,22 @@ class NotesService:
             raise ValueError("note_id ausente")
 
         now = self._now()
+        existing = await self._db.notes_collection.find_one(
+            {"_id": safe_note_id, "owner_id": safe_owner_id, "deleted_at": None},
+            {"folder_id": 1},
+        )
+        if not existing:
+            return None
         doc = await self._db.notes_collection.find_one_and_update(
             {"_id": safe_note_id, "owner_id": safe_owner_id, "deleted_at": None},
-            {"$set": {"deleted_at": now, "updated_at": now}},
+            {
+                "$set": {
+                    "deleted_at": now,
+                    "updated_at": now,
+                    "previous_folder_id": self._nullable_id(existing.get("folder_id")),
+                    "folder_id": None,
+                }
+            },
             return_document=ReturnDocument.AFTER,
         )
         if not doc:
@@ -1432,9 +1809,18 @@ class NotesService:
             raise ValueError("note_id ausente")
 
         now = self._now()
+        existing = await self._db.notes_collection.find_one(
+            {"_id": safe_note_id, "owner_id": safe_owner_id, "deleted_at": {"$ne": None}},
+            {"previous_folder_id": 1},
+        )
+        if not existing:
+            return None
+        restore_folder_id = self._nullable_id(existing.get("previous_folder_id"))
+        if restore_folder_id and not await self._folder_exists(safe_owner_id, restore_folder_id):
+            restore_folder_id = None
         doc = await self._db.notes_collection.find_one_and_update(
             {"_id": safe_note_id, "owner_id": safe_owner_id, "deleted_at": {"$ne": None}},
-            {"$set": {"deleted_at": None, "updated_at": now}},
+            {"$set": {"deleted_at": None, "updated_at": now, "folder_id": restore_folder_id, "previous_folder_id": None}},
             return_document=ReturnDocument.AFTER,
         )
         if not doc:
@@ -1575,9 +1961,9 @@ class NotesService:
             "note": note,
         }
 
-    async def import_note(self, owner_id: str, *, file_name: str, text_content: str) -> dict:
+    async def import_note(self, owner_id: str, *, file_name: str, text_content: str, folder_id: str | None = None) -> dict:
         title, content = self._import_note_payload(file_name, text_content)
-        result = await self.create_note(owner_id, title=title, content=content)
+        result = await self.create_note(owner_id, title=title, content=content, folder_id=folder_id)
         return {
             "note": result["note"],
             "source_file": str(file_name or ""),

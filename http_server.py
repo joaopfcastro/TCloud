@@ -1277,6 +1277,11 @@ class TCloudHTTPServer:
         self._app.router.add_get("/api/apps/runtime/file", self._handle_api_apps_runtime_file)
         self._app.router.add_get("/api/notes", self._handle_api_notes_list)
         self._app.router.add_post("/api/notes", self._handle_api_notes_create)
+        self._app.router.add_get("/api/notes/tree", self._handle_api_notes_tree)
+        self._app.router.add_post("/api/notes/folders", self._handle_api_notes_folder_create)
+        self._app.router.add_patch("/api/notes/folders/{folder_id}", self._handle_api_notes_folder_patch)
+        self._app.router.add_delete("/api/notes/folders/{folder_id}", self._handle_api_notes_folder_delete)
+        self._app.router.add_post("/api/notes/move", self._handle_api_notes_move)
         self._app.router.add_get("/api/notes/tags", self._handle_api_notes_tags)
         self._app.router.add_get("/api/notes/properties/schema", self._handle_api_notes_properties_schema_get)
         self._app.router.add_put("/api/notes/properties/schema", self._handle_api_notes_properties_schema_put)
@@ -8583,7 +8588,43 @@ except Exception as e:
                 tag=str(payload.get("tag") or "").strip(),
                 deleted=str(payload.get("deleted") or "").strip(),
                 archived=str(payload.get("archived") or "").strip(),
+                folder_id=payload.get("folder_id") if "folder_id" in payload else None,
             )
+
+        if function_id == "notes.tree":
+            return await self._notes_service.list_tree(
+                self._runtime_owner_id(session_payload),
+                query=str(payload.get("query") or payload.get("q") or "").strip(),
+                limit=payload.get("limit", 300),
+            )
+
+        if function_id == "notes.folders.create":
+            return await self._notes_service.create_folder(self._runtime_owner_id(session_payload), payload)
+
+        if function_id == "notes.folders.update":
+            folder_id = str(payload.get("folder_id") or payload.get("id") or "").strip()
+            if not folder_id:
+                raise ValueError("folder_id ausente")
+            result = await self._notes_service.update_folder(self._runtime_owner_id(session_payload), folder_id, payload)
+            if not result:
+                raise FileNotFoundError("pasta nao encontrada")
+            return result
+
+        if function_id == "notes.folders.delete":
+            folder_id = str(payload.get("folder_id") or payload.get("id") or "").strip()
+            if not folder_id:
+                raise ValueError("folder_id ausente")
+            result = await self._notes_service.delete_folder(
+                self._runtime_owner_id(session_payload),
+                folder_id,
+                mode=str(payload.get("mode") or "move_to_root"),
+            )
+            if not result:
+                raise FileNotFoundError("pasta nao encontrada")
+            return result
+
+        if function_id == "notes.move":
+            return await self._notes_service.move_items(self._runtime_owner_id(session_payload), payload)
 
         if function_id == "notes.get":
             note_id = str(payload.get("note_id") or payload.get("id") or "").strip()
@@ -8604,6 +8645,8 @@ except Exception as e:
                 title=str(payload.get("title") or "").strip(),
                 content=payload.get("content"),
                 properties=payload.get("properties"),
+                folder_id=payload.get("folder_id"),
+                position=payload.get("position"),
             )
 
         if function_id == "notes.update":
@@ -8700,6 +8743,7 @@ except Exception as e:
                 self._runtime_owner_id(session_payload),
                 file_name=file_name,
                 text_content=text_content,
+                folder_id=payload.get("folder_id"),
             )
 
         if function_id == "notes.export":
@@ -8961,12 +9005,97 @@ except Exception as e:
                 tag=str(request.query.get("tag") or "").strip(),
                 deleted=str(request.query.get("deleted") or "").strip(),
                 archived=str(request.query.get("archived") or "").strip(),
+                folder_id=request.query.get("folder_id") if "folder_id" in request.query else None,
             )
             return web.json_response({"ok": True, **payload})
         except ValueError as exc:
             return web.json_response({"ok": False, "error": str(exc)}, status=400)
         except Exception as exc:
             logger.error(f"Notes list failed: {exc}", exc_info=True)
+            return web.json_response({"ok": False, "error": str(exc)}, status=500)
+
+    async def _handle_api_notes_tree(self, request):
+        try:
+            payload = await self._notes_service.list_tree(
+                self._request_owner_id(request),
+                query=str(request.query.get("q") or request.query.get("query") or "").strip(),
+                limit=request.query.get("limit", 300),
+            )
+            return web.json_response({"ok": True, **payload})
+        except ValueError as exc:
+            return web.json_response({"ok": False, "error": str(exc)}, status=400)
+        except Exception as exc:
+            logger.error(f"Notes tree failed: {exc}", exc_info=True)
+            return web.json_response({"ok": False, "error": str(exc)}, status=500)
+
+    async def _handle_api_notes_folder_create(self, request):
+        try:
+            payload = await request.json()
+        except Exception:
+            return web.json_response({"ok": False, "error": "JSON invalido"}, status=400)
+        try:
+            result = await self._notes_service.create_folder(self._request_owner_id(request), payload)
+            return web.json_response({"ok": True, **result})
+        except ValueError as exc:
+            return web.json_response({"ok": False, "error": str(exc)}, status=400)
+        except Exception as exc:
+            logger.error(f"Notes folder create failed: {exc}", exc_info=True)
+            return web.json_response({"ok": False, "error": str(exc)}, status=500)
+
+    async def _handle_api_notes_folder_patch(self, request):
+        folder_id = str(request.match_info.get("folder_id") or "").strip()
+        if not folder_id:
+            return web.json_response({"ok": False, "error": "folder_id ausente"}, status=400)
+        try:
+            payload = await request.json()
+        except Exception:
+            return web.json_response({"ok": False, "error": "JSON invalido"}, status=400)
+        try:
+            result = await self._notes_service.update_folder(self._request_owner_id(request), folder_id, payload)
+            if not result:
+                return web.json_response({"ok": False, "error": "pasta nao encontrada"}, status=404)
+            return web.json_response({"ok": True, **result})
+        except ValueError as exc:
+            return web.json_response({"ok": False, "error": str(exc)}, status=400)
+        except Exception as exc:
+            logger.error(f"Notes folder patch failed: {exc}", exc_info=True)
+            return web.json_response({"ok": False, "error": str(exc)}, status=500)
+
+    async def _handle_api_notes_folder_delete(self, request):
+        folder_id = str(request.match_info.get("folder_id") or "").strip()
+        if not folder_id:
+            return web.json_response({"ok": False, "error": "folder_id ausente"}, status=400)
+        try:
+            payload = await request.json() if request.can_read_body else {}
+        except Exception:
+            payload = {}
+        try:
+            result = await self._notes_service.delete_folder(
+                self._request_owner_id(request),
+                folder_id,
+                mode=str((payload or {}).get("mode") or request.query.get("mode") or "move_to_root"),
+            )
+            if not result:
+                return web.json_response({"ok": False, "error": "pasta nao encontrada"}, status=404)
+            return web.json_response({"ok": True, **result})
+        except ValueError as exc:
+            return web.json_response({"ok": False, "error": str(exc)}, status=400)
+        except Exception as exc:
+            logger.error(f"Notes folder delete failed: {exc}", exc_info=True)
+            return web.json_response({"ok": False, "error": str(exc)}, status=500)
+
+    async def _handle_api_notes_move(self, request):
+        try:
+            payload = await request.json()
+        except Exception:
+            return web.json_response({"ok": False, "error": "JSON invalido"}, status=400)
+        try:
+            result = await self._notes_service.move_items(self._request_owner_id(request), payload)
+            return web.json_response({"ok": True, **result})
+        except ValueError as exc:
+            return web.json_response({"ok": False, "error": str(exc)}, status=400)
+        except Exception as exc:
+            logger.error(f"Notes move failed: {exc}", exc_info=True)
             return web.json_response({"ok": False, "error": str(exc)}, status=500)
 
     async def _handle_api_notes_tags(self, request):
@@ -8989,6 +9118,8 @@ except Exception as e:
                 title=str((payload or {}).get("title") or "").strip(),
                 content=(payload or {}).get("content"),
                 properties=(payload or {}).get("properties"),
+                folder_id=(payload or {}).get("folder_id"),
+                position=(payload or {}).get("position"),
             )
             return web.json_response({"ok": True, **result})
         except ValueError as exc:
@@ -9205,6 +9336,7 @@ except Exception as e:
                 self._request_owner_id(request),
                 file_name=str((payload or {}).get("file_name") or (payload or {}).get("filename") or "").strip(),
                 text_content=str((payload or {}).get("text_content") or (payload or {}).get("content") or ""),
+                folder_id=(payload or {}).get("folder_id"),
             )
             return web.json_response({"ok": True, **result})
         except (ValueError, json.JSONDecodeError) as exc:

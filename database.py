@@ -41,6 +41,7 @@ class Database:
         self._desktop_window_sessions = None
         self._notes = None
         self._note_revisions = None
+        self._note_folders = None
         self._note_property_schema = None
         self._note_views = None
 
@@ -67,6 +68,7 @@ class Database:
         self._desktop_window_sessions = self._db["desktop_window_sessions"]
         self._notes = self._db["notes"]
         self._note_revisions = self._db["note_revisions"]
+        self._note_folders = self._db["note_folders"]
         self._note_property_schema = self._db["note_property_schema"]
         self._note_views = self._db["note_views"]
 
@@ -109,6 +111,7 @@ class Database:
         await self._notes.create_index([("owner_id", 1), ("deleted_at", 1), ("updated_at", -1)])
         await self._notes.create_index([("owner_id", 1), ("_id", 1)], unique=True)
         await self._notes.create_index([("owner_id", 1), ("favorite", 1), ("deleted_at", 1), ("updated_at", -1)])
+        await self._notes.create_index([("owner_id", 1), ("folder_id", 1), ("deleted_at", 1), ("archived", 1), ("position", 1)])
         await self._notes.create_index([("owner_id", 1), ("tags", 1), ("deleted_at", 1), ("updated_at", -1)])
         await self._notes.create_index([("owner_id", 1), ("attachments.path", 1)])
         await self._notes.create_index([("owner_id", 1), ("outgoing_links", 1)])
@@ -117,6 +120,8 @@ class Database:
         await self._notes.create_index([("title", "text"), ("search_text", "text")])
         await self._note_revisions.create_index([("owner_id", 1), ("note_id", 1), ("version", -1)], unique=True)
         await self._note_revisions.create_index([("owner_id", 1), ("note_id", 1), ("saved_at", -1)])
+        await self._note_folders.create_index([("owner_id", 1), ("parent_id", 1), ("deleted_at", 1), ("position", 1)])
+        await self._note_folders.create_index([("owner_id", 1), ("name", 1), ("parent_id", 1)])
         await self._note_property_schema.create_index([("owner_id", 1), ("position", 1)])
         await self._note_property_schema.create_index([("owner_id", 1), ("name", 1)])
         await self._note_views.create_index([("owner_id", 1), ("position", 1)])
@@ -148,6 +153,10 @@ class Database:
     @property
     def note_revisions_collection(self):
         return self._note_revisions
+
+    @property
+    def note_folders_collection(self):
+        return self._note_folders
 
     @property
     def note_property_schema_collection(self):

@@ -78,6 +78,13 @@ function buildListParams({ query = "", limit = 100, favorite = false, tag = "", 
   return params;
 }
 
+function buildTreeParams({ query = "", limit = 300 } = {}) {
+  const params = new URLSearchParams();
+  if (query) params.set("q", query);
+  if (limit) params.set("limit", String(limit));
+  return params;
+}
+
 function quotePath(path) {
   return String(path || "").split("/").map((part) => encodeURIComponent(part)).join("/");
 }
@@ -125,6 +132,49 @@ export class NotesApi {
       return window.TCloudApp.call("notes.create", payload);
     }
     return apiJson("/api/notes", { method: "POST", body: JSON.stringify(payload) });
+  }
+
+  async getTree({ query = "", limit = 300 } = {}) {
+    if (await detectRuntimeMode()) {
+      return window.TCloudApp.call("notes.tree", { query, limit });
+    }
+    const params = buildTreeParams({ query, limit });
+    const suffix = params.toString() ? `?${params.toString()}` : "";
+    return apiJson(`/api/notes/tree${suffix}`);
+  }
+
+  async createFolder(payload = {}) {
+    if (await detectRuntimeMode()) {
+      return window.TCloudApp.call("notes.folders.create", payload);
+    }
+    return apiJson("/api/notes/folders", { method: "POST", body: JSON.stringify(payload) });
+  }
+
+  async updateFolder(folderId, payload = {}) {
+    if (await detectRuntimeMode()) {
+      return window.TCloudApp.call("notes.folders.update", { folder_id: folderId, ...payload });
+    }
+    return apiJson(`/api/notes/folders/${encodeURIComponent(folderId)}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async deleteFolder(folderId, { mode = "move_to_root" } = {}) {
+    if (await detectRuntimeMode()) {
+      return window.TCloudApp.call("notes.folders.delete", { folder_id: folderId, mode });
+    }
+    return apiJson(`/api/notes/folders/${encodeURIComponent(folderId)}`, {
+      method: "DELETE",
+      body: JSON.stringify({ mode }),
+    });
+  }
+
+  async moveItems(payload = {}) {
+    if (await detectRuntimeMode()) {
+      return window.TCloudApp.call("notes.move", payload);
+    }
+    return apiJson("/api/notes/move", { method: "POST", body: JSON.stringify(payload) });
   }
 
   async get(noteId, { includeDeleted = false } = {}) {
@@ -205,13 +255,13 @@ export class NotesApi {
     });
   }
 
-  async importNote({ fileName, textContent }) {
+  async importNote({ fileName, textContent, folderId = "" }) {
     if (await detectRuntimeMode()) {
-      return window.TCloudApp.call("notes.import", { file_name: fileName, text_content: textContent });
+      return window.TCloudApp.call("notes.import", { file_name: fileName, text_content: textContent, folder_id: folderId || null });
     }
     return apiJson("/api/notes/import", {
       method: "POST",
-      body: JSON.stringify({ file_name: fileName, text_content: textContent }),
+      body: JSON.stringify({ file_name: fileName, text_content: textContent, folder_id: folderId || null }),
     });
   }
 

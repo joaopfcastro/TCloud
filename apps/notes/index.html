@@ -6,7 +6,7 @@
   <title>TCloud Notes</title>
   <script src="https://unpkg.com/@phosphor-icons/web"></script>
   <link rel="icon" href="data:,">
-  <link rel="stylesheet" href="./style.css?v=notes-window-layout-20260524">
+  <link rel="stylesheet" href="./style.css?v=notes-workspace-folders-20260525">
 </head>
 <body>
   <div class="notes-app">
@@ -21,7 +21,10 @@
             <button id="sidebar-toggle-button" class="sidebar-toggle-button" type="button" aria-label="Recolher sidebar"><i class="ph ph-caret-double-left"></i></button>
           </div>
 
-          <button id="new-note-button" class="primary-button" type="button"><i class="ph ph-plus"></i> Nova nota</button>
+          <div class="sidebar-create-actions">
+            <button id="new-note-button" class="primary-button" type="button"><i class="ph ph-plus"></i> Nova nota</button>
+            <button id="new-folder-button" class="secondary-button icon-create-button" type="button" aria-label="Nova pasta"><i class="ph ph-folder-plus"></i></button>
+          </div>
 
           <label class="search-shell" for="search-input">
             <span>Buscar</span>
@@ -42,6 +45,19 @@
         </aside>
 
         <main class="editor-shell">
+          <div class="editor-topbar">
+            <button id="sidebar-open-button" class="sidebar-toggle-button" type="button" aria-label="Abrir sidebar"><i class="ph ph-sidebar"></i></button>
+            <nav id="note-breadcrumb" class="note-breadcrumb" aria-label="Localização da nota">Minhas notas</nav>
+            <span class="editor-topbar-spacer"></span>
+            <button id="templates-button" class="icon-toggle-button" type="button" aria-label="Templates"><i class="ph ph-sparkle"></i></button>
+            <button id="import-button" class="icon-toggle-button" type="button" aria-label="Importar"><i class="ph ph-upload-simple"></i></button>
+            <button id="export-button" class="icon-toggle-button" type="button" aria-label="Exportar"><i class="ph ph-export"></i></button>
+            <button id="revisions-button" class="icon-toggle-button" type="button" aria-label="Histórico"><i class="ph ph-clock-counter-clockwise"></i></button>
+            <button id="archive-note-button" class="icon-toggle-button" type="button" aria-label="Arquivar"><i class="ph ph-archive"></i></button>
+            <button id="delete-note-button" class="icon-toggle-button is-danger" type="button" aria-label="Mover para lixeira"><i class="ph ph-trash"></i></button>
+            <button id="restore-note-button" class="icon-toggle-button hidden" type="button" aria-label="Restaurar"><i class="ph ph-arrow-counter-clockwise"></i></button>
+            <button id="note-more-button" class="icon-toggle-button" type="button" aria-haspopup="menu" aria-expanded="false" aria-label="Mais ações"><i class="ph ph-dots-three"></i></button>
+          </div>
           <section id="editor-empty-state" class="editor-empty-state">
             <div class="empty-panel">
               <p id="empty-eyebrow" class="eyebrow">Notas</p>
@@ -256,6 +272,6 @@
   <script src="./vendor/editorjs/paragraph/paragraph.umd.js"></script>
   <script src="./vendor/editorjs/header/header.umd.js"></script>
   <script src="./vendor/editorjs/list/editorjs-list.umd.js"></script>
-  <script type="module" src="./script.js?v=notes-window-layout-20260524"></script>
+  <script type="module" src="./script.js?v=notes-workspace-folders-20260525"></script>
 </body>
 </html>

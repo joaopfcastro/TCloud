@@ -10,6 +10,14 @@ import {
   buildNoteMenuActions,
   getNoteContext,
 } from "./menu-actions.mjs";
+import { getAvailableCommands, runCommand } from "./commands.js";
+import {
+  buildFolderOptions,
+  isFolderDescendant,
+  loadSidebarUiState,
+  renderSidebarTree,
+  saveSidebarUiState,
+} from "./sidebar-tree.js";
 
 const AUTOSAVE_DELAY_MS = 1200;
 const SEARCH_DELAY_MS = 260;
@@ -136,6 +144,15 @@ const state = {
   editor: null,
   picker: null,
   notes: [],
+  folders: [],
+  tree: {
+    folders: [],
+    notes: [],
+    favorites: [],
+    recent: [],
+    archived: [],
+    trash: [],
+  },
   revisions: [],
   attachments: [],
   currentNoteId: "",
@@ -153,6 +170,8 @@ const state = {
     view: "active",
     tag: "",
   },
+  selectedFolderId: "",
+  expandedFolderIds: new Set(),
   saveState: {
     mode: "idle",
     at: 0,
@@ -181,6 +200,8 @@ const state = {
   },
   selectedNoteIds: new Set(),
   lastClickedNoteId: null,
+  contextMenuTargetNoteId: "",
+  contextMenuTargetFolderId: "",
   currentListRequestId: 0,
   currentOpenNoteRequestId: 0,
 };
@@ -189,6 +210,7 @@ const els = {
   app: document.querySelector(".notes-app"),
   searchInput: document.getElementById("search-input"),
   newNoteButton: document.getElementById("new-note-button"),
+  newFolderButton: document.getElementById("new-folder-button"),
   sidebarToggleButton: document.getElementById("sidebar-toggle-button"),
   sidebarOpenButton: document.getElementById("sidebar-open-button"),
   templatesButton: document.getElementById("templates-button"),
@@ -200,6 +222,7 @@ const els = {
   titleInput: document.getElementById("note-title"),
   favoriteButton: document.getElementById("favorite-button"),
   saveStatus: document.getElementById("save-status"),
+  noteBreadcrumb: document.getElementById("note-breadcrumb"),
   noteMeta: document.getElementById("note-meta"),
   deleteButton: document.getElementById("delete-note-button"),
   restoreNoteButton: document.getElementById("restore-note-button"),
@@ -245,6 +268,7 @@ const els = {
   noteIconMenu: document.getElementById("note-icon-menu"),
   sidebarContextMenu: document.getElementById("sidebar-context-menu"),
   editorContextMenu: document.getElementById("editor-context-menu"),
+  noteMoreButton: document.getElementById("note-more-button"),
   searchBarFloating: document.getElementById("search-bar-floating"),
   floatingSearchInput: document.getElementById("floating-search-input"),
   searchCounter: document.getElementById("search-counter"),
@@ -633,7 +657,65 @@ function hasShellWindowActions() {
 
 function findNoteById(noteId) {
   return state.notes.find((note) => note.id === noteId)
+    || state.tree.notes.find((note) => note.id === noteId)
+    || state.tree.favorites.find((note) => note.id === noteId)
+    || state.tree.archived.find((note) => note.id === noteId)
+    || state.tree.trash.find((note) => note.id === noteId)
     || (state.currentNote?.id === noteId ? state.currentNote : null);
+}
+
+function normalizeFolderId(value) {
+  return String(value || "").trim();
+}
+
+function findFolderById(folderId) {
+  const safeId = normalizeFolderId(folderId);
+  if (!safeId) return null;
+  return state.folders.find((folder) => folder.id === safeId) || null;
+}
+
+function folderPath(folderId) {
+  const path = [];
+  const visited = new Set();
+  let current = findFolderById(folderId);
+  while (current && !visited.has(current.id)) {
+    visited.add(current.id);
+    path.unshift(current);
+    current = findFolderById(current.parent_id);
+  }
+  return path;
+}
+
+function currentFolderLabel(folderId = state.selectedFolderId) {
+  const path = folderPath(folderId);
+  return path.length ? path.map((folder) => folder.name).join(" / ") : "Minhas notas";
+}
+
+function persistSidebarState() {
+  saveSidebarUiState({
+    expandedFolderIds: state.expandedFolderIds,
+    sidebarCollapsed: state.ui.sidebarCollapsed,
+    selectedFolderId: state.selectedFolderId,
+  });
+}
+
+function setSelectedFolder(folderId = "") {
+  state.selectedFolderId = normalizeFolderId(folderId);
+  if (state.selectedFolderId) state.expandedFolderIds.add(state.selectedFolderId);
+  persistSidebarState();
+  state.selectedNoteIds.clear();
+  state.currentNoteId = "";
+  setCurrentNote(null);
+  setEditorVisibility(false);
+  loadNotes({ preserveSelection: false }).catch(handleUnexpectedError);
+}
+
+function renderBreadcrumb() {
+  if (!els.noteBreadcrumb) return;
+  const noteFolderId = normalizeFolderId(state.currentNote?.folder_id || state.selectedFolderId);
+  const path = folderPath(noteFolderId);
+  const pieces = ["Minhas notas", ...path.map((folder) => folder.name)];
+  els.noteBreadcrumb.textContent = pieces.join(" / ");
 }
 
 function currentMenuContext(note, extra = {}) {
@@ -642,6 +724,8 @@ function currentMenuContext(note, extra = {}) {
     notes: state.notes,
     selectedNoteIds: state.selectedNoteIds,
     compactWindow: state.ui.compactWindow,
+    folders: state.folders,
+    selectedFolderId: state.selectedFolderId,
     ...extra,
   });
 }
@@ -685,7 +769,7 @@ function publishWindowActions() {
       label: "Exportar",
       icon: "ph-export",
       variant: "primary",
-      disabled: !hasNote,
+      disabled: !hasNote || trashed,
     },
     {
       id: "share.open",
@@ -756,6 +840,7 @@ function applyLayoutState() {
 function setSidebarCollapsed(collapsed) {
   state.ui.sidebarCollapsed = Boolean(collapsed);
   applyLayoutState();
+  persistSidebarState();
 }
 
 function updateCompactWindowMode(width) {
@@ -789,14 +874,18 @@ function noteTagsLabel(note) {
 function renderHeaderMeta() {
   if (!state.currentNote) {
     els.noteMeta.textContent = "Nenhuma nota selecionada";
+    renderBreadcrumb();
     return;
   }
   const pieces = [`v${state.currentNote.version || 1}`];
+  const folderLabel = currentFolderLabel(state.currentNote.folder_id);
+  if (folderLabel) pieces.push(folderLabel);
   if (!Array.isArray(state.currentNote.tags) || !state.currentNote.tags.length) pieces.push("Sem tags");
   if (state.currentNote.deleted_at) pieces.push("Na lixeira");
   if (state.currentNote.archived) pieces.push("Arquivada");
   if (state.currentNote.favorite) pieces.push("Favorita");
   els.noteMeta.textContent = pieces.join(" • ");
+  renderBreadcrumb();
 }
 
 function renderEmptyState() {
@@ -821,6 +910,13 @@ function renderEmptyState() {
     els.emptyTemplateGrid.classList.add("hidden");
     return;
   }
+  if (state.selectedFolderId) {
+    els.emptyEyebrow.textContent = currentFolderLabel();
+    els.emptyTitle.textContent = "Esta pasta está vazia";
+    els.emptyDescription.innerHTML = "Crie uma nota aqui ou arraste uma nota para esta pasta.";
+    els.emptyTemplateGrid.classList.remove("hidden");
+    return;
+  }
   els.emptyEyebrow.textContent = "Notas";
   els.emptyTitle.textContent = "Crie sua primeira nota";
   els.emptyDescription.innerHTML = "Comece em branco ou use um template. Escreva, organize com tags e mantenha foco no conteúdo.";
@@ -839,6 +935,7 @@ function setEditorVisibility(visible) {
   if (els.archiveButton) els.archiveButton.disabled = !visible;
   if (els.exportButton) els.exportButton.disabled = !visible;
   if (els.backupButton) els.backupButton.disabled = !visible;
+  if (els.noteMoreButton) els.noteMoreButton.disabled = !visible;
   if (!visible) renderEmptyState();
   applyLayoutState();
 }
@@ -848,6 +945,16 @@ function renderActiveFilterTabs() {
   els.filterFavorites.classList.toggle("is-active", state.filters.view === "favorites");
   els.filterArchived.classList.toggle("is-active", state.filters.view === "archived");
   els.filterTrash.classList.toggle("is-active", state.filters.view === "trash");
+  [
+    [els.filterAll, "active"],
+    [els.filterFavorites, "favorites"],
+    [els.filterArchived, "archived"],
+    [els.filterTrash, "trash"],
+  ].forEach(([button, view]) => {
+    button?.setAttribute("aria-selected", state.filters.view === view ? "true" : "false");
+    if (state.filters.view === view) button?.setAttribute("aria-current", "page");
+    else button?.removeAttribute("aria-current");
+  });
 }
 
 function renderNoteTags() {
@@ -867,79 +974,67 @@ function renderNoteTags() {
   });
 }
 
+function handleSidebarNoteClick(event, note) {
+  const isCmdOrCtrl = event.metaKey || event.ctrlKey;
+  const isShift = event.shiftKey;
+  if (isCmdOrCtrl) {
+    event.preventDefault();
+    toggleNoteSelection(note.id);
+    return;
+  }
+  if (isShift) {
+    event.preventDefault();
+    selectNoteRange(note.id);
+    return;
+  }
+  state.selectedFolderId = normalizeFolderId(note.folder_id);
+  state.selectedNoteIds.clear();
+  state.selectedNoteIds.add(note.id);
+  state.lastClickedNoteId = note.id;
+  persistSidebarState();
+  openNote(note.id).then(() => {
+    if (window.matchMedia("(max-width: 860px)").matches) setSidebarCollapsed(true);
+  }).catch(handleUnexpectedError);
+}
+
+function toggleFolderExpanded(folderId) {
+  const safeId = normalizeFolderId(folderId);
+  if (!safeId) return;
+  if (state.expandedFolderIds.has(safeId)) state.expandedFolderIds.delete(safeId);
+  else state.expandedFolderIds.add(safeId);
+  persistSidebarState();
+  renderNotesList();
+}
+
+function switchSmartView(view) {
+  if (!view) return;
+  state.filters.view = view;
+  state.selectedFolderId = "";
+  loadNotes({ preserveSelection: false }).catch(handleUnexpectedError);
+}
+
 function renderNotesList() {
   els.notesList.innerHTML = "";
   els.listMeta.textContent = listSummaryText();
   renderActiveFilterTabs();
-  if (!state.notes.length) {
-    const empty = document.createElement("div");
-    empty.className = "notes-list-empty";
-    empty.textContent = state.filters.view === "trash"
-      ? "A lixeira esta vazia."
-      : state.filters.view === "favorites"
-        ? "Nenhuma nota favorita ainda."
-      : state.lastLoadedQuery || state.filters.tag || state.filters.view === "favorites" || state.filters.view === "archived"
-        ? "Nenhuma nota corresponde aos filtros atuais."
-        : "Nenhuma nota ainda. Crie a primeira pela barra lateral.";
-    els.notesList.appendChild(empty);
-    return;
-  }
-
-  state.notes.forEach((note) => {
-    const isSelected = state.selectedNoteIds.has(note.id);
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = `note-card${note.id === state.currentNoteId ? " is-active" : ""}${isSelected ? " is-selected" : ""}`;
-    button.dataset.id = note.id;
-    button.setAttribute("role", "listitem");
-    const tags = Array.isArray(note.tags) ? note.tags.slice(0, 3) : [];
-    const preview = notePreviewText(note);
-    const stateLabels = noteStateLabels(note);
-    button.innerHTML = `
-      <div class="note-card-top">
-        <div class="note-card-title-container">
-          <input type="checkbox" class="note-card-checkbox" ${isSelected ? "checked" : ""}>
-          <span class="note-card-title">${escapeHtml(note.title || "Sem título")}</span>
-        </div>
-        ${note.favorite ? '<span class="note-card-favorite" aria-hidden="true">★</span>' : ""}
-      </div>
-      <span class="note-card-excerpt">${escapeHtml(preview)}</span>
-      ${stateLabels.length ? `<div class="advanced-list-row-meta">${stateLabels.map((label) => `<span class="advanced-list-row-label">${escapeHtml(label)}</span>`).join("")}</div>` : ""}
-      <div class="note-card-bottom">
-        <div class="note-card-tags">
-          ${tags.map((tag) => `<span class="note-card-tag">#${escapeHtml(tag)}</span>`).join("")}
-          ${note.archived ? '<span class="note-card-badge is-archived">Arquivada</span>' : ""}
-          ${note.deleted_at ? '<span class="note-card-badge is-trash">Lixeira</span>' : ""}
-        </div>
-      </div>
-    `;
-
-    const checkbox = button.querySelector(".note-card-checkbox");
-    checkbox.addEventListener("click", (event) => {
-      event.stopPropagation();
-      toggleNoteSelection(note.id);
-    });
-
-    button.addEventListener("click", (event) => {
-      const isCmdOrCtrl = event.metaKey || event.ctrlKey;
-      const isShift = event.shiftKey;
-      if (isCmdOrCtrl) {
-        event.preventDefault();
-        toggleNoteSelection(note.id);
-      } else if (isShift) {
-        event.preventDefault();
-        selectNoteRange(note.id);
-      } else {
-        state.selectedNoteIds.clear();
-        state.selectedNoteIds.add(note.id);
-        state.lastClickedNoteId = note.id;
-        openNote(note.id).then(() => {
-          if (window.matchMedia("(max-width: 860px)").matches) setSidebarCollapsed(true);
-        }).catch(handleUnexpectedError);
-      }
-    });
-
-    els.notesList.appendChild(button);
+  renderBreadcrumb();
+  renderSidebarTree(els.notesList, state.tree, {
+    view: state.filters.view,
+    query: state.lastLoadedQuery,
+    currentNoteId: state.currentNoteId,
+    selectedNoteIds: state.selectedNoteIds,
+    selectedFolderId: state.selectedFolderId,
+    expandedFolderIds: state.expandedFolderIds,
+    onToggleSelection: toggleNoteSelection,
+    onNoteClick: handleSidebarNoteClick,
+    onNoteContextMenu: openNoteContextMenu,
+    onFolderToggle: toggleFolderExpanded,
+    onFolderSelect: setSelectedFolder,
+    onCreateNoteInFolder: (folderId) => createBlankNote(folderId).catch(handleUnexpectedError),
+    onFolderContextMenu: openFolderContextMenu,
+    onEmptyContextMenu: openSidebarEmptyContextMenu,
+    onDropItem: handleSidebarDrop,
+    onSmartView: switchSmartView,
   });
 }
 
@@ -973,6 +1068,11 @@ function renderExportPreview() {
 function setCurrentNote(note) {
   state.currentNote = note;
   state.currentNoteId = note?.id || "";
+  if (note && !note.deleted_at) {
+    state.selectedFolderId = normalizeFolderId(note.folder_id);
+    if (state.selectedFolderId) state.expandedFolderIds.add(state.selectedFolderId);
+    persistSidebarState();
+  }
   state.attachments = Array.isArray(note?.attachments) ? note.attachments : [];
   els.titleInput.value = note?.title || "";
   els.favoriteButton.classList.toggle("is-active", Boolean(note?.favorite));
@@ -998,7 +1098,12 @@ function setCurrentNote(note) {
   els.deleteButton?.classList.toggle("hidden", trashed);
   els.restoreNoteButton?.classList.toggle("hidden", !trashed);
   els.archiveButton?.classList.toggle("hidden", trashed);
-  if (els.archiveButton) els.archiveButton.textContent = archived ? "Desarquivar" : "Arquivar";
+  els.exportButton?.classList.toggle("hidden", trashed);
+  els.revisionsButton?.classList.toggle("hidden", trashed);
+  if (els.archiveButton) {
+    els.archiveButton.setAttribute("aria-label", archived ? "Restaurar do arquivo" : "Arquivar");
+    els.archiveButton.innerHTML = archived ? '<i class="ph ph-archive-tray"></i>' : '<i class="ph ph-archive"></i>';
+  }
   publishWindowActions();
 }
 
@@ -1013,17 +1118,30 @@ async function loadNotes({ preserveSelection = true } = {}) {
   }
 
   try {
-    const response = await state.api.list({
+    const response = await state.api.getTree({
       query: currentQuery(),
-      limit: 100,
-      favorite: currentFavoriteFilter(),
-      tag: state.filters.tag,
-      deleted: currentDeletedFilter(),
-      archived: currentArchivedFilter(),
+      limit: 500,
     });
     if (requestId !== state.currentListRequestId) return;
 
-    state.notes = Array.isArray(response.notes) ? response.notes : [];
+    state.tree = {
+      folders: Array.isArray(response.folders) ? response.folders : [],
+      notes: Array.isArray(response.notes) ? response.notes : [],
+      favorites: Array.isArray(response.favorites) ? response.favorites : [],
+      recent: Array.isArray(response.recent) ? response.recent : [],
+      archived: Array.isArray(response.archived) ? response.archived : [],
+      trash: Array.isArray(response.trash) ? response.trash : [],
+    };
+    state.folders = state.tree.folders;
+    state.notes = state.filters.view === "favorites"
+      ? state.tree.favorites
+      : state.filters.view === "archived"
+        ? state.tree.archived
+        : state.filters.view === "trash"
+          ? state.tree.trash
+          : state.selectedFolderId
+            ? state.tree.notes.filter((note) => normalizeFolderId(note.folder_id) === state.selectedFolderId)
+            : state.tree.notes;
     state.lastLoadedQuery = currentQuery();
 
     // Keep only selected notes that are still in the loaded notes list
@@ -1286,22 +1404,26 @@ function findTemplate(templateId) {
   return TEMPLATES.find((template) => template.id === templateId) || TEMPLATES[0];
 }
 
-async function createNoteFromTemplate(templateId = "blank") {
+async function createNoteFromTemplate(templateId = "blank", folderId = state.selectedFolderId) {
   await flushPendingSave();
   const template = findTemplate(templateId);
+  const safeFolderId = normalizeFolderId(folderId);
   setSaveState("saving");
-  const response = await state.api.create({ title: template.title, content: template.content });
+  const response = await state.api.create({ title: template.title, content: template.content, folder_id: safeFolderId || null });
   setSaveState("saved", { at: Date.now() });
   els.searchInput.value = "";
   state.filters.view = "active";
+  state.selectedFolderId = safeFolderId;
+  if (safeFolderId) state.expandedFolderIds.add(safeFolderId);
+  persistSidebarState();
   closeModal();
   await loadNotes({ preserveSelection: false });
   if (response.note?.id) await openNote(response.note.id, { skipPendingSave: true });
   showToast(`Nota criada com template "${template.label}".`, "success");
 }
 
-async function createBlankNote() {
-  await createNoteFromTemplate("blank");
+async function createBlankNote(folderId = state.selectedFolderId) {
+  await createNoteFromTemplate("blank", folderId);
 }
 
 async function duplicateCurrentNote() {
@@ -1313,6 +1435,7 @@ async function duplicateCurrentNote() {
     title: duplicatedTitle,
     content: sanitizeContentForSave(state.currentNote.content),
     properties: { ...(state.currentNote.properties || {}) },
+    folder_id: normalizeFolderId(state.currentNote.folder_id) || null,
   });
   const duplicateId = created.note?.id;
   if (!duplicateId) throw new Error("Não foi possível duplicar a nota.");
@@ -1351,6 +1474,189 @@ function openShareDialog() {
       showToast("Link da nota copiado.", "success");
     },
   });
+}
+
+function promptFolderDestination({ excludeFolderId = "", title = "Mover para..." } = {}) {
+  const options = buildFolderOptions(state.folders).filter((option) => {
+    if (!excludeFolderId) return true;
+    if (option.id === excludeFolderId) return false;
+    return !isFolderDescendant(excludeFolderId, option.id, state.folders);
+  });
+  const message = [
+    title,
+    "",
+    ...options.map((option, index) => `${index}. ${option.label}`),
+    "",
+    "Digite o número do destino.",
+  ].join("\n");
+  const answer = window.prompt(message, "0");
+  if (answer === null) return null;
+  const option = options[Number(answer)];
+  if (!option) {
+    showToast("Destino inválido.", "error");
+    return null;
+  }
+  return option.id || "";
+}
+
+async function createFolder(parentId = state.selectedFolderId) {
+  const safeParentId = normalizeFolderId(parentId);
+  const name = window.prompt(safeParentId ? "Nome da subpasta" : "Nome da nova pasta", "Nova pasta");
+  if (name === null) return;
+  const trimmedName = String(name || "").trim();
+  if (!trimmedName) return;
+  setSaveState("saving");
+  const response = await state.api.createFolder({ name: trimmedName, parent_id: safeParentId || null, icon: "folder" });
+  if (response.folder?.id) {
+    state.selectedFolderId = response.folder.id;
+    state.expandedFolderIds.add(response.folder.id);
+    if (safeParentId) state.expandedFolderIds.add(safeParentId);
+    persistSidebarState();
+  }
+  await loadNotes({ preserveSelection: true });
+  setSaveState("saved", { at: Date.now() });
+  showToast("Pasta criada.", "success");
+}
+
+async function renameFolder(folderId) {
+  const folder = findFolderById(folderId);
+  if (!folder) return;
+  const name = window.prompt("Renomear pasta", folder.name || "Nova pasta");
+  if (name === null) return;
+  const trimmedName = String(name || "").trim();
+  if (!trimmedName) return;
+  setSaveState("saving");
+  await state.api.updateFolder(folder.id, { name: trimmedName });
+  await loadNotes({ preserveSelection: true });
+  setSaveState("saved", { at: Date.now() });
+  showToast("Pasta renomeada.", "success");
+}
+
+async function moveFolder(folderId) {
+  const folder = findFolderById(folderId);
+  if (!folder) return;
+  const targetFolderId = promptFolderDestination({
+    excludeFolderId: folder.id,
+    title: `Mover "${folder.name || "Nova pasta"}" para...`,
+  });
+  if (targetFolderId === null) return;
+  setSaveState("saving");
+  await state.api.moveItems({ items: [{ type: "folder", id: folder.id }], target_folder_id: targetFolderId || null });
+  if (targetFolderId) state.expandedFolderIds.add(targetFolderId);
+  persistSidebarState();
+  await loadNotes({ preserveSelection: true });
+  setSaveState("saved", { at: Date.now() });
+  showToast("Pasta movida.", "success");
+}
+
+async function deleteFolder(folderId) {
+  const folder = findFolderById(folderId);
+  if (!folder) return;
+  askConfirmation({
+    eyebrow: "Pasta",
+    title: `Excluir "${folder.name || "Nova pasta"}"?`,
+    description: "A pasta e subpastas serão removidas da árvore. As notas internas serão movidas para a raiz.",
+    acceptLabel: "Excluir pasta",
+    acceptKind: "danger",
+    onAccept: async () => {
+      setSaveState("saving");
+      await state.api.deleteFolder(folder.id, { mode: "move_to_root" });
+      if (state.selectedFolderId === folder.id || isFolderDescendant(folder.id, state.selectedFolderId, state.folders)) {
+        state.selectedFolderId = "";
+      }
+      state.expandedFolderIds.delete(folder.id);
+      persistSidebarState();
+      await loadNotes({ preserveSelection: false });
+      setSaveState("saved", { at: Date.now() });
+      showToast("Pasta excluída. Notas internas foram movidas para a raiz.", "success");
+    },
+  });
+}
+
+async function moveNoteToFolder(noteId) {
+  const note = findNoteById(noteId);
+  if (!note || currentMenuContext(note).noteTrashed) return;
+  const targetFolderId = promptFolderDestination({ title: `Mover "${note.title || "Sem título"}" para...` });
+  if (targetFolderId === null) return;
+  setSaveState("saving");
+  await state.api.moveItems({ items: [{ type: "note", id: note.id }], target_folder_id: targetFolderId || null });
+  state.selectedFolderId = targetFolderId || "";
+  if (targetFolderId) state.expandedFolderIds.add(targetFolderId);
+  persistSidebarState();
+  await loadNotes({ preserveSelection: true });
+  setSaveState("saved", { at: Date.now() });
+  showToast("Nota movida.", "success");
+}
+
+async function renameNoteForId(noteId) {
+  const note = findNoteById(noteId);
+  if (!note || currentMenuContext(note).noteTrashed) return;
+  if (state.currentNote?.id === noteId) {
+    els.titleInput.focus();
+    els.titleInput.select();
+    return;
+  }
+  const title = window.prompt("Renomear nota", note.title || "Sem título");
+  if (title === null) return;
+  setSaveState("saving");
+  await state.api.update(noteId, { title });
+  await loadNotes({ preserveSelection: true });
+  setSaveState("saved", { at: Date.now() });
+}
+
+function expandAllFolders() {
+  state.folders.forEach((folder) => state.expandedFolderIds.add(folder.id));
+  persistSidebarState();
+  renderNotesList();
+}
+
+function collapseAllFolders() {
+  state.expandedFolderIds.clear();
+  persistSidebarState();
+  renderNotesList();
+}
+
+function commandContext({ note = state.currentNote, folder = null, targetFolderId = state.selectedFolderId } = {}) {
+  return {
+    ...currentMenuContext(note),
+    note,
+    folder,
+    targetFolderId,
+    actions: {
+      openNote: (noteId) => openNote(noteId, { skipPendingSave: false }),
+      openNoteInNewTab: (noteId) => {
+        if (noteId) window.open(`${window.location.origin}${window.location.pathname}#note=${noteId}`, "_blank");
+      },
+      renameNote: renameNoteForId,
+      duplicateNote: duplicateNoteForId,
+      moveNote: moveNoteToFolder,
+      toggleFavorite: toggleFavoriteForId,
+      toggleArchive: toggleArchiveForId,
+      trashNote: deleteNoteForId,
+      restoreNote: restoreNoteForId,
+      purgeNote: purgeNoteForId,
+      copyNoteLink: copyNoteLinkForId,
+      openRevisions: openRevisionsForId,
+      openInfo: () => openNoteInfo(),
+      openExport: () => openImportExportModal().catch(handleUnexpectedError),
+      createFolder,
+      createNote: createBlankNote,
+      renameFolder,
+      moveFolder,
+      deleteFolder,
+      expandAll: expandAllFolders,
+      collapseAll: collapseAllFolders,
+      toggleSidebar: () => setSidebarCollapsed(!state.ui.sidebarCollapsed),
+      search: () => {
+        els.searchInput.focus();
+        els.searchInput.select();
+      },
+    },
+  };
+}
+
+function runNotesCommand(commandId, context = {}) {
+  return runCommand(commandId, commandContext(context));
 }
 
 function openNoteInfo() {
@@ -1506,6 +1812,9 @@ function upsertNoteSummary(note) {
     version: note.version,
     favorite: note.favorite,
     archived: note.archived,
+    folder_id: note.folder_id,
+    previous_folder_id: note.previous_folder_id,
+    position: note.position,
     cover: note.cover,
     icon: note.icon,
     tags: note.tags,
@@ -2138,7 +2447,7 @@ async function importSelectedFile() {
   if (!isSupportedImportFile(file.name)) throw new Error("Formato nao suportado para importacao.");
   const textContent = await readFileAsText(file);
   setSaveState("saving");
-  const response = await state.api.importNote({ fileName: file.name, textContent });
+  const response = await state.api.importNote({ fileName: file.name, textContent, folderId: state.selectedFolderId });
   els.importFileInput.value = "";
   closeModal();
   await loadNotes({ preserveSelection: false });
@@ -2148,7 +2457,7 @@ async function importSelectedFile() {
 }
 
 async function exportCurrentNote(format) {
-  if (!state.currentNote) return;
+  if (!state.currentNote || state.currentNote.deleted_at) return;
   await flushPendingSave();
   await state.api.downloadExport(state.currentNote.id, format);
   showToast(`Exportacao ${format.toUpperCase()} concluida.`, "success");
@@ -2172,6 +2481,23 @@ function handleWindowAction({ actionId, menuItemId } = {}) {
   const command = menuItemId || actionId;
   if (command && command.startsWith("bulk-")) {
     handleBulkAction(command).catch(handleUnexpectedError);
+    return;
+  }
+  const aliases = {
+    "open-tab.run": "note.openTab",
+    "favorite.run": "note.favorite.toggle",
+    "duplicate.run": "note.duplicate",
+    "archive.run": state.currentNote?.archived ? "note.unarchive" : "note.archive",
+    "copy-link.run": "note.copyLink",
+    "revisions.open": "note.revisions",
+    "info.open": "note.info",
+    "restore.run": "note.restore",
+    "purge.run": "note.deletePermanent",
+    "delete.run": "note.trash",
+  };
+  const commandId = aliases[command] || command;
+  if (commandId?.startsWith("note.") || commandId?.startsWith("folder.") || commandId?.startsWith("sidebar.") || commandId === "app.search") {
+    runNotesCommand(commandId).catch(handleUnexpectedError);
     return;
   }
   if (command === "sidebar.toggle") {
@@ -2241,6 +2567,7 @@ function wireEvents() {
   document.getElementById("bulk-clear-btn")?.addEventListener("click", () => handleBulkAction("bulk-clear.run").catch(handleUnexpectedError));
 
   els.newNoteButton.addEventListener("click", () => createBlankNote().catch(handleUnexpectedError));
+  els.newFolderButton?.addEventListener("click", () => createFolder(state.selectedFolderId).catch(handleUnexpectedError));
   els.sidebarToggleButton?.addEventListener("click", () => setSidebarCollapsed(true));
   els.sidebarOpenButton?.addEventListener("click", () => setSidebarCollapsed(!state.ui.sidebarCollapsed));
   els.templatesButton?.addEventListener("click", () => openModal("templates"));
@@ -2252,6 +2579,7 @@ function wireEvents() {
   els.revisionsButton?.addEventListener("click", () => openRevisionsModal().catch(handleUnexpectedError));
   els.archiveButton?.addEventListener("click", () => toggleArchive().catch(handleUnexpectedError));
   els.favoriteButton.addEventListener("click", () => toggleFavorite().catch(handleUnexpectedError));
+  els.noteMoreButton?.addEventListener("click", openNoteMoreMenu);
   document.querySelectorAll("[data-cover-action]").forEach((button) => {
     button.addEventListener("click", () => applyCoverAction(button.dataset.coverAction).catch(handleUnexpectedError));
   });
@@ -2609,6 +2937,7 @@ async function duplicateNoteForId(noteId) {
     title: duplicatedTitle,
     content: sanitizeContentForSave(targetNote.content),
     properties: { ...(targetNote.properties || {}) },
+    folder_id: normalizeFolderId(targetNote.folder_id) || null,
   });
   const duplicateId = created.note?.id;
   if (!duplicateId) throw new Error("Não foi possível duplicar a nota.");
@@ -2738,9 +3067,112 @@ async function openRevisionsForId(noteId) {
   await openRevisionsModal();
 }
 
+function showContextMenuAt(menu, x, y) {
+  if (!menu) return;
+  hideAllContextMenus();
+  menu.classList.remove("hidden");
+  const menuWidth = menu.offsetWidth || 180;
+  const menuHeight = menu.offsetHeight || 180;
+  const windowWidth = window.innerWidth;
+  const windowHeight = window.innerHeight;
+  const posX = clamp(Number(x) || 0, 8, Math.max(8, windowWidth - menuWidth - 8));
+  const posY = clamp(Number(y) || 0, 8, Math.max(8, windowHeight - menuHeight - 8));
+  menu.style.left = `${posX}px`;
+  menu.style.top = `${posY}px`;
+}
+
+function openNoteContextMenu(event, note) {
+  event.preventDefault();
+  event.stopPropagation();
+  if (!note) return;
+  state.contextMenuTargetNoteId = note.id;
+  state.contextMenuTargetFolderId = "";
+  const actions = buildNoteMenuActions(note, currentMenuContext(note, { compactWindow: false }));
+  if (!actions.length) return;
+  renderContextMenuActions(els.sidebarContextMenu, actions);
+  showContextMenuAt(els.sidebarContextMenu, event.pageX || event.clientX, event.pageY || event.clientY);
+}
+
+function openFolderContextMenu(event, folder) {
+  event.preventDefault();
+  event.stopPropagation();
+  if (!folder) return;
+  state.contextMenuTargetNoteId = "";
+  state.contextMenuTargetFolderId = folder.id;
+  const actions = getAvailableCommands([
+    "folder.createNote",
+    "folder.createChild",
+    "folder.rename",
+    "folder.move",
+    "folder.delete",
+  ], { folder, view: state.filters.view });
+  renderContextMenuActions(els.sidebarContextMenu, actions);
+  showContextMenuAt(els.sidebarContextMenu, event.pageX || event.clientX, event.pageY || event.clientY);
+}
+
+function openSidebarEmptyContextMenu(event) {
+  event.preventDefault();
+  event.stopPropagation();
+  state.contextMenuTargetNoteId = "";
+  state.contextMenuTargetFolderId = "";
+  const actions = getAvailableCommands([
+    "note.create",
+    "folder.create",
+    "sidebar.expandAll",
+    "sidebar.collapseAll",
+  ], { targetFolderId: state.selectedFolderId });
+  renderContextMenuActions(els.sidebarContextMenu, actions);
+  showContextMenuAt(els.sidebarContextMenu, event.pageX || event.clientX, event.pageY || event.clientY);
+}
+
+function handleSidebarDrop(event, targetFolderId = "") {
+  const noteId = event.dataTransfer?.getData("application/x-tcloud-note");
+  const folderId = event.dataTransfer?.getData("application/x-tcloud-folder");
+  const safeTargetFolderId = normalizeFolderId(targetFolderId);
+  if (noteId) {
+    state.api.moveItems({ items: [{ type: "note", id: noteId }], target_folder_id: safeTargetFolderId || null })
+      .then(() => {
+        state.selectedFolderId = safeTargetFolderId;
+        if (safeTargetFolderId) state.expandedFolderIds.add(safeTargetFolderId);
+        persistSidebarState();
+        showToast("Nota movida.", "success");
+        return loadNotes({ preserveSelection: true });
+      })
+      .catch(handleUnexpectedError);
+    return;
+  }
+  if (folderId) {
+    if (folderId === safeTargetFolderId || isFolderDescendant(folderId, safeTargetFolderId, state.folders)) {
+      showToast("Uma pasta não pode ser movida para dentro dela mesma.", "error");
+      return;
+    }
+    state.api.moveItems({ items: [{ type: "folder", id: folderId }], target_folder_id: safeTargetFolderId || null })
+      .then(() => {
+        if (safeTargetFolderId) state.expandedFolderIds.add(safeTargetFolderId);
+        persistSidebarState();
+        showToast("Pasta movida.", "success");
+        return loadNotes({ preserveSelection: true });
+      })
+      .catch(handleUnexpectedError);
+  }
+}
+
+function openNoteMoreMenu(event) {
+  event.preventDefault();
+  event.stopPropagation();
+  const actions = buildEditorMoreActions(state.currentNote, currentMenuContext(state.currentNote, { compactWindow: false }));
+  renderContextMenuActions(els.sidebarContextMenu, actions);
+  state.contextMenuTargetNoteId = state.currentNote?.id || "";
+  state.contextMenuTargetFolderId = "";
+  els.noteMoreButton?.setAttribute("aria-expanded", "true");
+  const rect = els.noteMoreButton?.getBoundingClientRect();
+  showContextMenuAt(els.sidebarContextMenu, rect?.left || event.pageX, (rect?.bottom || event.pageY) + 6);
+}
+
 function hideAllContextMenus() {
   els.sidebarContextMenu?.classList.add("hidden");
   els.editorContextMenu?.classList.add("hidden");
+  els.noteMoreButton?.setAttribute("aria-expanded", "false");
 }
 
 function renderContextMenuActions(menu, actions) {
@@ -2756,7 +3188,8 @@ function renderContextMenuActions(menu, actions) {
     const item = document.createElement("li");
     item.className = `context-menu-item${action.variant === "danger" ? " danger" : ""}`;
     item.dataset.action = action.id;
-    item.textContent = action.label;
+    if (action.disabled) item.classList.add("is-disabled");
+    item.innerHTML = `${action.icon ? `<i class="ph ${escapeHtml(action.icon.replace(/^ph\s+/, ""))}" aria-hidden="true"></i>` : ""}<span>${escapeHtml(action.label)}</span>`;
     list.appendChild(item);
   });
 }
@@ -2767,41 +3200,8 @@ function executeNoteMenuAction(action, noteId) {
     handleBulkAction(action).catch(handleUnexpectedError);
     return;
   }
-  if (action === "open-tab.run") {
-    window.open(`${window.location.origin}${window.location.pathname}#note=${noteId}`, "_blank");
-    return;
-  }
-  if (action === "favorite.run") {
-    toggleFavoriteForId(noteId).catch(handleUnexpectedError);
-    return;
-  }
-  if (action === "duplicate.run") {
-    duplicateNoteForId(noteId).catch(handleUnexpectedError);
-    return;
-  }
-  if (action === "archive.run") {
-    toggleArchiveForId(noteId).catch(handleUnexpectedError);
-    return;
-  }
-  if (action === "copy-link.run") {
-    copyNoteLinkForId(noteId).catch(handleUnexpectedError);
-    return;
-  }
-  if (action === "revisions.open") {
-    openRevisionsForId(noteId).catch(handleUnexpectedError);
-    return;
-  }
-  if (action === "restore.run") {
-    restoreNoteForId(noteId).catch(handleUnexpectedError);
-    return;
-  }
-  if (action === "purge.run") {
-    purgeNoteForId(noteId).catch(handleUnexpectedError);
-    return;
-  }
-  if (action === "delete.run") {
-    deleteNoteForId(noteId).catch(handleUnexpectedError);
-  }
+  const note = findNoteById(noteId);
+  runNotesCommand(action, { note }).catch(handleUnexpectedError);
 }
 
 function wireContextMenus() {
@@ -2883,12 +3283,14 @@ function wireContextMenus() {
     if (!item) return;
     const action = item.dataset.action;
     const noteId = state.contextMenuTargetNoteId;
-    if (!noteId) {
-      hideAllContextMenus();
-      return;
+    const folderId = state.contextMenuTargetFolderId;
+    if (noteId) {
+      executeNoteMenuAction(action, noteId);
+    } else if (folderId) {
+      runNotesCommand(action, { folder: findFolderById(folderId) }).catch(handleUnexpectedError);
+    } else {
+      runNotesCommand(action, { targetFolderId: state.selectedFolderId }).catch(handleUnexpectedError);
     }
-
-    executeNoteMenuAction(action, noteId);
     hideAllContextMenus();
   });
 
@@ -2936,7 +3338,10 @@ function wireContextMenus() {
 
 async function init() {
   state.currentNoteId = readNoteIdFromHash();
-  state.ui.sidebarCollapsed = false;
+  const savedSidebarState = loadSidebarUiState();
+  state.ui.sidebarCollapsed = Boolean(savedSidebarState.sidebarCollapsed);
+  state.selectedFolderId = savedSidebarState.selectedFolderId || "";
+  state.expandedFolderIds = savedSidebarState.expandedFolderIds || new Set();
   updateCompactWindowMode(els.app?.getBoundingClientRect?.().width || window.innerWidth);
   setEditorVisibility(false);
   renderSaveStatus();
