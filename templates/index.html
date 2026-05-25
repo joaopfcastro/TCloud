@@ -24861,7 +24861,9 @@
         function estimateGenericWindowActionWidth(action) {
             const label = String(action?.label || action?.id || '').trim();
             if (!label) return 42;
-            return Math.min(190, Math.max(42, 42 + (label.length * 7)));
+            const iconWidth = action?.icon ? 24 : 0;
+            const labelWidth = Math.ceil(label.length * 7.6);
+            return Math.max(42, 28 + iconWidth + labelWidth);
         }
 
         function genericWindowActionPriority(action, index) {

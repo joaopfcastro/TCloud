@@ -178,10 +178,10 @@
 }
 
 .tcloud-window[data-app-id="notes"] .app-viewer-action {
-    flex: 0 1 auto;
+    flex: 0 0 auto;
     height: 36px;
     min-width: 36px;
-    max-width: 178px;
+    max-width: none;
     overflow: hidden;
     padding: 0 13px;
     border-radius: 10px;
