@@ -736,25 +736,19 @@ class NotesService:
     def _render_block_markdown(cls, block: dict) -> str:
         block_type = str((block or {}).get("type") or "")
         data = (block or {}).get("data") if isinstance((block or {}).get("data"), dict) else {}
-        text = re.sub(r"\s+", " ", cls._strip_html(data.get("text") or "")).strip()
+        text = cls._render_text_value(data.get("text"))
         if block_type == "header":
             level = max(1, min(int(data.get("level") or 2), 6))
             return f'{"#" * level} {text}'.rstrip()
         if block_type == "list":
             items = data.get("items") if isinstance(data.get("items"), list) else []
-            prefix = "1." if str(data.get("style") or "") == "ordered" else "-"
-            rendered_items = []
-            for item in items:
-                if not str(item or "").strip():
-                    continue
-                clean_item = re.sub(r"\s+", " ", cls._strip_html(item)).strip()
-                rendered_items.append(f"{prefix} {clean_item}".rstrip())
-            return "\n".join(rendered_items)
+            ordered = str(data.get("style") or "") == "ordered"
+            return cls._render_list_items_markdown(items, ordered=ordered)
         if block_type == "todo":
             checked = "x" if bool(data.get("checked")) else " "
             return f"- [{checked}] {text}".rstrip()
         if block_type == "quote":
-            caption = re.sub(r"\s+", " ", cls._strip_html(data.get("caption") or "")).strip()
+            caption = cls._render_text_value(data.get("caption"))
             body = f"> {text}".rstrip()
             return f"{body}\n>\n> {caption}".rstrip() if caption else body
         if block_type == "codeBlock":
@@ -769,29 +763,76 @@ class NotesService:
         return text
 
     @classmethod
+    def _render_text_value(cls, value) -> str:
+        if value in (None, ""):
+            return ""
+        if isinstance(value, dict):
+            for key in ("content", "text", "title", "name", "path", "label"):
+                rendered = cls._render_text_value(value.get(key))
+                if rendered:
+                    return rendered
+            return ""
+        if isinstance(value, list):
+            return re.sub(r"\s+", " ", " ".join(filter(None, (cls._render_text_value(item) for item in value)))).strip()
+        return re.sub(r"\s+", " ", cls._strip_html(value)).strip()
+
+    @classmethod
+    def _list_item_text_and_children(cls, item) -> tuple[str, list]:
+        if isinstance(item, dict):
+            children = item.get("items") if isinstance(item.get("items"), list) else []
+            text = ""
+            for key in ("content", "text", "title", "name", "path", "label"):
+                text = cls._render_text_value(item.get(key))
+                if text:
+                    break
+            return text, children
+        return cls._render_text_value(item), []
+
+    @classmethod
+    def _render_list_items_markdown(cls, items: list, *, ordered: bool, depth: int = 0) -> str:
+        lines = []
+        for index, item in enumerate(items, 1):
+            text, children = cls._list_item_text_and_children(item)
+            marker = f"{index}." if ordered else "-"
+            indent = "  " * depth
+            if text:
+                lines.append(f"{indent}{marker} {text}".rstrip())
+            if children:
+                nested = cls._render_list_items_markdown(children, ordered=ordered, depth=depth + 1)
+                if nested:
+                    lines.append(nested)
+        return "\n".join(lines)
+
+    @classmethod
+    def _render_list_items_html(cls, items: list, *, ordered: bool) -> str:
+        tag = "ol" if ordered else "ul"
+        body_parts = []
+        for item in items:
+            text, children = cls._list_item_text_and_children(item)
+            nested = cls._render_list_items_html(children, ordered=ordered) if children else ""
+            if not text and not nested:
+                continue
+            body_parts.append(f"<li>{html.escape(text)}{nested}</li>")
+        body = "".join(body_parts)
+        return f"<{tag}>{body}</{tag}>" if body else ""
+
+    @classmethod
     def _render_block_html(cls, block: dict) -> str:
         block_type = str((block or {}).get("type") or "")
         data = (block or {}).get("data") if isinstance((block or {}).get("data"), dict) else {}
-        text = html.escape(re.sub(r"\s+", " ", cls._strip_html(data.get("text") or "")).strip())
+        text = html.escape(cls._render_text_value(data.get("text")))
         if block_type == "header":
             level = max(1, min(int(data.get("level") or 2), 6))
             return f"<h{level}>{text}</h{level}>"
         if block_type == "list":
             items = data.get("items") if isinstance(data.get("items"), list) else []
-            tag = "ol" if str(data.get("style") or "") == "ordered" else "ul"
-            body_parts = []
-            for item in items:
-                if not str(item or "").strip():
-                    continue
-                clean_item = html.escape(re.sub(r"\s+", " ", cls._strip_html(item)).strip())
-                body_parts.append(f"<li>{clean_item}</li>")
-            body = "".join(body_parts)
-            return f"<{tag}>{body}</{tag}>"
+            ordered = str(data.get("style") or "") == "ordered"
+            return cls._render_list_items_html(items, ordered=ordered)
         if block_type == "todo":
             checked = " checked" if bool(data.get("checked")) else ""
             return f'<div class="note-check"><input type="checkbox" disabled{checked}> <span>{text}</span></div>'
         if block_type == "quote":
-            caption = html.escape(re.sub(r"\s+", " ", cls._strip_html(data.get("caption") or "")).strip())
+            caption = html.escape(cls._render_text_value(data.get("caption")))
             footer = f"<footer>{caption}</footer>" if caption else ""
             return f"<blockquote><p>{text}</p>{footer}</blockquote>"
         if block_type == "codeBlock":

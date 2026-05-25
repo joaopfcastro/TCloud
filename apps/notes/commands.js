@@ -140,6 +140,14 @@ export const commands = {
     isVisible: (ctx) => hasNote(ctx) && !noteIsTrash(ctx),
     isEnabled: hasNote,
   },
+  "note.share": {
+    id: "note.share",
+    label: "Compartilhar",
+    icon: "ph-share-network",
+    run: (ctx) => ctx.actions.shareNote(ctx.note?.id),
+    isVisible: (ctx) => hasNote(ctx) && !noteIsTrash(ctx),
+    isEnabled: hasNote,
+  },
   "folder.create": {
     id: "folder.create",
     label: "Nova pasta",

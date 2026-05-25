@@ -157,6 +157,20 @@ export class EditorAdapter {
               "Italic": "Itálico",
             },
           },
+          blockTunes: {
+            delete: {
+              Delete: "Excluir",
+              "Click to delete": "Clique para excluir",
+            },
+            moveUp: {
+              "Move up": "Mover para cima",
+              "Move Up": "Mover para cima",
+            },
+            moveDown: {
+              "Move down": "Mover para baixo",
+              "Move Down": "Mover para baixo",
+            },
+          },
           ui: {
             blockTunes: {
               toggler: {
@@ -178,6 +192,11 @@ export class EditorAdapter {
               Filter: "Filtrar",
               "Nothing found": "Nada encontrado",
               "Convert to": "Converter para",
+              "Tune": "Ajustar",
+              "Add": "Adicionar",
+              "Move up": "Mover para cima",
+              "Move down": "Mover para baixo",
+              "Delete": "Excluir",
             },
           },
         },

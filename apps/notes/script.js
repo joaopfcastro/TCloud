@@ -53,6 +53,18 @@ const COVER_PRESETS = {
   none: { type: "none", value: "" },
 };
 
+const COVER_GRADIENTS = [
+  { id: "blue-green", label: "Azul sereno", css: "linear-gradient(135deg, rgba(10, 132, 255, 0.34), rgba(48, 209, 88, 0.16)), #242a31" },
+  { id: "graphite", label: "Grafite", css: "linear-gradient(135deg, #23272f, #606874)" },
+  { id: "rose", label: "Aurora", css: "linear-gradient(135deg, #f8b4c8, #f7d8a8)" },
+  { id: "mint", label: "Menta", css: "linear-gradient(135deg, #b7ecd5, #dcead8)" },
+  { id: "sky", label: "Céu", css: "linear-gradient(135deg, #9fd3ff, #d9ecff)" },
+  { id: "ink", label: "Tinta", css: "linear-gradient(135deg, #1f2937, #405064)" },
+];
+
+const ICON_RECENTS = ["⭐", "✅", "📌", "🧠", "📚", "⚕️"];
+const ICON_SYMBOLS = ["▰", "✦", "✓", "◆", "●", "■", "▲", "—", "#", "!", "?"];
+
 function templateContent(blocks) {
   return normalizeEditorData({ time: Date.now(), blocks });
 }
@@ -190,6 +202,9 @@ const state = {
   ui: {
     sidebarCollapsed: false,
     compactWindow: false,
+    chromeMode: "standalone",
+    iconQuery: "",
+    coverColorDraft: "",
   },
   compactWindowObserver: null,
   bootAttempt: 0,
@@ -215,6 +230,7 @@ const els = {
   newFolderButton: document.getElementById("new-folder-button"),
   sidebarToggleButton: document.getElementById("sidebar-toggle-button"),
   sidebarOpenButton: document.getElementById("sidebar-open-button"),
+  sidebarBackdrop: document.getElementById("sidebar-backdrop"),
   templatesButton: document.getElementById("templates-button"),
   importButton: document.getElementById("import-button"),
   exportButton: document.getElementById("export-button"),
@@ -226,6 +242,7 @@ const els = {
   saveStatus: document.getElementById("save-status"),
   noteBreadcrumb: document.getElementById("note-breadcrumb"),
   noteMeta: document.getElementById("note-meta"),
+  noteStateBanner: document.getElementById("note-state-banner"),
   deleteButton: document.getElementById("delete-note-button"),
   restoreNoteButton: document.getElementById("restore-note-button"),
   revisionsButton: document.getElementById("revisions-button"),
@@ -251,6 +268,8 @@ const els = {
   revisionsList: document.getElementById("revisions-list"),
   importExportModal: document.getElementById("import-export-modal"),
   importFileInput: document.getElementById("import-file-input"),
+  importFileName: document.getElementById("import-file-name"),
+  importStatus: document.getElementById("import-status"),
   importConfirmButton: document.getElementById("import-confirm-button"),
   exportPreview: document.getElementById("export-preview"),
   exportJsonButton: document.getElementById("export-json-button"),
@@ -389,6 +408,11 @@ function normalizeAppearance(rawAppearance) {
   };
 }
 
+function coverGradientCss(value) {
+  const gradient = COVER_GRADIENTS.find((item) => item.id === value) || COVER_GRADIENTS[0];
+  return gradient.css;
+}
+
 function currentAppearance() {
   const properties = state.currentNote?.properties || {};
   const hasDedicatedAppearance = state.currentNote && ("cover" in state.currentNote || "icon" in state.currentNote);
@@ -404,7 +428,7 @@ function coverBackground(cover) {
   if (cover.type === "image" && cover.value) {
     return `linear-gradient(180deg, rgba(28, 28, 30, 0.04), rgba(28, 28, 30, 0.36)), url("${buildDirectStreamPath(cover.value)}")`;
   }
-  return "linear-gradient(135deg, rgba(10, 132, 255, 0.34), rgba(48, 209, 88, 0.14)), #242426";
+  return coverGradientCss(cover.value || COVER_PRESETS.gradient.value);
 }
 
 function renderAppearance() {
@@ -422,6 +446,106 @@ function renderAppearance() {
     els.noteIconButton.textContent = empty ? "Adicionar ícone" : appearance.icon.value;
     els.noteIconButton.setAttribute("aria-label", empty ? "Adicionar ícone da nota" : "Trocar ícone da nota");
   }
+  renderAppearanceMenus();
+}
+
+function renderAppearanceMenus() {
+  renderIconMenu();
+  renderCoverMenu();
+}
+
+function iconMatchesQuery(value, query) {
+  const safeQuery = String(query || "").trim().toLowerCase();
+  if (!safeQuery) return true;
+  return String(value || "").toLowerCase().includes(safeQuery);
+}
+
+function renderIconSection(label, values, selectedValue) {
+  const query = state.ui.iconQuery;
+  const buttons = values
+    .filter((value) => iconMatchesQuery(value, query))
+    .map((value) => `
+      <button class="appearance-icon-choice${value === selectedValue ? " is-selected" : ""}" type="button" role="menuitemradio" aria-checked="${value === selectedValue ? "true" : "false"}" data-icon-value="${escapeHtml(value)}">
+        <span>${escapeHtml(value)}</span>
+      </button>
+    `)
+    .join("");
+  if (!buttons) return "";
+  return `
+    <div class="appearance-section">
+      <span class="appearance-section-label">${escapeHtml(label)}</span>
+      <div class="appearance-icon-grid">${buttons}</div>
+    </div>
+  `;
+}
+
+function renderIconMenu() {
+  if (!els.noteIconMenu) return;
+  const appearance = currentAppearance();
+  const selectedValue = appearance.icon.type === "none" ? "" : appearance.icon.value;
+  const sections = [
+    renderIconSection("Recentes", ICON_RECENTS, selectedValue),
+    renderIconSection("Símbolos", ICON_SYMBOLS, selectedValue),
+  ].filter(Boolean).join("");
+  els.noteIconMenu.innerHTML = `
+    <div class="appearance-popover-header">
+      <strong>Ícone da nota</strong>
+      <span>Escolha um símbolo</span>
+    </div>
+    <label class="appearance-search" for="note-icon-search">
+      <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+      <input id="note-icon-search" type="search" placeholder="Buscar emoji ou símbolo" value="${escapeHtml(state.ui.iconQuery)}" autocomplete="off">
+    </label>
+    ${sections || '<p class="appearance-empty">Nenhum ícone encontrado.</p>'}
+    <button class="appearance-danger-action" type="button" role="menuitem" data-icon-value="none">
+      <i class="ph ph-trash" aria-hidden="true"></i>
+      <span>Remover ícone</span>
+    </button>
+  `;
+}
+
+function renderCoverMenu() {
+  if (!els.noteCoverMenu) return;
+  const appearance = currentAppearance();
+  const selectedGradient = appearance.cover.type === "gradient" ? appearance.cover.value : "";
+  const selectedColor = appearance.cover.type === "color" ? appearance.cover.value : (state.ui.coverColorDraft || COVER_PRESETS.color.value);
+  const gradientButtons = COVER_GRADIENTS.map((gradient) => `
+    <button class="cover-gradient-choice${gradient.id === selectedGradient ? " is-selected" : ""}" type="button" role="menuitemradio" aria-checked="${gradient.id === selectedGradient ? "true" : "false"}" data-cover-gradient="${escapeHtml(gradient.id)}">
+      <span class="cover-gradient-swatch" style="background: ${escapeHtml(gradient.css)}"></span>
+      <span>${escapeHtml(gradient.label)}</span>
+    </button>
+  `).join("");
+  els.noteCoverMenu.innerHTML = `
+    <div class="appearance-popover-header">
+      <strong>Capa</strong>
+      <span>Escolha uma aparência</span>
+    </div>
+    <div class="appearance-section">
+      <span class="appearance-section-label">Gradientes</span>
+      <div class="cover-gradient-grid">${gradientButtons}</div>
+    </div>
+    <div class="appearance-section">
+      <span class="appearance-section-label">Cor</span>
+      <div class="cover-color-row">
+        <label class="cover-color-preview" style="background: ${escapeHtml(selectedColor)}">
+          <input id="cover-color-input" type="color" value="${escapeHtml(selectedColor)}" aria-label="Selecionar cor da capa">
+        </label>
+        <input id="cover-hex-input" class="cover-hex-input" type="text" value="${escapeHtml(selectedColor)}" maxlength="7" aria-label="Cor HEX da capa">
+        <button class="secondary-button cover-color-apply" type="button" data-cover-color-apply>Aplicar</button>
+      </div>
+      <p id="cover-color-error" class="appearance-error hidden">Use uma cor no formato #RGB ou #RRGGBB.</p>
+    </div>
+    <div class="appearance-section">
+      <button class="appearance-menu-action" type="button" role="menuitem" data-cover-action="image">
+        <i class="ph ph-image" aria-hidden="true"></i>
+        <span>Escolher imagem do TCloud</span>
+      </button>
+    </div>
+    <button class="appearance-danger-action" type="button" role="menuitem" data-cover-action="none">
+      <i class="ph ph-trash" aria-hidden="true"></i>
+      <span>Remover capa</span>
+    </button>
+  `;
 }
 
 function updateCurrentProperties(nextProperties) {
@@ -447,6 +571,54 @@ async function setAppearancePatch(patch, toastMessage = "Aparência atualizada."
   showToast(toastMessage, "success");
 }
 
+function positionFloatingElement(element, x, y, { width = 0, margin = 10 } = {}) {
+  if (!element) return;
+  element.style.position = "fixed";
+  if (width) element.style.width = `${Math.min(width, window.innerWidth - (margin * 2))}px`;
+  const rect = element.getBoundingClientRect();
+  const menuWidth = rect.width || width || 240;
+  const menuHeight = rect.height || 180;
+  const left = clamp(Number(x) || margin, margin, Math.max(margin, window.innerWidth - menuWidth - margin));
+  const top = clamp(Number(y) || margin, margin, Math.max(margin, window.innerHeight - menuHeight - margin));
+  element.style.left = `${left}px`;
+  element.style.right = "auto";
+  element.style.top = `${top}px`;
+}
+
+function positionAnchoredElement(element, anchor, { align = "start", gap = 8, width = 0 } = {}) {
+  if (!element || !anchor) return;
+  element.classList.remove("hidden");
+  element.style.position = "fixed";
+  element.style.left = "0";
+  element.style.right = "auto";
+  element.style.top = "0";
+  if (width) element.style.width = `${Math.min(width, window.innerWidth - 20)}px`;
+  const anchorRect = anchor.getBoundingClientRect();
+  const rect = element.getBoundingClientRect();
+  const menuWidth = rect.width || width || 240;
+  const menuHeight = rect.height || 180;
+  const rawLeft = align === "end" ? anchorRect.right - menuWidth : anchorRect.left;
+  const left = clamp(rawLeft, 10, Math.max(10, window.innerWidth - menuWidth - 10));
+  const belowTop = anchorRect.bottom + gap;
+  const aboveTop = anchorRect.top - menuHeight - gap;
+  const top = belowTop + menuHeight > window.innerHeight - 10 && aboveTop >= 10
+    ? aboveTop
+    : clamp(belowTop, 10, Math.max(10, window.innerHeight - menuHeight - 10));
+  element.style.left = `${left}px`;
+  element.style.top = `${top}px`;
+}
+
+function positionAppearancePopover(element, anchor, { align = "start", width = 0 } = {}) {
+  positionAnchoredElement(element, anchor, { align, width });
+  const titleRect = els.titleInput?.getBoundingClientRect();
+  const rect = element?.getBoundingClientRect();
+  if (!titleRect || !rect) return;
+  const overlapsTitle = !(rect.right < titleRect.left || rect.left > titleRect.right || rect.bottom < titleRect.top || rect.top > titleRect.bottom);
+  if (!overlapsTitle) return;
+  const top = clamp(titleRect.bottom + 10, 10, Math.max(10, window.innerHeight - rect.height - 10));
+  element.style.top = `${top}px`;
+}
+
 function closeCoverMenu() {
   els.noteCoverMenu?.classList.add("hidden");
   if (els.noteCoverMenu) {
@@ -456,27 +628,42 @@ function closeCoverMenu() {
     els.noteCoverMenu.style.top = "";
   }
   els.noteCoverButton?.setAttribute("aria-expanded", "false");
+  els.noteCoverButton?.classList.remove("is-active");
 }
 
 function closeIconMenu() {
   els.noteIconMenu?.classList.add("hidden");
   els.noteIconButton?.setAttribute("aria-expanded", "false");
+  els.noteIconButton?.classList.remove("is-active");
 }
 
 function openCoverMenuAt(x, y) {
   if (!els.noteCoverMenu || !state.currentNote || state.currentNote.deleted_at) return;
   closeIconMenu();
+  renderCoverMenu();
   els.noteCoverMenu.classList.remove("hidden");
   els.noteCoverButton?.setAttribute("aria-expanded", "true");
+  els.noteCoverButton?.classList.add("is-active");
+  positionFloatingElement(els.noteCoverMenu, x, y, { width: 340 });
+}
 
-  const menuWidth = els.noteCoverMenu.offsetWidth || 180;
-  const menuHeight = els.noteCoverMenu.offsetHeight || 120;
-  const left = clamp(Number(x) || 0, 8, Math.max(8, window.innerWidth - menuWidth - 8));
-  const top = clamp(Number(y) || 0, 8, Math.max(8, window.innerHeight - menuHeight - 8));
-  els.noteCoverMenu.style.position = "fixed";
-  els.noteCoverMenu.style.left = `${left}px`;
-  els.noteCoverMenu.style.right = "auto";
-  els.noteCoverMenu.style.top = `${top}px`;
+function openCoverMenuFromButton() {
+  if (!els.noteCoverMenu || !els.noteCoverButton || !state.currentNote || state.currentNote.deleted_at) return;
+  closeIconMenu();
+  renderCoverMenu();
+  positionAppearancePopover(els.noteCoverMenu, els.noteCoverButton, { align: "start", width: 340 });
+  els.noteCoverButton.setAttribute("aria-expanded", "true");
+  els.noteCoverButton.classList.add("is-active");
+}
+
+function openIconMenuFromButton() {
+  if (!els.noteIconMenu || !els.noteIconButton || !state.currentNote || state.currentNote.deleted_at) return;
+  closeCoverMenu();
+  renderIconMenu();
+  positionAppearancePopover(els.noteIconMenu, els.noteIconButton, { align: "start", width: 320 });
+  els.noteIconButton.setAttribute("aria-expanded", "true");
+  els.noteIconButton.classList.add("is-active");
+  window.setTimeout(() => els.noteIconMenu?.querySelector("#note-icon-search")?.focus(), 0);
 }
 
 function noteStateLabels(note) {
@@ -645,11 +832,11 @@ function formatRelativeElapsed(timestamp) {
   if (!timestamp) return "Salvo agora";
   const seconds = Math.max(0, Math.floor((Date.now() - timestamp) / 1000));
   if (seconds < 5) return "Salvo agora";
-  if (seconds < 60) return `Salvo ha ${seconds}s`;
+  if (seconds < 60) return `Salvo há ${seconds}s`;
   const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `Salvo ha ${minutes}min`;
+  if (minutes < 60) return `Salvo há ${minutes}min`;
   const hours = Math.floor(minutes / 60);
-  return `Salvo ha ${hours}h`;
+  return `Salvo há ${hours}h`;
 }
 
 function setSaveState(mode, extra = {}) {
@@ -671,6 +858,10 @@ function currentSaveStatusText() {
 
 function hasShellWindowActions() {
   return window.parent !== window && typeof window.TCloudApp?.setWindowActions === "function";
+}
+
+function currentChromeMode() {
+  return hasShellWindowActions() ? "shell" : "standalone";
 }
 
 function findNoteById(noteId) {
@@ -779,7 +970,9 @@ function publishWindowActions() {
   const hasNote = Boolean(state.currentNote);
   const noteContext = currentMenuContext(state.currentNote);
   const trashed = noteContext.noteTrashed;
-  const moreItems = buildEditorMoreActions(state.currentNote, noteContext);
+  const directActionIds = new Set(trashed ? ["note.restore"] : ["note.export", "note.share"]);
+  const moreItems = buildEditorMoreActions(state.currentNote, noteContext)
+    .filter((action) => !directActionIds.has(action.id));
   const actions = [
     {
       id: "sidebar.toggle",
@@ -787,20 +980,29 @@ function publishWindowActions() {
       icon: "ph-sidebar",
       pressed: !state.ui.sidebarCollapsed,
     },
-    {
-      id: "export.open",
-      label: "Exportar",
-      icon: "ph-export",
-      variant: "primary",
-      disabled: !hasNote || trashed,
-    },
-    {
-      id: "share.open",
-      label: "Compartilhar",
-      icon: "ph-share-network",
-      disabled: !hasNote || trashed,
-    },
   ];
+  if (hasNote && trashed) {
+    actions.push({
+      id: "note.restore",
+      label: "Restaurar",
+      icon: "ph-arrow-counter-clockwise",
+      variant: "primary",
+    });
+  } else if (hasNote) {
+    actions.push(
+      {
+        id: "note.export",
+        label: "Exportar",
+        icon: "ph-export",
+        variant: "primary",
+      },
+      {
+        id: "note.share",
+        label: "Compartilhar",
+        icon: "ph-share-network",
+      },
+    );
+  }
   if (moreItems.length) {
     actions.push({
       id: "more",
@@ -853,8 +1055,16 @@ function tickSaveStatus() {
 }
 
 function applyLayoutState() {
+  state.ui.chromeMode = currentChromeMode();
+  document.documentElement.dataset.tcloudChrome = state.ui.chromeMode;
+  els.app?.classList.toggle("is-shell-hosted", state.ui.chromeMode === "shell");
+  els.app?.classList.toggle("is-standalone", state.ui.chromeMode === "standalone");
   els.app?.classList.toggle("sidebar-collapsed", Boolean(state.ui.sidebarCollapsed));
   els.app?.classList.toggle("is-compact-window", Boolean(state.ui.compactWindow));
+  const drawerOpen = Boolean(state.ui.compactWindow && !state.ui.sidebarCollapsed);
+  els.app?.classList.toggle("has-sidebar-drawer-open", drawerOpen);
+  els.sidebarBackdrop?.classList.toggle("hidden", !drawerOpen);
+  els.sidebarBackdrop?.setAttribute("aria-hidden", drawerOpen ? "false" : "true");
   els.sidebarOpenButton?.setAttribute("aria-pressed", state.ui.sidebarCollapsed ? "false" : "true");
   els.sidebarToggleButton?.setAttribute("aria-expanded", state.ui.sidebarCollapsed ? "false" : "true");
   publishWindowActions();
@@ -867,9 +1077,12 @@ function setSidebarCollapsed(collapsed) {
 }
 
 function updateCompactWindowMode(width) {
-  const nextCompact = Number(width || 0) > 0 && Number(width) < 820;
+  const nextCompact = Number(width || 0) > 0 && Number(width) < 900;
   if (state.ui.compactWindow === nextCompact) return;
   state.ui.compactWindow = nextCompact;
+  if (nextCompact && !state.ui.sidebarCollapsed) {
+    state.ui.sidebarCollapsed = true;
+  }
   applyLayoutState();
 }
 
@@ -914,8 +1127,8 @@ function renderHeaderMeta() {
 function renderEmptyState() {
   if (state.filters.view === "trash") {
     els.emptyEyebrow.textContent = "Lixeira";
-    els.emptyTitle.textContent = "Notas excluidas aparecem aqui";
-    els.emptyDescription.innerHTML = "Quando voce excluir uma nota, ela vai para a lixeira e podera ser restaurada depois.";
+    els.emptyTitle.textContent = "Notas excluídas aparecem aqui";
+    els.emptyDescription.innerHTML = "Quando você excluir uma nota, ela vai para a lixeira e poderá ser restaurada depois.";
     els.emptyTemplateGrid.classList.add("hidden");
     return;
   }
@@ -954,13 +1167,14 @@ function renderEmptyState() {
 }
 
 function setEditorVisibility(visible) {
+  const readOnly = Boolean(state.currentNote?.deleted_at);
   els.editorPanel.classList.toggle("hidden", !visible);
   els.emptyState.classList.toggle("hidden", visible);
-  els.titleInput.disabled = !visible;
-  els.favoriteButton.disabled = !visible;
+  els.titleInput.disabled = !visible || readOnly;
+  els.favoriteButton.disabled = !visible || readOnly;
   if (els.deleteButton) els.deleteButton.disabled = !visible;
   if (els.revisionsButton) els.revisionsButton.disabled = !visible;
-  els.tagInput.disabled = !visible;
+  els.tagInput.disabled = !visible || readOnly;
   if (els.restoreNoteButton) els.restoreNoteButton.disabled = !visible;
   if (els.archiveButton) els.archiveButton.disabled = !visible;
   if (els.exportButton) els.exportButton.disabled = !visible;
@@ -1121,6 +1335,23 @@ function renderExportPreview() {
   `;
 }
 
+function setImportStatus(message = "", kind = "info") {
+  if (!els.importStatus) return;
+  const text = String(message || "").trim();
+  els.importStatus.textContent = text;
+  els.importStatus.classList.toggle("hidden", !text);
+  els.importStatus.dataset.kind = kind;
+}
+
+function updateImportFileLabel() {
+  if (!els.importFileName || !els.importFileInput) return;
+  const file = els.importFileInput.files?.[0];
+  els.importFileName.textContent = file
+    ? file.name
+    : "Arraste ou selecione .txt, .md ou .tcnote.json";
+  setImportStatus("");
+}
+
 function setCurrentNote(note) {
   state.currentNote = note;
   state.currentNoteId = note?.id || "";
@@ -1138,6 +1369,19 @@ function setCurrentNote(note) {
   renderNoteTags();
   renderHeaderMeta();
   renderExportPreview();
+  const noteContext = currentMenuContext(note);
+  const trashed = noteContext.noteTrashed;
+  const archived = noteContext.noteArchived;
+  els.editorPanel?.classList.toggle("is-trash-note", Boolean(trashed));
+  els.editorPanel?.classList.toggle("is-archived-note", Boolean(archived));
+  if (els.noteStateBanner) {
+    els.noteStateBanner.classList.toggle("hidden", !trashed && !archived);
+    els.noteStateBanner.textContent = trashed
+      ? "Esta nota está na lixeira. Restaure para voltar a editar."
+      : archived
+        ? "Nota arquivada."
+        : "";
+  }
 
   if (!note) {
     els.deleteButton?.classList.add("hidden");
@@ -1147,9 +1391,6 @@ function setCurrentNote(note) {
     return;
   }
 
-  const noteContext = currentMenuContext(note);
-  const trashed = noteContext.noteTrashed;
-  const archived = noteContext.noteArchived;
   els.favoriteButton?.classList.toggle("hidden", trashed);
   els.deleteButton?.classList.toggle("hidden", trashed);
   els.restoreNoteButton?.classList.toggle("hidden", !trashed);
@@ -1577,13 +1818,16 @@ async function createFolder(parentId = state.selectedFolderId) {
   const name = await openFolderNameModal({ mode: "create", parentId: safeParentId });
   if (name === null) return;
   try {
+    const previousFolderId = state.selectedFolderId;
+    const previousNoteId = state.currentNoteId;
     setSaveState("saving");
     const response = await state.api.createFolder({ name, parent_id: safeParentId || null, icon: "folder" });
     if (response.folder?.id) {
       state.filters.view = "active";
-      state.selectedFolderId = response.folder.id;
       state.expandedFolderIds.add(response.folder.id);
       if (safeParentId) state.expandedFolderIds.add(safeParentId);
+      state.selectedFolderId = previousFolderId;
+      if (previousNoteId) state.currentNoteId = previousNoteId;
       persistSidebarState();
     }
     await loadNotes({ preserveSelection: true });
@@ -1719,6 +1963,7 @@ function commandContext({ note = state.currentNote, folder = null, targetFolderI
       openRevisions: openRevisionsForId,
       openInfo: () => openNoteInfo(),
       openExport: () => openImportExportModal().catch(handleUnexpectedError),
+      shareNote: () => openShareDialog(),
       createFolder,
       createNote: createBlankNote,
       renameFolder,
@@ -2386,6 +2631,37 @@ async function applyCoverAction(action) {
   closeCoverMenu();
 }
 
+function normalizeHexColor(value) {
+  const raw = String(value || "").trim();
+  const withHash = raw.startsWith("#") ? raw : `#${raw}`;
+  if (/^#[0-9a-f]{3}$/i.test(withHash)) {
+    return `#${withHash.slice(1).split("").map((char) => `${char}${char}`).join("")}`.toUpperCase();
+  }
+  if (/^#[0-9a-f]{6}$/i.test(withHash)) return withHash.toUpperCase();
+  return "";
+}
+
+async function applyCoverGradient(gradientId) {
+  const gradient = COVER_GRADIENTS.find((item) => item.id === gradientId) || COVER_GRADIENTS[0];
+  closeCoverMenu();
+  await setAppearancePatch({ cover: { type: "gradient", value: gradient.id } }, "Capa atualizada.");
+}
+
+async function applyCoverColorFromMenu() {
+  const input = els.noteCoverMenu?.querySelector("#cover-hex-input");
+  const error = els.noteCoverMenu?.querySelector("#cover-color-error");
+  const normalized = normalizeHexColor(input?.value);
+  if (!normalized) {
+    input?.classList.add("is-invalid");
+    error?.classList.remove("hidden");
+    input?.focus();
+    return;
+  }
+  state.ui.coverColorDraft = normalized;
+  closeCoverMenu();
+  await setAppearancePatch({ cover: { type: "color", value: normalized } }, "Capa atualizada.");
+}
+
 async function applyIconValue(value) {
   const normalized = String(value || "").trim();
   closeIconMenu();
@@ -2554,6 +2830,8 @@ async function resolveBlockPreview(data) {
 
 async function openImportExportModal() {
   renderExportPreview();
+  updateImportFileLabel();
+  setImportStatus("");
   openModal("import-export");
 }
 
@@ -2573,12 +2851,20 @@ async function pickerFromBlock(type, config = {}) {
 
 async function importSelectedFile() {
   const file = els.importFileInput.files?.[0];
-  if (!file) throw new Error("Selecione um arquivo para importar.");
-  if (!isSupportedImportFile(file.name)) throw new Error("Formato nao suportado para importacao.");
+  if (!file) {
+    setImportStatus("Selecione um arquivo para importar.", "error");
+    throw new Error("Selecione um arquivo para importar.");
+  }
+  if (!isSupportedImportFile(file.name)) {
+    setImportStatus("Formato não suportado para importação.", "error");
+    throw new Error("Formato não suportado para importação.");
+  }
   const textContent = await readFileAsText(file);
+  setImportStatus("Importando arquivo...", "info");
   setSaveState("saving");
-  const response = await state.api.importNote({ fileName: file.name, textContent, folderId: state.selectedFolderId });
+  const response = await state.api.importNote({ fileName: file.name, textContent, folderId: folderTargetForCreation() });
   els.importFileInput.value = "";
+  updateImportFileLabel();
   closeModal();
   await loadNotes({ preserveSelection: false });
   if (response.note?.id) await openNote(response.note.id, { skipPendingSave: true });
@@ -2614,6 +2900,8 @@ function handleWindowAction({ actionId, menuItemId } = {}) {
     return;
   }
   const aliases = {
+    "export.open": "note.export",
+    "share.open": "note.share",
     "open-tab.run": "note.openTab",
     "favorite.run": "note.favorite.toggle",
     "duplicate.run": "note.duplicate",
@@ -2719,30 +3007,20 @@ function wireEvents() {
       submitFolderNameModal();
     }
   });
-  document.querySelectorAll("[data-cover-action]").forEach((button) => {
-    button.addEventListener("click", () => applyCoverAction(button.dataset.coverAction).catch(handleUnexpectedError));
-  });
   els.noteCoverButton?.addEventListener("click", (event) => {
     event.stopPropagation();
-    const nextHidden = !els.noteCoverMenu?.classList.contains("hidden");
-    closeIconMenu();
-    if (els.noteCoverMenu) {
-      els.noteCoverMenu.style.position = "";
-      els.noteCoverMenu.style.left = "";
-      els.noteCoverMenu.style.right = "";
-      els.noteCoverMenu.style.top = "";
-    }
-    els.noteCoverMenu?.classList.toggle("hidden", nextHidden);
-    els.noteCoverButton?.setAttribute("aria-expanded", nextHidden ? "false" : "true");
+    const isOpen = !els.noteCoverMenu?.classList.contains("hidden");
+    if (isOpen) closeCoverMenu();
+    else openCoverMenuFromButton();
   });
   els.noteIconButton?.addEventListener("click", (event) => {
     event.stopPropagation();
-    const nextHidden = !els.noteIconMenu?.classList.contains("hidden");
-    closeCoverMenu();
-    els.noteIconMenu?.classList.toggle("hidden", nextHidden);
-    els.noteIconButton?.setAttribute("aria-expanded", nextHidden ? "false" : "true");
+    const isOpen = !els.noteIconMenu?.classList.contains("hidden");
+    if (isOpen) closeIconMenu();
+    else openIconMenuFromButton();
   });
   els.importFileInput.setAttribute("accept", IMPORT_ACCEPT);
+  els.importFileInput.addEventListener("change", updateImportFileLabel);
   els.importConfirmButton.addEventListener("click", () => importSelectedFile().catch(handleUnexpectedError));
   els.exportJsonButton.addEventListener("click", () => exportCurrentNote("json").catch(handleUnexpectedError));
   els.exportMarkdownButton.addEventListener("click", () => exportCurrentNote("markdown").catch(handleUnexpectedError));
@@ -2806,10 +3084,57 @@ function wireEvents() {
       applyIconValue(iconChoice.dataset.iconValue).catch(handleUnexpectedError);
       return;
     }
+    const coverGradient = target.closest("[data-cover-gradient]");
+    if (coverGradient) {
+      event.preventDefault();
+      applyCoverGradient(coverGradient.dataset.coverGradient).catch(handleUnexpectedError);
+      return;
+    }
+    const coverAction = target.closest("[data-cover-action]");
+    if (coverAction) {
+      event.preventDefault();
+      applyCoverAction(coverAction.dataset.coverAction).catch(handleUnexpectedError);
+      return;
+    }
+    if (target.closest("[data-cover-color-apply]")) {
+      event.preventDefault();
+      applyCoverColorFromMenu().catch(handleUnexpectedError);
+      return;
+    }
     if (state.slashMenu.open && !target.closest("#slash-menu")) closeSlashMenu();
     if (!target.closest("#note-icon-menu") && !target.closest("#note-icon-button")) closeIconMenu();
     if (!target.closest("#note-cover-menu") && !target.closest("#note-cover-button")) closeCoverMenu();
   });
+
+  els.noteIconMenu?.addEventListener("input", (event) => {
+    if (event.target?.id !== "note-icon-search") return;
+    state.ui.iconQuery = event.target.value;
+    els.noteIconMenu.querySelectorAll("[data-icon-value]").forEach((button) => {
+      if (button.dataset.iconValue === "none") return;
+      button.hidden = !iconMatchesQuery(button.dataset.iconValue, state.ui.iconQuery);
+    });
+  });
+
+  els.noteCoverMenu?.addEventListener("input", (event) => {
+    if (event.target?.id === "cover-color-input") {
+      const value = normalizeHexColor(event.target.value);
+      const hexInput = els.noteCoverMenu.querySelector("#cover-hex-input");
+      const preview = els.noteCoverMenu.querySelector(".cover-color-preview");
+      if (hexInput && value) hexInput.value = value;
+      if (preview && value) preview.style.background = value;
+      state.ui.coverColorDraft = value;
+    }
+    if (event.target?.id === "cover-hex-input") {
+      const value = normalizeHexColor(event.target.value);
+      const preview = els.noteCoverMenu.querySelector(".cover-color-preview");
+      event.target.classList.toggle("is-invalid", Boolean(event.target.value.trim()) && !value);
+      els.noteCoverMenu.querySelector("#cover-color-error")?.classList.toggle("hidden", Boolean(value) || !event.target.value.trim());
+      if (preview && value) preview.style.background = value;
+      state.ui.coverColorDraft = value || event.target.value;
+    }
+  });
+
+  els.sidebarBackdrop?.addEventListener("click", () => setSidebarCollapsed(true));
 
   window.TCloudApp?.onWindowAction?.(handleWindowAction);
   window.TCloudApp?.ready?.().then(() => publishWindowActions()).catch(() => {});
@@ -2940,15 +3265,14 @@ function wireEvents() {
       }
 
       if (!isEditorTarget && state.currentNote) {
+        const noteText = `${state.currentNote.title || "Sem título"}\n\n${blocksToMarkdownPreview(state.currentNote.content?.blocks || []) || "Nota vazia"}`;
         if (key === "c") {
           event.preventDefault();
-          const noteText = `${state.currentNote.title || "Sem título"}\n\n${state.currentNote.content || ""}`;
           navigator.clipboard.writeText(noteText).then(() => {
             showToast("Conteúdo da nota copiado.", "success");
           }).catch(() => {});
         } else if (key === "x") {
           event.preventDefault();
-          const noteText = `${state.currentNote.title || "Sem título"}\n\n${state.currentNote.content || ""}`;
           navigator.clipboard.writeText(noteText).then(() => {
             showToast("Conteúdo da nota recortado.", "info");
             deleteCurrentNote().catch(handleUnexpectedError);
@@ -2968,6 +3292,18 @@ function wireEvents() {
 
     if (event.key === "Escape") {
       window.TCloudApp?.closeWindowMenus?.();
+      if (state.ui.compactWindow && !state.ui.sidebarCollapsed) {
+        setSidebarCollapsed(true);
+        return;
+      }
+      if (!els.noteIconMenu?.classList.contains("hidden")) {
+        closeIconMenu();
+        return;
+      }
+      if (!els.noteCoverMenu?.classList.contains("hidden")) {
+        closeCoverMenu();
+        return;
+      }
       if (state.floatingSearch.visible) {
         hideFloatingSearch();
         return;
@@ -3214,14 +3550,7 @@ function showContextMenuAt(menu, x, y) {
   if (!menu) return;
   hideAllContextMenus();
   menu.classList.remove("hidden");
-  const menuWidth = menu.offsetWidth || 180;
-  const menuHeight = menu.offsetHeight || 180;
-  const windowWidth = window.innerWidth;
-  const windowHeight = window.innerHeight;
-  const posX = clamp(Number(x) || 0, 8, Math.max(8, windowWidth - menuWidth - 8));
-  const posY = clamp(Number(y) || 0, 8, Math.max(8, windowHeight - menuHeight - 8));
-  menu.style.left = `${posX}px`;
-  menu.style.top = `${posY}px`;
+  positionFloatingElement(menu, x, y, { margin: 8 });
 }
 
 function openNoteContextMenu(event, note) {
@@ -3303,7 +3632,12 @@ function handleSidebarDrop(event, targetFolderId = "") {
 function openNoteMoreMenu(event) {
   event.preventDefault();
   event.stopPropagation();
-  const actions = buildEditorMoreActions(state.currentNote, currentMenuContext(state.currentNote, { compactWindow: false }));
+  const context = currentMenuContext(state.currentNote, { compactWindow: false });
+  const directStandaloneIds = context.noteTrashed
+    ? new Set(["note.restore"])
+    : new Set(["note.favorite.toggle", "note.archive", "note.unarchive", "note.revisions", "note.export", "note.trash"]);
+  const actions = buildEditorMoreActions(state.currentNote, context)
+    .filter((action) => state.ui.chromeMode !== "standalone" || !directStandaloneIds.has(action.id));
   renderContextMenuActions(els.sidebarContextMenu, actions);
   state.contextMenuTargetNoteId = state.currentNote?.id || "";
   state.contextMenuTargetFolderId = "";
@@ -3331,6 +3665,8 @@ function renderContextMenuActions(menu, actions) {
     const item = document.createElement("li");
     item.className = `context-menu-item${action.variant === "danger" ? " danger" : ""}`;
     item.dataset.action = action.id;
+    item.setAttribute("role", "menuitem");
+    item.tabIndex = -1;
     if (action.disabled) {
       item.classList.add("is-disabled");
       item.setAttribute("aria-disabled", "true");
@@ -3382,27 +3718,7 @@ function wireContextMenus() {
 
     if (targetMenu) {
       event.preventDefault();
-      targetMenu.classList.remove("hidden");
-
-      const menuWidth = targetMenu.offsetWidth || 160;
-      const menuHeight = targetMenu.offsetHeight || 160;
-      const windowWidth = window.innerWidth;
-      const windowHeight = window.innerHeight;
-
-      let posX = event.pageX;
-      let posY = event.pageY;
-
-      // Prevenir transbordo/overflow horizontal
-      if (posX + menuWidth > windowWidth) {
-        posX = windowWidth - menuWidth - 8;
-      }
-      // Prevenir transbordo/overflow vertical
-      if (posY + menuHeight > windowHeight) {
-        posY = windowHeight - menuHeight - 8;
-      }
-
-      targetMenu.style.left = `${posX}px`;
-      targetMenu.style.top = `${posY}px`;
+      showContextMenuAt(targetMenu, event.clientX, event.clientY);
     }
   });
 

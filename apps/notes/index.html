@@ -44,20 +44,23 @@
             <span id="list-meta" class="list-meta">Carregando notas...</span>
           </div>
         </aside>
+        <button id="sidebar-backdrop" class="sidebar-backdrop hidden" type="button" aria-label="Fechar sidebar"></button>
 
         <main class="editor-shell">
           <div class="editor-topbar">
             <button id="sidebar-open-button" class="sidebar-toggle-button" type="button" aria-label="Abrir sidebar"><i class="ph ph-sidebar"></i></button>
             <nav id="note-breadcrumb" class="note-breadcrumb" aria-label="Localização da nota">Minhas notas</nav>
             <span class="editor-topbar-spacer"></span>
-            <button id="templates-button" class="icon-toggle-button" type="button" aria-label="Templates"><i class="ph ph-sparkle"></i></button>
-            <button id="import-button" class="icon-toggle-button" type="button" aria-label="Importar"><i class="ph ph-upload-simple"></i></button>
-            <button id="export-button" class="icon-toggle-button" type="button" aria-label="Exportar"><i class="ph ph-export"></i></button>
-            <button id="revisions-button" class="icon-toggle-button" type="button" aria-label="Histórico"><i class="ph ph-clock-counter-clockwise"></i></button>
-            <button id="archive-note-button" class="icon-toggle-button" type="button" aria-label="Arquivar"><i class="ph ph-archive"></i></button>
-            <button id="delete-note-button" class="icon-toggle-button is-danger" type="button" aria-label="Mover para lixeira"><i class="ph ph-trash"></i></button>
-            <button id="restore-note-button" class="icon-toggle-button hidden" type="button" aria-label="Restaurar"><i class="ph ph-arrow-counter-clockwise"></i></button>
-            <button id="note-more-button" class="icon-toggle-button" type="button" aria-haspopup="menu" aria-expanded="false" aria-label="Mais ações"><i class="ph ph-dots-three"></i></button>
+            <div class="notes-local-actions" aria-label="Ações locais da nota">
+              <button id="templates-button" class="icon-toggle-button" type="button" aria-label="Templates"><i class="ph ph-sparkle"></i></button>
+              <button id="import-button" class="icon-toggle-button" type="button" aria-label="Importar"><i class="ph ph-upload-simple"></i></button>
+              <button id="export-button" class="icon-toggle-button" type="button" aria-label="Exportar"><i class="ph ph-export"></i></button>
+              <button id="revisions-button" class="icon-toggle-button" type="button" aria-label="Histórico"><i class="ph ph-clock-counter-clockwise"></i></button>
+              <button id="archive-note-button" class="icon-toggle-button" type="button" aria-label="Arquivar"><i class="ph ph-archive"></i></button>
+              <button id="delete-note-button" class="icon-toggle-button is-danger" type="button" aria-label="Mover para lixeira"><i class="ph ph-trash"></i></button>
+              <button id="restore-note-button" class="icon-toggle-button hidden" type="button" aria-label="Restaurar"><i class="ph ph-arrow-counter-clockwise"></i></button>
+              <button id="note-more-button" class="icon-toggle-button" type="button" aria-haspopup="menu" aria-expanded="false" aria-label="Mais ações"><i class="ph ph-dots-three"></i></button>
+            </div>
           </div>
           <section id="editor-empty-state" class="editor-empty-state">
             <div class="empty-panel">
@@ -104,24 +107,11 @@
                 <div class="note-page-tools">
                   <div class="note-icon-shell">
                     <button id="note-icon-button" class="note-icon" type="button" aria-haspopup="menu" aria-expanded="false" aria-label="Trocar ícone da nota">▰</button>
-                    <div id="note-icon-menu" class="appearance-popover hidden" role="menu" aria-label="Ícones da nota">
-                      <button type="button" data-icon-value="▰">▰</button>
-                      <button type="button" data-icon-value="✦">✦</button>
-                      <button type="button" data-icon-value="✓">✓</button>
-                      <button type="button" data-icon-value="◆">◆</button>
-                      <button type="button" data-icon-value="📌">📌</button>
-                      <button type="button" data-icon-value="🧠">🧠</button>
-                      <button type="button" class="appearance-popover-wide" data-icon-value="none">Remover</button>
-                    </div>
+                    <div id="note-icon-menu" class="appearance-popover note-icon-popover hidden" role="menu" aria-label="Ícones da nota"></div>
                   </div>
                   <div class="note-cover-shell">
                     <button id="note-cover-button" class="appearance-toggle-button" type="button" aria-haspopup="menu" aria-expanded="false"><i class="ph ph-image"></i> Capa</button>
-                    <div id="note-cover-menu" class="appearance-popover hidden" role="menu" aria-label="Ações da capa">
-                      <button class="appearance-button" type="button" data-cover-action="gradient">Gradiente</button>
-                      <button class="appearance-button" type="button" data-cover-action="color">Cor</button>
-                      <button class="appearance-button" type="button" data-cover-action="image">Imagem</button>
-                      <button class="appearance-button is-danger" type="button" data-cover-action="none">Remover</button>
-                    </div>
+                    <div id="note-cover-menu" class="appearance-popover note-cover-popover hidden" role="menu" aria-label="Ações da capa"></div>
                   </div>
                 </div>
                 <div class="title-row">
@@ -135,6 +125,7 @@
                 <div class="editor-meta-row">
                   <span id="note-meta" class="note-meta">Nenhuma nota selecionada</span>
                 </div>
+                <div id="note-state-banner" class="note-state-banner hidden" role="status"></div>
               </header>
 
               <div class="editor-content-grid">
@@ -192,7 +183,13 @@
         <section class="io-card">
           <h4>Importar</h4>
           <p class="note-meta">Suporta <code>.txt</code>, <code>.md</code> básico e <code>.tcnote.json</code>.</p>
-          <input id="import-file-input" type="file" accept=".txt,.md,.markdown,.json,.tcnote.json">
+          <label class="import-dropzone" for="import-file-input">
+            <input id="import-file-input" class="visually-hidden" type="file" accept=".txt,.md,.markdown,.json,.tcnote.json">
+            <span class="import-dropzone-icon"><i class="ph ph-file-arrow-up"></i></span>
+            <span class="import-dropzone-title">Escolher arquivo</span>
+            <span id="import-file-name" class="import-dropzone-meta">Arraste ou selecione .txt, .md ou .tcnote.json</span>
+          </label>
+          <p id="import-status" class="io-status hidden" aria-live="polite"></p>
           <button id="import-confirm-button" class="primary-button" type="button"><i class="ph ph-upload-simple"></i> Importar arquivo</button>
         </section>
         <section class="io-card">
