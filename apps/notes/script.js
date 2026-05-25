@@ -4,6 +4,12 @@ import { NotesFilePicker } from "./file-picker.js";
 import { IMPORT_ACCEPT, isSupportedImportFile, readFileAsText } from "./export-import.js";
 import { blocksToMarkdownPreview } from "./markdown-converter.js";
 import { installWikiLinkAutocomplete } from "./relations.js";
+import {
+  buildBulkSelectionActions,
+  buildEditorMoreActions,
+  buildNoteMenuActions,
+  getNoteContext,
+} from "./menu-actions.mjs";
 
 const AUTOSAVE_DELAY_MS = 1200;
 const SEARCH_DELAY_MS = 260;
@@ -403,12 +409,34 @@ async function setAppearancePatch(patch, toastMessage = "Aparência atualizada."
 
 function closeCoverMenu() {
   els.noteCoverMenu?.classList.add("hidden");
+  if (els.noteCoverMenu) {
+    els.noteCoverMenu.style.position = "";
+    els.noteCoverMenu.style.left = "";
+    els.noteCoverMenu.style.right = "";
+    els.noteCoverMenu.style.top = "";
+  }
   els.noteCoverButton?.setAttribute("aria-expanded", "false");
 }
 
 function closeIconMenu() {
   els.noteIconMenu?.classList.add("hidden");
   els.noteIconButton?.setAttribute("aria-expanded", "false");
+}
+
+function openCoverMenuAt(x, y) {
+  if (!els.noteCoverMenu || !state.currentNote || state.currentNote.deleted_at) return;
+  closeIconMenu();
+  els.noteCoverMenu.classList.remove("hidden");
+  els.noteCoverButton?.setAttribute("aria-expanded", "true");
+
+  const menuWidth = els.noteCoverMenu.offsetWidth || 180;
+  const menuHeight = els.noteCoverMenu.offsetHeight || 120;
+  const left = clamp(Number(x) || 0, 8, Math.max(8, window.innerWidth - menuWidth - 8));
+  const top = clamp(Number(y) || 0, 8, Math.max(8, window.innerHeight - menuHeight - 8));
+  els.noteCoverMenu.style.position = "fixed";
+  els.noteCoverMenu.style.left = `${left}px`;
+  els.noteCoverMenu.style.right = "auto";
+  els.noteCoverMenu.style.top = `${top}px`;
 }
 
 function noteStateLabels(note) {
@@ -603,16 +631,27 @@ function hasShellWindowActions() {
   return window.parent !== window && typeof window.TCloudApp?.setWindowActions === "function";
 }
 
+function findNoteById(noteId) {
+  return state.notes.find((note) => note.id === noteId)
+    || (state.currentNote?.id === noteId ? state.currentNote : null);
+}
+
+function currentMenuContext(note, extra = {}) {
+  return getNoteContext(note, {
+    view: state.filters.view,
+    notes: state.notes,
+    selectedNoteIds: state.selectedNoteIds,
+    compactWindow: state.ui.compactWindow,
+    ...extra,
+  });
+}
+
 function publishWindowActions() {
   if (!hasShellWindowActions()) return;
 
   const selectedCount = state.selectedNoteIds?.size || 0;
   const isCompactWindow = Boolean(state.ui.compactWindow);
   if (selectedCount > 1) {
-    const view = state.filters.view;
-    const isTrash = view === "trash";
-    const isArchived = view === "archived";
-
     const actions = [
       {
         id: "sidebar.toggle",
@@ -620,73 +659,8 @@ function publishWindowActions() {
         icon: "ph-sidebar",
         pressed: !state.ui.sidebarCollapsed,
       },
+      ...buildBulkSelectionActions(currentMenuContext(null, { compactWindow: isCompactWindow })),
     ];
-
-    if (isTrash) {
-      actions.push({
-        id: "bulk-restore.run",
-        label: "Restaurar selecionadas",
-        icon: "ph-arrow-counter-clockwise",
-        variant: "primary",
-      });
-      if (isCompactWindow) {
-        actions.push({
-          id: "bulk-more",
-          label: "Mais",
-          icon: "ph-dots-three",
-          menuItems: [
-            { id: "bulk-purge.run", label: "Excluir definitivamente", icon: "ph-trash", variant: "danger" },
-          ],
-        });
-      } else {
-        actions.push({
-          id: "bulk-purge.run",
-          label: "Excluir definitivamente",
-          icon: "ph-trash",
-          variant: "danger",
-        });
-      }
-    } else {
-      const selectedIds = Array.from(state.selectedNoteIds);
-      const anyFav = selectedIds.some((id) => {
-        const n = state.notes.find((x) => x.id === id);
-        return n && n.favorite;
-      });
-
-      actions.push({
-        id: "bulk-favorite.run",
-        label: anyFav ? "Desfavoritar" : "Favoritar",
-        icon: "ph-star",
-      });
-      actions.push({
-        id: "bulk-archive.run",
-        label: isArchived ? "Desarquivar" : "Arquivar",
-        icon: isArchived ? "ph-archive-tray" : "ph-archive",
-      });
-      if (isCompactWindow) {
-        actions.push({
-          id: "bulk-more",
-          label: "Mais",
-          icon: "ph-dots-three",
-          menuItems: [
-            { id: "bulk-delete.run", label: "Mover para lixeira", icon: "ph-trash", variant: "danger" },
-          ],
-        });
-      } else {
-        actions.push({
-          id: "bulk-delete.run",
-          label: "Mover para lixeira",
-          icon: "ph-trash",
-          variant: "danger",
-        });
-      }
-    }
-
-    actions.push({
-      id: "bulk-clear.run",
-      label: "Limpar seleção",
-      icon: "ph-x",
-    });
 
     window.TCloudApp?.setWindowActions?.({
       statusText: isCompactWindow ? `${selectedCount} selecionadas` : `${selectedCount} notas selecionadas`,
@@ -696,45 +670,41 @@ function publishWindowActions() {
   }
 
   const hasNote = Boolean(state.currentNote);
-  const trashed = Boolean(state.currentNote?.deleted_at);
-  const archived = Boolean(state.currentNote?.archived);
+  const noteContext = currentMenuContext(state.currentNote);
+  const trashed = noteContext.noteTrashed;
+  const moreItems = buildEditorMoreActions(state.currentNote, noteContext);
+  const actions = [
+    {
+      id: "sidebar.toggle",
+      label: "Sidebar",
+      icon: "ph-sidebar",
+      pressed: !state.ui.sidebarCollapsed,
+    },
+    {
+      id: "export.open",
+      label: "Exportar",
+      icon: "ph-export",
+      variant: "primary",
+      disabled: !hasNote,
+    },
+    {
+      id: "share.open",
+      label: "Compartilhar",
+      icon: "ph-share-network",
+      disabled: !hasNote || trashed,
+    },
+  ];
+  if (moreItems.length) {
+    actions.push({
+      id: "more",
+      label: "Mais",
+      icon: "ph-dots-three",
+      menuItems: moreItems,
+    });
+  }
   window.TCloudApp?.setWindowActions?.({
     statusText: currentSaveStatusText(),
-    actions: [
-      {
-        id: "sidebar.toggle",
-        label: "Sidebar",
-        icon: "ph-sidebar",
-        pressed: !state.ui.sidebarCollapsed,
-      },
-      {
-        id: "export.open",
-        label: "Exportar",
-        icon: "ph-export",
-        variant: "primary",
-        disabled: !hasNote,
-      },
-      {
-        id: "share.open",
-        label: "Compartilhar",
-        icon: "ph-share-network",
-        disabled: !hasNote,
-      },
-      {
-        id: "more",
-        label: "Mais",
-        icon: "ph-dots-three",
-        menuItems: [
-          { id: "duplicate.run", label: "Duplicar nota", icon: "ph-copy-simple", disabled: !hasNote || trashed },
-          { id: "archive.run", label: archived ? "Desarquivar" : "Arquivar", icon: archived ? "ph-archive-tray" : "ph-archive", disabled: !hasNote || trashed },
-          { id: "copy-link.run", label: "Copiar link da nota", icon: "ph-link-simple", disabled: !hasNote },
-          { id: "info.open", label: "Informações da nota", icon: "ph-info", disabled: !hasNote },
-          { id: "restore.run", label: "Restaurar", icon: "ph-arrow-counter-clockwise", disabled: !hasNote || !trashed },
-          { id: "purge.run", label: "Excluir definitivamente", icon: "ph-trash", variant: "danger", disabled: !hasNote || !trashed },
-          { id: "delete.run", label: "Mover para lixeira", icon: "ph-trash", variant: "danger", disabled: !hasNote || trashed },
-        ],
-      },
-    ],
+    actions,
   });
 }
 
@@ -1021,8 +991,10 @@ function setCurrentNote(note) {
     return;
   }
 
-  const trashed = Boolean(note.deleted_at);
-  const archived = Boolean(note.archived);
+  const noteContext = currentMenuContext(note);
+  const trashed = noteContext.noteTrashed;
+  const archived = noteContext.noteArchived;
+  els.favoriteButton?.classList.toggle("hidden", trashed);
   els.deleteButton?.classList.toggle("hidden", trashed);
   els.restoreNoteButton?.classList.toggle("hidden", !trashed);
   els.archiveButton?.classList.toggle("hidden", trashed);
@@ -1175,43 +1147,30 @@ function updateSelectionUI() {
 }
 
 function renderBulkPanelButtons() {
-  const view = state.filters.view;
-  const isTrash = view === "trash";
-  const isArchived = view === "archived";
-
   const favBtn = document.getElementById("bulk-fav-btn");
   const arcBtn = document.getElementById("bulk-arc-btn");
   const delBtn = document.getElementById("bulk-del-btn");
   const rstBtn = document.getElementById("bulk-rst-btn");
   const purgeBtn = document.getElementById("bulk-purge-btn");
+  const actionById = new Map(buildBulkSelectionActions(currentMenuContext(null, { compactWindow: false })).map((action) => [action.id, action]));
+  const visible = (button, actionId) => button?.classList.toggle("hidden", !actionById.has(actionId));
 
-  if (isTrash) {
-    favBtn?.classList.add("hidden");
-    arcBtn?.classList.add("hidden");
-    rstBtn?.classList.remove("hidden");
-    purgeBtn?.classList.remove("hidden");
-    delBtn?.classList.add("hidden");
-  } else {
-    favBtn?.classList.remove("hidden");
-    arcBtn?.classList.remove("hidden");
-    rstBtn?.classList.add("hidden");
-    purgeBtn?.classList.add("hidden");
-    delBtn?.classList.remove("hidden");
+  visible(favBtn, "bulk-favorite.run");
+  visible(arcBtn, "bulk-archive.run");
+  visible(delBtn, "bulk-delete.run");
+  visible(rstBtn, "bulk-restore.run");
+  visible(purgeBtn, "bulk-purge.run");
 
-    const selectedIds = Array.from(state.selectedNoteIds);
-    const anyFav = selectedIds.some((id) => {
-      const n = state.notes.find((x) => x.id === id);
-      return n && n.favorite;
-    });
+  const favAction = actionById.get("bulk-favorite.run");
+  if (favBtn && favAction) {
+    favBtn.querySelector(".label-text").textContent = favAction.label;
+    favBtn.querySelector("i").className = favAction.label === "Desfavoritar" ? "ph-fill ph-star" : "ph ph-star";
+  }
 
-    if (favBtn) {
-      favBtn.querySelector(".label-text").textContent = anyFav ? "Desfavoritar" : "Favoritar";
-      favBtn.querySelector("i").className = anyFav ? "ph-fill ph-star" : "ph ph-star";
-    }
-    if (arcBtn) {
-      arcBtn.querySelector(".label-text").textContent = isArchived ? "Desarquivar" : "Arquivar";
-      arcBtn.querySelector("i").className = isArchived ? "ph ph-archive-tray" : "ph ph-archive";
-    }
+  const archiveAction = actionById.get("bulk-archive.run");
+  if (arcBtn && archiveAction) {
+    arcBtn.querySelector(".label-text").textContent = archiveAction.label;
+    arcBtn.querySelector("i").className = `ph ${archiveAction.icon}`;
   }
 }
 
@@ -2047,6 +2006,13 @@ function eventShouldOpenSlashMenu(event) {
   return true;
 }
 
+function shouldOpenEditorContextMenu(target) {
+  if (!(target instanceof HTMLElement)) return false;
+  if (!target.closest(".editorjs-host")) return false;
+  if (target.closest("button, input, textarea, select")) return false;
+  return Boolean(target.closest(".ce-block, .codex-editor__redactor, .editor-todo, .editor-quote, .editor-code, .tcloud-block-card"));
+}
+
 async function toggleFavorite() {
   if (!state.currentNote || state.currentNote.deleted_at || state.favoriteSaving) return;
   state.favoriteSaving = true;
@@ -2220,6 +2186,14 @@ function handleWindowAction({ actionId, menuItemId } = {}) {
     openShareDialog();
     return;
   }
+  if (command === "open-tab.run") {
+    if (state.currentNoteId) window.open(`${window.location.origin}${window.location.pathname}#note=${state.currentNoteId}`, "_blank");
+    return;
+  }
+  if (command === "favorite.run") {
+    toggleFavorite().catch(handleUnexpectedError);
+    return;
+  }
   if (command === "duplicate.run") {
     duplicateCurrentNote().catch(handleUnexpectedError);
     return;
@@ -2230,6 +2204,10 @@ function handleWindowAction({ actionId, menuItemId } = {}) {
   }
   if (command === "copy-link.run") {
     copyCurrentNoteLink().catch(handleUnexpectedError);
+    return;
+  }
+  if (command === "revisions.open") {
+    openRevisionsModal().catch(handleUnexpectedError);
     return;
   }
   if (command === "info.open") {
@@ -2281,6 +2259,12 @@ function wireEvents() {
     event.stopPropagation();
     const nextHidden = !els.noteCoverMenu?.classList.contains("hidden");
     closeIconMenu();
+    if (els.noteCoverMenu) {
+      els.noteCoverMenu.style.position = "";
+      els.noteCoverMenu.style.left = "";
+      els.noteCoverMenu.style.right = "";
+      els.noteCoverMenu.style.top = "";
+    }
     els.noteCoverMenu?.classList.toggle("hidden", nextHidden);
     els.noteCoverButton?.setAttribute("aria-expanded", nextHidden ? "false" : "true");
   });
@@ -2644,8 +2628,8 @@ async function duplicateNoteForId(noteId) {
 }
 
 async function deleteNoteForId(noteId) {
-  const targetNote = state.notes.find(n => n.id === noteId) || (state.currentNote && state.currentNote.id === noteId ? state.currentNote : null);
-  if (!targetNote) return;
+  const targetNote = findNoteById(noteId);
+  if (!targetNote || currentMenuContext(targetNote).noteTrashed) return;
 
   askConfirmation({
     eyebrow: "Lixeira",
@@ -2668,9 +2652,156 @@ async function deleteNoteForId(noteId) {
   });
 }
 
+async function restoreNoteForId(noteId) {
+  const targetNote = findNoteById(noteId);
+  if (!targetNote || !currentMenuContext(targetNote).noteTrashed) return;
+  if (state.currentNote?.id === noteId) {
+    await restoreCurrentNote();
+    return;
+  }
+  setSaveState("saving");
+  const response = await state.api.restore(noteId);
+  showToast("Nota restaurada da lixeira.", "success");
+  state.filters.view = "active";
+  state.selectedNoteIds.delete(noteId);
+  await loadNotes({ preserveSelection: false });
+  if (response.note?.id) await openNote(response.note.id, { skipPendingSave: true });
+  setSaveState("saved", { at: Date.now() });
+}
+
+async function purgeNoteForId(noteId) {
+  const targetNote = findNoteById(noteId);
+  if (!targetNote || !currentMenuContext(targetNote).noteTrashed) return;
+  askConfirmation({
+    eyebrow: "Exclusão definitiva",
+    title: "Excluir definitivamente esta nota?",
+    description: "Excluir definitivamente esta nota? Esta ação não pode ser desfeita.",
+    acceptLabel: "Excluir definitivamente",
+    acceptKind: "danger",
+    onAccept: async () => {
+      setSaveState("saving");
+      await state.api.purge(noteId);
+      showToast("Nota excluída definitivamente.", "success");
+      state.selectedNoteIds.delete(noteId);
+      if (state.currentNoteId === noteId) {
+        state.currentNoteId = "";
+        setCurrentNote(null);
+      }
+      await loadNotes({ preserveSelection: false });
+      setSaveState("saved", { at: Date.now() });
+    },
+  });
+}
+
+async function toggleArchiveForId(noteId) {
+  const targetNote = findNoteById(noteId);
+  if (!targetNote || currentMenuContext(targetNote).noteTrashed) return;
+  if (state.currentNote?.id === noteId) {
+    await toggleArchive();
+    return;
+  }
+
+  const targetArchived = !Boolean(targetNote.archived);
+  setSaveState("saving");
+  const response = await state.api.update(noteId, {
+    archived: targetArchived,
+    favorite: Boolean(targetNote.favorite),
+    tags: Array.isArray(targetNote.tags) ? targetNote.tags : [],
+    properties: { ...(targetNote.properties || {}) },
+  });
+  upsertNoteSummary(response.note);
+  if (targetArchived && state.filters.view === "active") {
+    await loadNotes({ preserveSelection: false });
+  } else if (!targetArchived && state.filters.view === "archived") {
+    state.filters.view = "active";
+    await loadNotes({ preserveSelection: false });
+  } else {
+    renderNotesList();
+  }
+  setSaveState("saved", { at: Date.now() });
+  showToast(targetArchived ? "Nota arquivada." : "Nota desarquivada.", "success");
+}
+
+async function copyNoteLinkForId(noteId) {
+  const targetNote = findNoteById(noteId);
+  if (!targetNote || currentMenuContext(targetNote).noteTrashed) return;
+  await copyToClipboard(buildCurrentNoteUrl(noteId));
+  showToast("Link da nota copiado.", "success");
+}
+
+async function openRevisionsForId(noteId) {
+  const targetNote = findNoteById(noteId);
+  if (!targetNote || currentMenuContext(targetNote).noteTrashed) return;
+  if (state.currentNote?.id !== noteId) {
+    await openNote(noteId, { skipPendingSave: false });
+  }
+  await openRevisionsModal();
+}
+
 function hideAllContextMenus() {
   els.sidebarContextMenu?.classList.add("hidden");
   els.editorContextMenu?.classList.add("hidden");
+}
+
+function renderContextMenuActions(menu, actions) {
+  const list = menu?.querySelector(".context-menu-list");
+  if (!list) return;
+  list.innerHTML = "";
+  actions.forEach((action) => {
+    if (action.separatorBefore && list.children.length) {
+      const divider = document.createElement("li");
+      divider.className = "context-menu-divider";
+      list.appendChild(divider);
+    }
+    const item = document.createElement("li");
+    item.className = `context-menu-item${action.variant === "danger" ? " danger" : ""}`;
+    item.dataset.action = action.id;
+    item.textContent = action.label;
+    list.appendChild(item);
+  });
+}
+
+function executeNoteMenuAction(action, noteId) {
+  if (!action || !noteId) return;
+  if (action.startsWith("bulk-")) {
+    handleBulkAction(action).catch(handleUnexpectedError);
+    return;
+  }
+  if (action === "open-tab.run") {
+    window.open(`${window.location.origin}${window.location.pathname}#note=${noteId}`, "_blank");
+    return;
+  }
+  if (action === "favorite.run") {
+    toggleFavoriteForId(noteId).catch(handleUnexpectedError);
+    return;
+  }
+  if (action === "duplicate.run") {
+    duplicateNoteForId(noteId).catch(handleUnexpectedError);
+    return;
+  }
+  if (action === "archive.run") {
+    toggleArchiveForId(noteId).catch(handleUnexpectedError);
+    return;
+  }
+  if (action === "copy-link.run") {
+    copyNoteLinkForId(noteId).catch(handleUnexpectedError);
+    return;
+  }
+  if (action === "revisions.open") {
+    openRevisionsForId(noteId).catch(handleUnexpectedError);
+    return;
+  }
+  if (action === "restore.run") {
+    restoreNoteForId(noteId).catch(handleUnexpectedError);
+    return;
+  }
+  if (action === "purge.run") {
+    purgeNoteForId(noteId).catch(handleUnexpectedError);
+    return;
+  }
+  if (action === "delete.run") {
+    deleteNoteForId(noteId).catch(handleUnexpectedError);
+  }
 }
 
 function wireContextMenus() {
@@ -2682,10 +2813,22 @@ function wireContextMenus() {
 
     let targetMenu = null;
     const noteCard = target.closest(".note-card");
-    const isEditorClick = target.closest(".editor-shell") || target.closest(".codex-editor");
+    const isEditorClick = shouldOpenEditorContextMenu(target);
+
+    if (target.closest("#note-cover")) {
+      event.preventDefault();
+      event.stopPropagation();
+      hideAllContextMenus();
+      openCoverMenuAt(event.clientX, event.clientY);
+      return;
+    }
 
     if (noteCard) {
       state.contextMenuTargetNoteId = noteCard.dataset.id;
+      const targetNote = findNoteById(state.contextMenuTargetNoteId);
+      const actions = buildNoteMenuActions(targetNote, currentMenuContext(targetNote, { compactWindow: false }));
+      if (!actions.length) return;
+      renderContextMenuActions(els.sidebarContextMenu, actions);
       targetMenu = els.sidebarContextMenu;
     } else if (isEditorClick) {
       targetMenu = els.editorContextMenu;
@@ -2745,18 +2888,7 @@ function wireContextMenus() {
       return;
     }
 
-    console.log(`[Sidebar Context Menu] Ação disparada: ${action} para nota ${noteId}`);
-    
-    if (action === "open-tab") {
-      window.open(`${window.location.origin}${window.location.pathname}#note=${noteId}`, "_blank");
-    } else if (action === "favorite") {
-      toggleFavoriteForId(noteId).catch(handleUnexpectedError);
-    } else if (action === "duplicate") {
-      duplicateNoteForId(noteId).catch(handleUnexpectedError);
-    } else if (action === "delete") {
-      deleteNoteForId(noteId).catch(handleUnexpectedError);
-    }
-
+    executeNoteMenuAction(action, noteId);
     hideAllContextMenus();
   });
 
@@ -3010,6 +3142,3 @@ function navigateFloatingSearch(direction) {
 window.showFloatingSearch = showFloatingSearch;
 window.hideFloatingSearch = hideFloatingSearch;
 window.state = state;
-
-
-
