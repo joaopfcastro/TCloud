@@ -62,8 +62,34 @@ const COVER_GRADIENTS = [
   { id: "ink", label: "Tinta", css: "linear-gradient(135deg, #1f2937, #405064)" },
 ];
 
-const ICON_RECENTS = ["⭐", "✅", "📌", "🧠", "📚", "⚕️"];
-const ICON_SYMBOLS = ["▰", "✦", "✓", "◆", "●", "■", "▲", "—", "#", "!", "?"];
+const NOTE_ICON_CATALOG = [
+  { value: "▰", label: "Bloco", group: "Recentes", aliases: ["bloco", "quadrado", "padrao", "padrão", "default", "note"] },
+  { value: "⭐", label: "Estrela", group: "Recentes", aliases: ["estrela", "favorito", "favorite", "star"] },
+  { value: "✅", label: "Check", group: "Recentes", aliases: ["check", "feito", "ok", "done", "concluido", "concluído", "tarefa"] },
+  { value: "📌", label: "Pin", group: "Recentes", aliases: ["pin", "fixar", "fixado", "importante"] },
+  { value: "🧠", label: "Cérebro", group: "Recentes", aliases: ["cerebro", "cérebro", "mente", "neurologia", "psico"] },
+  { value: "📚", label: "Livros", group: "Recentes", aliases: ["livro", "livros", "book", "books", "estudo", "academico", "acadêmico"] },
+  { value: "⚕️", label: "Saúde", group: "Saúde", aliases: ["saude", "saúde", "medico", "médico", "medical", "hospital", "medicina"] },
+  { value: "🩺", label: "Medicina", group: "Saúde", aliases: ["medicina", "medical", "medico", "médico", "saude", "saúde", "estetoscopio", "estetoscópio"] },
+  { value: "🤰", label: "Obstetrícia", group: "Saúde", aliases: ["obstetricia", "obstetrícia", "gestante", "gestacao", "gestação", "gravidez", "pregnancy"] },
+  { value: "❤️", label: "Coração", group: "Comuns", aliases: ["coracao", "coração", "heart", "amor", "saude", "saúde"] },
+  { value: "👍", label: "Joia", group: "Comuns", aliases: ["joia", "curtir", "like", "thumbs up", "ok", "positivo"] },
+  { value: "📁", label: "Pasta", group: "Organização", aliases: ["pasta", "folder", "arquivo", "organizar", "categoria"] },
+  { value: "📝", label: "Nota", group: "Organização", aliases: ["nota", "note", "anotacao", "anotação", "texto", "documento"] },
+  { value: "🏷️", label: "Tag", group: "Organização", aliases: ["tag", "etiqueta", "hashtag", "categoria"] },
+  { value: "💡", label: "Ideia", group: "Comuns", aliases: ["ideia", "lampada", "lâmpada", "insight"] },
+  { value: "🔥", label: "Fogo", group: "Comuns", aliases: ["fogo", "urgente", "hot", "importante"] },
+  { value: "⚠️", label: "Alerta", group: "Comuns", aliases: ["alerta", "aviso", "perigo", "warning"] },
+  { value: "✦", label: "Brilho", group: "Símbolos", aliases: ["brilho", "sparkle", "estrela"] },
+  { value: "✓", label: "Marcado", group: "Símbolos", aliases: ["check", "marcado", "feito"] },
+  { value: "◆", label: "Losango", group: "Símbolos", aliases: ["losango", "diamante", "diamond"] },
+  { value: "●", label: "Círculo", group: "Símbolos", aliases: ["circulo", "círculo", "circle", "bolinha"] },
+  { value: "■", label: "Quadrado", group: "Símbolos", aliases: ["quadrado", "square"] },
+  { value: "▲", label: "Triângulo", group: "Símbolos", aliases: ["triangulo", "triângulo", "triangle"] },
+  { value: "#", label: "Hashtag", group: "Símbolos", aliases: ["tag", "hashtag", "numero", "número"] },
+  { value: "!", label: "Importante", group: "Símbolos", aliases: ["importante", "alerta", "exclamacao", "exclamação"] },
+  { value: "?", label: "Pergunta", group: "Símbolos", aliases: ["pergunta", "duvida", "dúvida", "question"] },
+];
 
 function templateContent(blocks) {
   return normalizeEditorData({ time: Date.now(), blocks });
@@ -454,19 +480,36 @@ function renderAppearanceMenus() {
   renderCoverMenu();
 }
 
-function iconMatchesQuery(value, query) {
-  const safeQuery = String(query || "").trim().toLowerCase();
-  if (!safeQuery) return true;
-  return String(value || "").toLowerCase().includes(safeQuery);
+function normalizeIconSearch(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
 }
 
-function renderIconSection(label, values, selectedValue) {
+function iconMatchesQuery(item, query) {
+  const safeQuery = normalizeIconSearch(query);
+  if (!safeQuery) return true;
+  const haystack = [
+    item?.value,
+    item?.label,
+    item?.group,
+    ...(Array.isArray(item?.aliases) ? item.aliases : []),
+  ].map(normalizeIconSearch).join(" ");
+  return haystack.includes(safeQuery);
+}
+
+function filteredIconCatalog() {
   const query = state.ui.iconQuery;
-  const buttons = values
-    .filter((value) => iconMatchesQuery(value, query))
-    .map((value) => `
-      <button class="appearance-icon-choice${value === selectedValue ? " is-selected" : ""}" type="button" role="menuitemradio" aria-checked="${value === selectedValue ? "true" : "false"}" data-icon-value="${escapeHtml(value)}">
-        <span>${escapeHtml(value)}</span>
+  return NOTE_ICON_CATALOG.filter((item) => iconMatchesQuery(item, query));
+}
+
+function renderIconSection(label, items, selectedValue) {
+  const buttons = items
+    .map((item) => `
+      <button class="appearance-icon-choice${item.value === selectedValue ? " is-selected" : ""}" type="button" role="menuitemradio" aria-checked="${item.value === selectedValue ? "true" : "false"}" data-icon-value="${escapeHtml(item.value)}" title="${escapeHtml(item.label)}" aria-label="${escapeHtml(item.label)}">
+        <span class="appearance-icon-symbol">${escapeHtml(item.value)}</span>
       </button>
     `)
     .join("");
@@ -483,25 +526,63 @@ function renderIconMenu() {
   if (!els.noteIconMenu) return;
   const appearance = currentAppearance();
   const selectedValue = appearance.icon.type === "none" ? "" : appearance.icon.value;
-  const sections = [
-    renderIconSection("Recentes", ICON_RECENTS, selectedValue),
-    renderIconSection("Símbolos", ICON_SYMBOLS, selectedValue),
-  ].filter(Boolean).join("");
+  const query = state.ui.iconQuery.trim();
+  const grouped = filteredIconCatalog().reduce((map, item) => {
+    const group = item.group || "Ícones";
+    if (!map.has(group)) map.set(group, []);
+    map.get(group).push(item);
+    return map;
+  }, new Map());
+  const sections = Array.from(grouped.entries())
+    .map(([label, items]) => renderIconSection(label, items, selectedValue))
+    .filter(Boolean)
+    .join("");
   els.noteIconMenu.innerHTML = `
     <div class="appearance-popover-header">
       <strong>Ícone da nota</strong>
       <span>Escolha um símbolo</span>
     </div>
-    <label class="appearance-search" for="note-icon-search">
+    <div class="appearance-search">
+      <label class="visually-hidden" for="note-icon-search">Buscar ícone</label>
       <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
       <input id="note-icon-search" type="search" placeholder="Buscar emoji ou símbolo" value="${escapeHtml(state.ui.iconQuery)}" autocomplete="off">
-    </label>
-    ${sections || '<p class="appearance-empty">Nenhum ícone encontrado.</p>'}
+      <button class="appearance-search-clear${query ? "" : " hidden"}" type="button" data-icon-clear aria-label="Limpar busca" title="Limpar busca">
+        <i class="ph ph-x" aria-hidden="true"></i>
+      </button>
+    </div>
+    ${sections || `<div class="appearance-empty icon-empty-state" role="status">
+      <span>Nenhum ícone encontrado${query ? ` para “${escapeHtml(query)}”` : ""}.</span>
+      <small>Tente estrela, médico, livro, check, pasta ou tag.</small>
+    </div>`}
     <button class="appearance-danger-action" type="button" role="menuitem" data-icon-value="none">
       <i class="ph ph-trash" aria-hidden="true"></i>
       <span>Remover ícone</span>
     </button>
   `;
+}
+
+function refreshIconMenuAfterSearch() {
+  if (!els.noteIconMenu || els.noteIconMenu.classList.contains("hidden")) return;
+  renderIconMenu();
+  positionAppearancePopover(els.noteIconMenu, els.noteIconButton, { align: "start", width: 340 });
+  window.requestAnimationFrame(() => {
+    const input = els.noteIconMenu?.querySelector("#note-icon-search");
+    input?.focus();
+    input?.setSelectionRange(input.value.length, input.value.length);
+  });
+}
+
+function visibleIconChoices() {
+  return Array.from(els.noteIconMenu?.querySelectorAll(".appearance-icon-choice") || [])
+    .filter((button) => !button.hidden);
+}
+
+function focusIconChoice(offset) {
+  const choices = visibleIconChoices();
+  if (!choices.length) return;
+  const activeIndex = choices.findIndex((button) => button === document.activeElement);
+  const nextIndex = activeIndex === -1 ? 0 : (activeIndex + offset + choices.length) % choices.length;
+  choices[nextIndex]?.focus();
 }
 
 function renderCoverMenu() {
@@ -637,6 +718,14 @@ function closeIconMenu() {
   els.noteIconButton?.classList.remove("is-active");
 }
 
+function closeTransientOverlays() {
+  closeIconMenu();
+  closeCoverMenu();
+  closeSlashMenu();
+  hideAllContextMenus();
+  window.TCloudApp?.closeWindowMenus?.();
+}
+
 function openCoverMenuAt(x, y) {
   if (!els.noteCoverMenu || !state.currentNote || state.currentNote.deleted_at) return;
   closeIconMenu();
@@ -659,8 +748,9 @@ function openCoverMenuFromButton() {
 function openIconMenuFromButton() {
   if (!els.noteIconMenu || !els.noteIconButton || !state.currentNote || state.currentNote.deleted_at) return;
   closeCoverMenu();
+  state.ui.iconQuery = "";
   renderIconMenu();
-  positionAppearancePopover(els.noteIconMenu, els.noteIconButton, { align: "start", width: 320 });
+  positionAppearancePopover(els.noteIconMenu, els.noteIconButton, { align: "start", width: 340 });
   els.noteIconButton.setAttribute("aria-expanded", "true");
   els.noteIconButton.classList.add("is-active");
   window.setTimeout(() => els.noteIconMenu?.querySelector("#note-icon-search")?.focus(), 0);
@@ -914,6 +1004,7 @@ function persistSidebarState() {
 }
 
 function setSelectedFolder(folderId = "") {
+  closeTransientOverlays();
   state.selectedFolderId = normalizeFolderId(folderId);
   if (state.selectedFolderId) state.expandedFolderIds.add(state.selectedFolderId);
   persistSidebarState();
@@ -928,8 +1019,28 @@ function renderBreadcrumb() {
   if (!els.noteBreadcrumb) return;
   const noteFolderId = normalizeFolderId(state.currentNote?.folder_id || state.selectedFolderId);
   const path = folderPath(noteFolderId);
-  const pieces = ["Minhas notas", ...path.map((folder) => folder.name)];
-  els.noteBreadcrumb.textContent = pieces.join(" / ");
+  const pieces = [
+    { label: "Minhas notas", folderId: "" },
+    ...path.map((folder) => ({ label: folder.name || "Nova pasta", folderId: folder.id })),
+  ];
+  if (state.currentNote?.id) {
+    pieces.push({
+      label: state.currentNote.title || "Sem título",
+      noteId: state.currentNote.id,
+      current: true,
+    });
+  }
+  els.noteBreadcrumb.innerHTML = pieces.map((piece, index) => {
+    const separator = index ? '<span class="breadcrumb-separator" aria-hidden="true">/</span>' : "";
+    const label = escapeHtml(piece.label || "Sem título");
+    if (piece.current) {
+      return `${separator}<span class="breadcrumb-current" title="${label}" aria-current="page">${label}</span>`;
+    }
+    return `${separator}<button class="breadcrumb-link" type="button" data-folder-id="${escapeHtml(piece.folderId || "")}" title="${label}">${label}</button>`;
+  }).join("");
+  els.noteBreadcrumb.querySelectorAll("[data-folder-id]").forEach((button) => {
+    button.addEventListener("click", () => setSelectedFolder(button.dataset.folderId || ""));
+  });
 }
 
 function currentMenuContext(note, extra = {}) {
@@ -1065,7 +1176,11 @@ function applyLayoutState() {
   els.app?.classList.toggle("has-sidebar-drawer-open", drawerOpen);
   els.sidebarBackdrop?.classList.toggle("hidden", !drawerOpen);
   els.sidebarBackdrop?.setAttribute("aria-hidden", drawerOpen ? "false" : "true");
-  els.sidebarOpenButton?.setAttribute("aria-pressed", state.ui.sidebarCollapsed ? "false" : "true");
+  const shouldShowRestore = Boolean(state.ui.sidebarCollapsed);
+  els.sidebarOpenButton?.classList.toggle("hidden", !shouldShowRestore);
+  els.sidebarOpenButton?.setAttribute("aria-hidden", shouldShowRestore ? "false" : "true");
+  els.sidebarOpenButton?.setAttribute("aria-expanded", state.ui.sidebarCollapsed ? "false" : "true");
+  els.sidebarOpenButton?.setAttribute("title", state.ui.compactWindow ? "Mostrar sidebar" : "Reabrir sidebar");
   els.sidebarToggleButton?.setAttribute("aria-expanded", state.ui.sidebarCollapsed ? "false" : "true");
   publishWindowActions();
 }
@@ -1999,6 +2114,7 @@ function openNoteInfo() {
 async function openNote(noteId, options = {}) {
   if (!noteId) return;
   hideFloatingSearch();
+  closeTransientOverlays();
   if (!options.skipPendingSave) await flushPendingSave();
 
   const requestId = ++state.currentOpenNoteRequestId;
@@ -2987,7 +3103,7 @@ function wireEvents() {
   els.newNoteButton.addEventListener("click", () => runNotesCommand("note.create", { targetFolderId: folderTargetForCreation() }).catch(handleUnexpectedError));
   els.newFolderButton?.addEventListener("click", () => runNotesCommand("folder.create", { targetFolderId: folderTargetForCreation() }).catch(handleUnexpectedError));
   els.sidebarToggleButton?.addEventListener("click", () => setSidebarCollapsed(true));
-  els.sidebarOpenButton?.addEventListener("click", () => setSidebarCollapsed(!state.ui.sidebarCollapsed));
+  els.sidebarOpenButton?.addEventListener("click", () => setSidebarCollapsed(false));
   els.templatesButton?.addEventListener("click", () => openModal("templates"));
   els.importButton?.addEventListener("click", () => openImportExportModal().catch(handleUnexpectedError));
   els.exportButton?.addEventListener("click", () => runNotesCommand("note.export").catch(handleUnexpectedError));
@@ -3078,6 +3194,13 @@ function wireEvents() {
   document.addEventListener("click", (event) => {
     const target = event.target;
     if (!(target instanceof HTMLElement)) return;
+    const iconClear = target.closest("[data-icon-clear]");
+    if (iconClear) {
+      event.preventDefault();
+      state.ui.iconQuery = "";
+      refreshIconMenuAfterSearch();
+      return;
+    }
     const iconChoice = target.closest("[data-icon-value]");
     if (iconChoice) {
       event.preventDefault();
@@ -3109,10 +3232,33 @@ function wireEvents() {
   els.noteIconMenu?.addEventListener("input", (event) => {
     if (event.target?.id !== "note-icon-search") return;
     state.ui.iconQuery = event.target.value;
-    els.noteIconMenu.querySelectorAll("[data-icon-value]").forEach((button) => {
-      if (button.dataset.iconValue === "none") return;
-      button.hidden = !iconMatchesQuery(button.dataset.iconValue, state.ui.iconQuery);
-    });
+    refreshIconMenuAfterSearch();
+  });
+
+  els.noteIconMenu?.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeIconMenu();
+      els.noteIconButton?.focus();
+      return;
+    }
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      focusIconChoice(1);
+      return;
+    }
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      focusIconChoice(-1);
+      return;
+    }
+    if (event.key === "Enter" && event.target?.id === "note-icon-search") {
+      const [first] = visibleIconChoices();
+      if (first?.dataset.iconValue) {
+        event.preventDefault();
+        applyIconValue(first.dataset.iconValue).catch(handleUnexpectedError);
+      }
+    }
   });
 
   els.noteCoverMenu?.addEventListener("input", (event) => {
@@ -3641,15 +3787,34 @@ function openNoteMoreMenu(event) {
   renderContextMenuActions(els.sidebarContextMenu, actions);
   state.contextMenuTargetNoteId = state.currentNote?.id || "";
   state.contextMenuTargetFolderId = "";
-  els.noteMoreButton?.setAttribute("aria-expanded", "true");
   const rect = els.noteMoreButton?.getBoundingClientRect();
   showContextMenuAt(els.sidebarContextMenu, rect?.left || event.pageX, (rect?.bottom || event.pageY) + 6);
+  els.noteMoreButton?.setAttribute("aria-expanded", "true");
 }
 
 function hideAllContextMenus() {
   els.sidebarContextMenu?.classList.add("hidden");
   els.editorContextMenu?.classList.add("hidden");
   els.noteMoreButton?.setAttribute("aria-expanded", "false");
+}
+
+function normalizeActionIcon(action) {
+  const fallback = action?.id?.endsWith(".move") || action?.id === "note.move" || action?.id === "folder.move"
+    ? "ph-folder-simple"
+    : "";
+  const raw = String(action?.icon || fallback || "").trim();
+  if (!raw) return { weight: "ph", name: "" };
+  const parts = raw.split(/\s+/).filter(Boolean);
+  const weight = parts.includes("ph-fill") ? "ph-fill" : "ph";
+  const named = parts.find((part) => part.startsWith("ph-") && part !== "ph-fill") || parts[0];
+  const name = named.startsWith("ph-") ? named : `ph-${named}`;
+  return { weight, name };
+}
+
+function renderActionIcon(action) {
+  const icon = normalizeActionIcon(action);
+  if (!icon.name) return '<span class="context-menu-icon is-empty" aria-hidden="true"></span>';
+  return `<span class="context-menu-icon" aria-hidden="true"><i class="${escapeHtml(icon.weight)} ${escapeHtml(icon.name)}"></i></span>`;
 }
 
 function renderContextMenuActions(menu, actions) {
@@ -3671,7 +3836,7 @@ function renderContextMenuActions(menu, actions) {
       item.classList.add("is-disabled");
       item.setAttribute("aria-disabled", "true");
     }
-    item.innerHTML = `${action.icon ? `<i class="ph ${escapeHtml(action.icon.replace(/^ph\s+/, ""))}" aria-hidden="true"></i>` : ""}<span>${escapeHtml(action.label)}</span>`;
+    item.innerHTML = `${renderActionIcon(action)}<span>${escapeHtml(action.label)}</span>`;
     list.appendChild(item);
   });
 }

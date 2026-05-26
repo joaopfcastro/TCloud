@@ -50,7 +50,7 @@ export const commands = {
   "note.move": {
     id: "note.move",
     label: "Mover para...",
-    icon: "ph-folder-simple-arrow-right",
+    icon: "ph-folder-simple",
     run: (ctx) => ctx.actions.moveNote(ctx.note?.id),
     isVisible: (ctx) => hasNote(ctx) && !noteIsTrash(ctx),
     isEnabled: hasNote,
@@ -183,7 +183,7 @@ export const commands = {
   "folder.move": {
     id: "folder.move",
     label: "Mover para...",
-    icon: "ph-folder-simple-arrow-right",
+    icon: "ph-folder-simple",
     run: (ctx) => ctx.actions.moveFolder(ctx.folder?.id),
     isVisible: hasFolder,
     isEnabled: hasFolder,
