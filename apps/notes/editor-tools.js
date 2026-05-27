@@ -266,6 +266,10 @@ class ColorInlineTool {
     return true;
   }
 
+  static get title() {
+    return "Cor";
+  }
+
   static get sanitize() {
     return { span: { style: true } };
   }
@@ -282,6 +286,7 @@ class ColorInlineTool {
     this.colorInput = null;
     this.preview = null;
     this.error = null;
+    this.applyButton = null;
     this.modeButtons = {};
     this.savedRange = null;
     this.activeColorMode = "text";
@@ -326,8 +331,8 @@ class ColorInlineTool {
     this.button = document.createElement("button");
     this.button.type = "button";
     this.button.className = "ce-inline-tool tcloud-color-tool-button";
-    this.button.title = "Cor";
-    this.button.setAttribute("aria-label", "Abrir cores");
+    this.button.title = "Cor do texto";
+    this.button.setAttribute("aria-label", "Abrir cores do texto");
     this.button.setAttribute("aria-haspopup", "dialog");
     this.button.setAttribute("aria-expanded", "false");
     this.button.textContent = "A";
@@ -436,10 +441,10 @@ class ColorInlineTool {
     this.hexInput.maxLength = 7;
     this.hexInput.setAttribute("aria-label", "Cor hexadecimal");
 
-    const apply = document.createElement("button");
-    apply.type = "button";
-    apply.className = "tcloud-color-apply";
-    apply.textContent = "Aplicar";
+    this.applyButton = document.createElement("button");
+    this.applyButton.type = "button";
+    this.applyButton.className = "tcloud-color-apply";
+    this.applyButton.textContent = "Aplicar";
 
     this.error = document.createElement("span");
     this.error.className = "tcloud-color-error";
@@ -462,22 +467,22 @@ class ColorInlineTool {
         this.closePopover();
       }
     });
-    apply.addEventListener("pointerdown", (event) => event.preventDefault());
-    apply.addEventListener("click", () => this.applyCustomHex());
+    this.applyButton.addEventListener("pointerdown", (event) => event.preventDefault());
+    this.applyButton.addEventListener("click", () => this.applyCustomHex());
 
-    row.append(this.preview, this.hexInput, apply);
+    row.append(this.preview, this.hexInput, this.applyButton);
     custom.append(label, row, this.error);
     return custom;
   }
 
-  renderSwatches(grid, colors, { includeEmpty = false } = {}) {
+  renderSwatches(grid, colors, { includeEmpty = false, labelPrefix = "Aplicar cor" } = {}) {
     grid.innerHTML = "";
     colors.forEach(([name, hex]) => {
       if (!includeEmpty && !hex) return;
       const button = document.createElement("button");
       button.type = "button";
       button.title = name;
-      button.setAttribute("aria-label", name);
+      button.setAttribute("aria-label", hex ? `${labelPrefix}: ${name}` : name);
       button.dataset.colorName = name;
       button.dataset.colorValue = hex;
       button.innerHTML = '<span class="tcloud-color-swatch"></span>';
@@ -515,6 +520,8 @@ class ColorInlineTool {
     this.preview.style.background = normalized || this.currentHex;
     this.hexInput.classList.toggle("is-invalid", shouldShowInvalid);
     this.error.classList.toggle("is-visible", shouldShowInvalid);
+    this.applyButton.disabled = !normalized;
+    this.applyButton.setAttribute("aria-disabled", normalized ? "false" : "true");
   }
 
   updatePopoverState() {
@@ -522,11 +529,19 @@ class ColorInlineTool {
     const isBackground = this.activeColorMode === "background";
     this.modeButtons.text?.setAttribute("aria-pressed", isBackground ? "false" : "true");
     this.modeButtons.background?.setAttribute("aria-pressed", isBackground ? "true" : "false");
-    this.clearButton.textContent = isBackground ? "Sem fundo" : "Automático";
-    this.clearButton.setAttribute("aria-label", isBackground ? "Remover destaque" : "Remover cor do texto");
-    this.renderSwatches(this.paletteGrid, isBackground ? BG_COLORS : TEXT_COLORS);
+    this.clearButton.textContent = isBackground ? "Remover fundo" : "Remover cor";
+    this.clearButton.setAttribute(
+      "aria-label",
+      isBackground ? "Remover fundo customizado e voltar ao padrão" : "Remover cor customizada e voltar ao padrão",
+    );
+    this.clearButton.title = isBackground ? "Voltar ao fundo padrão" : "Voltar à cor padrão";
+    this.renderSwatches(this.paletteGrid, isBackground ? BG_COLORS : TEXT_COLORS, {
+      labelPrefix: isBackground ? "Aplicar fundo" : "Aplicar cor do texto",
+    });
     const recentColors = readRecentColors().map((hex) => [hex, hex]);
-    this.renderSwatches(this.recentGrid, recentColors);
+    this.renderSwatches(this.recentGrid, recentColors, {
+      labelPrefix: isBackground ? "Aplicar fundo recente" : "Aplicar cor recente",
+    });
     this.recentGrid.parentElement?.classList.toggle("is-empty", !recentColors.length);
     this.markActiveSwatches();
   }
@@ -609,6 +624,8 @@ class ColorInlineTool {
     if (!normalized) {
       this.hexInput?.classList.add("is-invalid");
       this.error?.classList.add("is-visible");
+      this.applyButton.disabled = true;
+      this.applyButton.setAttribute("aria-disabled", "true");
       return;
     }
     this.setHexValue(normalized, { validate: false });

@@ -26,15 +26,42 @@
   --shadow: 0 18px 44px rgba(36, 40, 45, 0.08);
   --radius-window: 8px;
   --radius-item: 7px;
+  --notes-popover-bg: #ffffff;
+  --notes-popover-border: #dedbd4;
+  --notes-popover-shadow: 0 20px 56px rgba(26, 33, 43, 0.15), 0 2px 10px rgba(26, 33, 43, 0.06);
+  --notes-popover-radius: 12px;
+  --notes-control-radius: 8px;
+  --notes-text-primary: #24282d;
+  --notes-text-secondary: #626872;
+  --notes-hover: #f0efeb;
+  --notes-active: rgba(82, 103, 216, 0.13);
+  --notes-focus-ring: 0 0 0 3px rgba(82, 103, 216, 0.18);
+  --notes-error: #c4332c;
+  --notes-error-soft: rgba(196, 51, 44, 0.1);
+  --notes-destructive: #c4332c;
+  --notes-destructive-hover: rgba(196, 51, 44, 0.1);
+  --notes-disabled: rgba(79, 85, 93, 0.48);
+  --notes-menu-bg: var(--notes-popover-bg);
+  --notes-menu-border: var(--notes-popover-border);
+  --notes-menu-shadow: var(--notes-popover-shadow);
+  --notes-menu-radius: var(--notes-popover-radius);
+  --notes-menu-text: var(--notes-text-primary);
+  --notes-menu-muted: var(--notes-text-secondary);
+  --notes-menu-hover: var(--notes-hover);
+  --notes-menu-active: var(--notes-active);
+  --notes-menu-focus: var(--notes-focus-ring);
+  --notes-menu-disabled: var(--notes-disabled);
+  --notes-menu-danger: var(--notes-destructive);
+  --notes-menu-danger-bg: var(--notes-destructive-hover);
   --tcloud-inline-accent: #5267d8;
-  --tcloud-inline-bg: rgba(255, 255, 255, 0.96);
-  --tcloud-inline-bg-strong: #ffffff;
-  --tcloud-inline-border: rgba(36, 40, 45, 0.1);
-  --tcloud-inline-border-strong: rgba(36, 40, 45, 0.16);
-  --tcloud-inline-text: #24282d;
-  --tcloud-inline-muted: #777a80;
-  --tcloud-inline-shadow: 0 18px 40px rgba(36, 40, 45, 0.12);
-  --tcloud-inline-radius: 10px;
+  --tcloud-inline-bg: var(--notes-popover-bg);
+  --tcloud-inline-bg-strong: var(--notes-popover-bg);
+  --tcloud-inline-border: rgba(36, 40, 45, 0.11);
+  --tcloud-inline-border-strong: rgba(36, 40, 45, 0.18);
+  --tcloud-inline-text: var(--notes-text-primary);
+  --tcloud-inline-muted: var(--notes-text-secondary);
+  --tcloud-inline-shadow: var(--notes-popover-shadow);
+  --tcloud-inline-radius: var(--notes-popover-radius);
   --tcloud-inline-z-toolbar: 120;
   --tcloud-inline-z-popover: 130;
   --sidebar-width: clamp(248px, 30vw, 318px);
@@ -5056,5 +5083,715 @@ body,
   .tag-input {
     flex-basis: 100%;
     max-width: 100%;
+  }
+}
+
+/* Notes editor visual system - Phase 3 final consolidation */
+.notes-app,
+.editorjs-host,
+.codex-editor {
+  --notes-menu-bg: var(--notes-popover-bg);
+  --notes-menu-border: var(--notes-popover-border);
+  --notes-menu-shadow: var(--notes-popover-shadow);
+  --notes-menu-radius: var(--notes-popover-radius);
+  --notes-menu-text: var(--notes-text-primary);
+  --notes-menu-muted: var(--notes-text-secondary);
+  --notes-menu-hover: var(--notes-hover);
+  --notes-menu-active: var(--notes-active);
+  --notes-menu-focus: var(--notes-focus-ring);
+  --notes-menu-disabled: var(--notes-disabled);
+  --notes-menu-danger: var(--notes-destructive);
+  --notes-menu-danger-bg: var(--notes-destructive-hover);
+}
+
+.editorjs-host .codex-editor {
+  --color-background: var(--notes-menu-bg) !important;
+  --color-text-primary: var(--notes-menu-text) !important;
+  --color-text-secondary: var(--notes-menu-muted) !important;
+  --color-border: var(--notes-menu-border) !important;
+  --color-background-hover: var(--notes-menu-hover) !important;
+  --color-background-item-hover: var(--notes-menu-hover) !important;
+  --color-background-item-focus: var(--notes-menu-active) !important;
+  --color-background-selected: var(--notes-menu-active) !important;
+  --color-shadow: rgba(26, 33, 43, 0.14) !important;
+}
+
+.editorjs-host .ce-inline-toolbar,
+.editorjs-host .ce-conversion-toolbar,
+.editorjs-host .ce-popover,
+.editorjs-host .ce-settings,
+.ce-inline-toolbar,
+.ce-conversion-toolbar,
+.ce-popover,
+.ce-settings,
+.slash-menu,
+.wiki-link-menu,
+.tcloud-context-menu,
+.appearance-popover,
+.tcloud-color-popover {
+  box-sizing: border-box !important;
+  border: 1px solid var(--notes-menu-border) !important;
+  border-radius: var(--notes-menu-radius) !important;
+  background: var(--notes-menu-bg) !important;
+  color: var(--notes-menu-text) !important;
+  box-shadow: var(--notes-menu-shadow) !important;
+}
+
+.editorjs-host .ce-inline-toolbar,
+.ce-inline-toolbar {
+  min-height: 42px;
+  max-width: min(520px, calc(100vw - 24px));
+  padding: 5px !important;
+  overflow: visible !important;
+}
+
+.editorjs-host .ce-popover--inline,
+.ce-popover--inline {
+  --width: max-content;
+  min-width: max-content;
+}
+
+.editorjs-host .ce-popover--inline > .ce-popover__container,
+.ce-popover--inline > .ce-popover__container {
+  min-width: max-content !important;
+  width: max-content !important;
+  border-radius: var(--notes-menu-radius) !important;
+  background: var(--notes-menu-bg) !important;
+  box-shadow: none !important;
+}
+
+.editorjs-host .ce-inline-toolbar__buttons,
+.ce-inline-toolbar__buttons,
+.editorjs-host .ce-popover--inline .ce-popover__items,
+.ce-popover--inline .ce-popover__items {
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+}
+
+/* Editor.js renders the inline link editor inside a nested popover without
+   a stable custom hook, so these internal classes keep that vendor input from
+   showing a horizontal scrollbar inside the light TCloud wrapper. */
+.editorjs-host .ce-popover--inline .ce-popover--nested .ce-popover__container,
+.ce-popover--inline .ce-popover--nested .ce-popover__container {
+  width: min(326px, calc(100vw - 24px)) !important;
+  min-width: min(326px, calc(100vw - 24px)) !important;
+  max-width: calc(100vw - 24px) !important;
+  overflow: visible !important;
+}
+
+.editorjs-host .ce-popover--inline .ce-popover--nested .ce-popover__items,
+.ce-popover--inline .ce-popover--nested .ce-popover__items {
+  width: auto !important;
+  min-width: 0 !important;
+  overflow-x: hidden !important;
+  overflow-y: visible !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.editorjs-host .ce-popover--inline .ce-popover--nested .ce-popover-item-html,
+.ce-popover--inline .ce-popover--nested .ce-popover-item-html {
+  width: 100% !important;
+  max-width: 100% !important;
+  flex: 1 1 auto !important;
+}
+
+.editorjs-host .ce-popover--inline .ce-popover--nested .ce-inline-tool-input,
+.ce-popover--inline .ce-popover--nested .ce-inline-tool-input {
+  width: 100% !important;
+  margin: 5px 0 !important;
+}
+
+.editorjs-host .ce-inline-tool,
+.editorjs-host .ce-conversion-tool,
+.editorjs-host .ce-settings__button,
+.editorjs-host .ce-popover-item,
+.ce-inline-tool,
+.ce-conversion-tool,
+.ce-settings__button,
+.ce-popover-item {
+  min-height: 34px !important;
+  border-radius: var(--notes-control-radius) !important;
+  color: var(--notes-menu-muted) !important;
+  transition: background 140ms ease, color 140ms ease, box-shadow 140ms ease, border-color 140ms ease;
+}
+
+.editorjs-host .ce-inline-tool,
+.ce-inline-tool {
+  width: 34px !important;
+  min-width: 34px !important;
+  height: 34px !important;
+  padding: 0 !important;
+}
+
+.editorjs-host .ce-inline-tool:hover,
+.editorjs-host .ce-inline-tool:focus-visible,
+.editorjs-host .ce-conversion-tool:hover,
+.editorjs-host .ce-conversion-tool:focus-visible,
+.editorjs-host .ce-settings__button:hover,
+.editorjs-host .ce-settings__button:focus-visible,
+.editorjs-host .ce-popover-item:hover,
+.editorjs-host .ce-popover-item--focused,
+.ce-inline-tool:hover,
+.ce-inline-tool:focus-visible,
+.ce-conversion-tool:hover,
+.ce-conversion-tool:focus-visible,
+.ce-settings__button:hover,
+.ce-settings__button:focus-visible,
+.ce-popover-item:hover,
+.ce-popover-item--focused {
+  background: var(--notes-menu-hover) !important;
+  color: var(--notes-menu-text) !important;
+}
+
+.editorjs-host .ce-inline-tool:focus-visible,
+.editorjs-host .ce-conversion-tool:focus-visible,
+.editorjs-host .ce-settings__button:focus-visible,
+.editorjs-host .ce-popover-item:focus-visible,
+.ce-inline-tool:focus-visible,
+.ce-conversion-tool:focus-visible,
+.ce-settings__button:focus-visible,
+.ce-popover-item:focus-visible,
+.tcloud-color-popover button:focus-visible,
+.tcloud-color-hex-input:focus-visible,
+.context-menu-item:focus-visible,
+.slash-menu button:focus-visible,
+.wiki-link-menu button:focus-visible {
+  outline: none !important;
+  box-shadow: var(--notes-menu-focus) !important;
+}
+
+.editorjs-host .ce-inline-tool--active,
+.ce-inline-tool--active {
+  background: var(--notes-menu-active) !important;
+  color: var(--accent) !important;
+  box-shadow: inset 0 0 0 1px rgba(82, 103, 216, 0.22) !important;
+}
+
+.editorjs-host .ce-inline-tool[disabled],
+.editorjs-host .ce-inline-tool--disabled,
+.editorjs-host .ce-conversion-tool[disabled],
+.editorjs-host .ce-settings__button[disabled],
+.editorjs-host .ce-popover-item--disabled,
+.ce-inline-tool[disabled],
+.ce-inline-tool--disabled,
+.ce-conversion-tool[disabled],
+.ce-settings__button[disabled],
+.ce-popover-item--disabled {
+  color: var(--notes-menu-disabled) !important;
+  cursor: not-allowed !important;
+  opacity: 0.62;
+}
+
+.editorjs-host .ce-inline-toolbar__dropdown,
+.ce-inline-toolbar__dropdown {
+  min-width: 128px !important;
+  height: 34px !important;
+  padding: 0 10px !important;
+  border-right: 1px solid var(--notes-menu-border) !important;
+  border-radius: var(--notes-control-radius) !important;
+  color: var(--notes-menu-muted) !important;
+}
+
+.editorjs-host .ce-inline-toolbar__dropdown:hover,
+.editorjs-host .ce-inline-toolbar__dropdown:focus-visible,
+.ce-inline-toolbar__dropdown:hover,
+.ce-inline-toolbar__dropdown:focus-visible {
+  background: var(--notes-menu-hover) !important;
+  color: var(--notes-menu-text) !important;
+}
+
+.editorjs-host .ce-inline-toolbar__dropdown-content,
+.ce-inline-toolbar__dropdown-content {
+  max-width: none !important;
+  overflow: visible !important;
+  white-space: nowrap !important;
+}
+
+.editorjs-host .ce-popover:not(.ce-popover--inline) .ce-popover__container,
+.editorjs-host .ce-conversion-toolbar,
+.ce-popover:not(.ce-popover--inline) .ce-popover__container,
+.ce-conversion-toolbar {
+  --width: 244px;
+  min-width: 244px !important;
+  max-width: min(340px, calc(100vw - 24px)) !important;
+  padding: 6px !important;
+  border: 1px solid var(--notes-menu-border) !important;
+  border-radius: var(--notes-menu-radius) !important;
+  background: var(--notes-menu-bg) !important;
+}
+
+.editorjs-host .ce-popover-item,
+.ce-popover-item {
+  min-height: 38px !important;
+  margin: 2px 0 !important;
+  padding: 6px 8px !important;
+  gap: 8px !important;
+}
+
+.editorjs-host .ce-popover-item__title,
+.editorjs-host .ce-conversion-tool__label,
+.ce-popover-item__title,
+.ce-conversion-tool__label {
+  color: inherit !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0 !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  white-space: nowrap !important;
+}
+
+.editorjs-host .ce-popover-item__secondary-title,
+.ce-popover-item__secondary-title {
+  color: var(--notes-menu-muted) !important;
+  letter-spacing: 0 !important;
+}
+
+.editorjs-host .ce-popover-item__icon,
+.editorjs-host .ce-conversion-tool__icon,
+.ce-popover-item__icon,
+.ce-conversion-tool__icon {
+  width: 28px !important;
+  height: 28px !important;
+  border: 1px solid var(--notes-menu-border) !important;
+  border-radius: var(--notes-control-radius) !important;
+  background: var(--bg-surface-strong) !important;
+  color: var(--notes-menu-muted) !important;
+  box-shadow: none !important;
+}
+
+.editorjs-host .ce-popover-item[data-item-name="delete"],
+.editorjs-host .ce-settings__button[data-item-name="delete"],
+.editorjs-host .ce-settings__button[title="Excluir"],
+.ce-popover-item[data-item-name="delete"],
+.ce-settings__button[data-item-name="delete"],
+.ce-settings__button[title="Excluir"] {
+  color: var(--notes-menu-danger) !important;
+}
+
+.editorjs-host .ce-popover-item[data-item-name="delete"]:hover,
+.editorjs-host .ce-settings__button[data-item-name="delete"]:hover,
+.editorjs-host .ce-settings__button[title="Excluir"]:hover,
+.ce-popover-item[data-item-name="delete"]:hover,
+.ce-settings__button[data-item-name="delete"]:hover,
+.ce-settings__button[title="Excluir"]:hover {
+  background: var(--notes-menu-danger-bg) !important;
+}
+
+.editorjs-host .cdx-search-field,
+.cdx-search-field {
+  display: grid !important;
+  grid-template-columns: auto minmax(0, 1fr) !important;
+  align-items: center !important;
+  min-height: 38px !important;
+  margin: 4px 0 8px !important;
+  padding: 5px 8px !important;
+  border: 1px solid var(--notes-menu-border) !important;
+  border-radius: var(--notes-control-radius) !important;
+  background: var(--bg-surface-strong) !important;
+  color: var(--notes-menu-muted) !important;
+  box-shadow: none !important;
+}
+
+.editorjs-host .cdx-search-field:focus-within,
+.cdx-search-field:focus-within {
+  border-color: rgba(82, 103, 216, 0.46) !important;
+  box-shadow: var(--notes-menu-focus) !important;
+}
+
+.editorjs-host .cdx-search-field__input,
+.cdx-search-field__input {
+  min-width: 0 !important;
+  color: var(--notes-menu-text) !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+}
+
+.editorjs-host .cdx-search-field__input::placeholder,
+.cdx-search-field__input::placeholder,
+.editorjs-host .ce-inline-toolbar__input::placeholder,
+.editorjs-host .ce-inline-tool-input::placeholder,
+.ce-inline-toolbar__input::placeholder,
+.ce-inline-tool-input::placeholder {
+  color: var(--notes-menu-muted) !important;
+  opacity: 0.72 !important;
+}
+
+.editorjs-host .ce-inline-toolbar__input,
+.editorjs-host .ce-inline-tool-input,
+.ce-inline-toolbar__input,
+.ce-inline-tool-input {
+  min-height: 38px !important;
+  width: min(300px, calc(100vw - 48px)) !important;
+  margin: 5px !important;
+  border: 1px solid var(--notes-menu-border) !important;
+  border-radius: var(--notes-control-radius) !important;
+  background: var(--bg-surface-strong) !important;
+  color: var(--notes-menu-text) !important;
+  box-shadow: none !important;
+}
+
+.editorjs-host .ce-inline-toolbar__input:focus,
+.editorjs-host .ce-inline-tool-input:focus,
+.ce-inline-toolbar__input:focus,
+.ce-inline-tool-input:focus {
+  border-color: rgba(82, 103, 216, 0.46) !important;
+  box-shadow: var(--notes-menu-focus) !important;
+}
+
+.editorjs-host .ce-block--selected .ce-block__content {
+  background: transparent !important;
+  border-radius: var(--notes-control-radius);
+  box-shadow: inset 3px 0 0 var(--accent) !important;
+}
+
+.editorjs-host .ce-toolbar__actions {
+  gap: 4px !important;
+}
+
+.editorjs-host .ce-toolbar__plus,
+.editorjs-host .ce-toolbar__settings-btn {
+  border: 1px solid var(--notes-menu-border) !important;
+  border-radius: 10px !important;
+  background: var(--notes-menu-bg) !important;
+  color: var(--notes-menu-muted) !important;
+  box-shadow: 0 10px 28px rgba(26, 33, 43, 0.12) !important;
+}
+
+.editorjs-host .ce-toolbar__plus:hover,
+.editorjs-host .ce-toolbar__plus:focus-visible,
+.editorjs-host .ce-toolbar__settings-btn:hover,
+.editorjs-host .ce-toolbar__settings-btn:focus-visible {
+  background: var(--notes-menu-hover) !important;
+  color: var(--notes-menu-text) !important;
+}
+
+.slash-menu,
+.wiki-link-menu,
+.tcloud-context-menu,
+.appearance-popover {
+  border-color: var(--notes-menu-border) !important;
+  background: var(--notes-menu-bg) !important;
+  color: var(--notes-menu-text) !important;
+}
+
+.slash-menu button,
+.wiki-link-menu button,
+.context-menu-item,
+.appearance-menu-action,
+.appearance-danger-action {
+  border-radius: var(--notes-control-radius) !important;
+  color: var(--notes-menu-text);
+}
+
+.slash-menu button:hover,
+.slash-menu button.is-active,
+.wiki-link-menu button:hover,
+.context-menu-item:hover,
+.context-menu-item:focus-visible,
+.appearance-menu-action:hover,
+.appearance-menu-action:focus-visible {
+  background: var(--notes-menu-hover) !important;
+  color: var(--notes-menu-text) !important;
+}
+
+.slash-menu button.is-active,
+.context-menu-item[aria-selected="true"] {
+  background: var(--notes-menu-active) !important;
+}
+
+.context-menu-item.danger,
+.appearance-danger-action {
+  color: var(--notes-menu-danger) !important;
+}
+
+.context-menu-item.danger:hover,
+.appearance-danger-action:hover,
+.appearance-danger-action:focus-visible {
+  background: var(--notes-menu-danger-bg) !important;
+}
+
+.context-menu-item.is-disabled,
+.context-menu-item[aria-disabled="true"] {
+  color: var(--notes-menu-disabled) !important;
+  cursor: not-allowed !important;
+  opacity: 0.72;
+}
+
+.context-menu-item.is-disabled:hover,
+.context-menu-item[aria-disabled="true"]:hover {
+  background: transparent !important;
+}
+
+.tcloud-color-popover {
+  width: min(336px, calc(100vw - 24px));
+  max-height: calc(100vh - 24px);
+  overflow-y: auto;
+  padding: 12px;
+}
+
+.tcloud-color-header > span {
+  color: var(--notes-menu-text);
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.tcloud-color-mode {
+  border-color: var(--notes-menu-border);
+  background: var(--bg-surface-strong);
+}
+
+.tcloud-color-mode button {
+  min-width: 62px;
+  color: var(--notes-menu-muted);
+}
+
+.tcloud-color-mode button[aria-pressed="true"] {
+  background: var(--accent);
+  color: #ffffff !important;
+  box-shadow: 0 5px 14px rgba(82, 103, 216, 0.24);
+}
+
+.tcloud-color-clear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  border: 1px solid var(--notes-menu-border);
+  background: var(--bg-surface-strong);
+  color: var(--notes-menu-text);
+}
+
+.tcloud-color-clear:hover,
+.tcloud-color-clear:focus-visible {
+  border-color: rgba(82, 103, 216, 0.34);
+  background: var(--notes-menu-active);
+}
+
+.tcloud-color-section {
+  border-top-color: var(--notes-menu-border);
+}
+
+.tcloud-color-section > span {
+  color: var(--notes-menu-muted);
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0.02em;
+}
+
+.tcloud-color-grid {
+  grid-template-columns: repeat(5, minmax(44px, 1fr));
+  gap: 7px;
+}
+
+.tcloud-color-grid button {
+  min-width: 44px;
+  height: 40px;
+  border-color: var(--notes-menu-border);
+  background: var(--bg-surface-strong);
+}
+
+.tcloud-color-grid button:hover,
+.tcloud-color-grid button:focus-visible {
+  border-color: rgba(82, 103, 216, 0.36);
+  background: var(--notes-menu-hover);
+}
+
+.tcloud-color-grid button.is-active {
+  border-color: rgba(82, 103, 216, 0.72);
+  background: var(--notes-menu-active);
+  box-shadow: inset 0 0 0 1px rgba(82, 103, 216, 0.18), var(--notes-menu-focus);
+}
+
+.tcloud-color-swatch {
+  width: 25px;
+  height: 25px;
+  border-color: rgba(36, 40, 45, 0.16);
+  border-radius: 8px;
+}
+
+.tcloud-color-grid button.is-active .tcloud-color-swatch::after {
+  inset: auto -5px -5px auto;
+  width: 17px;
+  height: 17px;
+  border: 2px solid var(--notes-menu-bg);
+  border-radius: 999px;
+  background: var(--accent);
+  color: #ffffff;
+  font-size: 10px;
+  line-height: 1;
+  text-shadow: none;
+}
+
+.tcloud-color-hex-row {
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+}
+
+.tcloud-color-preview,
+.tcloud-color-hex-input,
+.tcloud-color-apply {
+  height: 38px;
+  border-radius: var(--notes-control-radius);
+}
+
+.tcloud-color-hex-input {
+  border-color: var(--notes-menu-border);
+  background: var(--bg-surface-strong);
+  color: var(--notes-menu-text);
+}
+
+.tcloud-color-hex-input:focus {
+  border-color: rgba(82, 103, 216, 0.46);
+  box-shadow: var(--notes-menu-focus);
+}
+
+.tcloud-color-hex-input.is-invalid {
+  border-color: rgba(196, 51, 44, 0.58);
+  box-shadow: 0 0 0 3px rgba(196, 51, 44, 0.12);
+}
+
+.tcloud-color-apply {
+  border: 1px solid rgba(82, 103, 216, 0.42);
+  background: var(--accent);
+  color: #ffffff !important;
+}
+
+.tcloud-color-apply:hover,
+.tcloud-color-apply:focus-visible {
+  background: var(--accent-hover);
+}
+
+.tcloud-color-apply:disabled,
+.tcloud-color-apply[aria-disabled="true"] {
+  border-color: var(--notes-menu-border);
+  background: var(--bg-control);
+  color: var(--notes-menu-disabled) !important;
+  cursor: not-allowed;
+  box-shadow: none !important;
+}
+
+.tcloud-color-error {
+  display: block;
+  min-height: 16px;
+  margin-top: 6px;
+  color: var(--notes-error);
+  font-size: 11.5px;
+  font-weight: 650;
+  line-height: 1.35;
+  visibility: hidden;
+}
+
+.tcloud-color-error.is-visible {
+  visibility: visible;
+}
+
+@media (max-width: 700px) {
+  .editorjs-host .ce-popover:not(.ce-popover--inline) .ce-popover__container,
+  .ce-popover:not(.ce-popover--inline) .ce-popover__container,
+  .ce-conversion-toolbar,
+  .tcloud-color-popover {
+    max-width: calc(100vw - 18px) !important;
+  }
+
+  .tcloud-color-grid {
+    grid-template-columns: repeat(4, minmax(44px, 1fr));
+  }
+}
+
+/* Notes detail layout fixes */
+.notes-app .note-cover.is-hidden {
+  height: 0 !important;
+  min-height: 0 !important;
+  border: 0 !important;
+  margin: 0 !important;
+  opacity: 0;
+  overflow: hidden !important;
+  pointer-events: none;
+}
+
+.notes-app .note-cover.is-hidden + .note-page {
+  padding-top: clamp(22px, 2.8vw, 34px);
+}
+
+.notes-app.is-compact-window .note-cover.is-hidden + .note-page {
+  padding-top: 18px;
+}
+
+.editor-content-grid,
+.notes-app.sidebar-collapsed:not(.is-compact-window) .editor-content-grid {
+  --editor-toolbar-offset: 82px;
+  width: min(var(--note-editor-width), 100%);
+  max-width: 100%;
+  margin-left: 0;
+  padding-left: 0;
+  overflow: visible;
+}
+
+.notes-app.sidebar-collapsed:not(.is-compact-window) .note-page {
+  width: min(1040px, calc(100% - (var(--notes-page-padding-x) * 2)));
+}
+
+.editorjs-host {
+  width: min(var(--note-editor-width), 100%);
+}
+
+.editorjs-host .ce-block__content,
+.editorjs-host .ce-toolbar__content {
+  width: 100%;
+  max-width: 100% !important;
+  margin-left: 0 !important;
+  margin-right: auto !important;
+}
+
+.editorjs-host .ce-toolbar {
+  pointer-events: none;
+}
+
+.editorjs-host .ce-toolbar__actions {
+  left: calc(var(--editor-toolbar-offset) * -1) !important;
+  right: auto !important;
+  display: flex !important;
+  align-items: flex-start !important;
+  gap: 6px !important;
+  width: max-content !important;
+  transform: none !important;
+  pointer-events: auto;
+}
+
+.editorjs-host .ce-toolbar__plus,
+.editorjs-host .ce-toolbar__settings-btn {
+  position: relative !important;
+  flex: 0 0 34px !important;
+  width: 34px !important;
+  min-width: 34px !important;
+  max-width: 34px !important;
+  height: 34px !important;
+  min-height: 34px !important;
+  max-height: 34px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  opacity: 1 !important;
+}
+
+.editorjs-host .ce-inline-toolbar:empty,
+.ce-inline-toolbar:empty {
+  display: none !important;
+  pointer-events: none !important;
+}
+
+@media (max-width: 900px) {
+  .editor-content-grid,
+  .notes-app.sidebar-collapsed:not(.is-compact-window) .editor-content-grid {
+    --editor-toolbar-offset: 76px;
+  }
+}
+
+@media (max-width: 640px) {
+  .editor-content-grid,
+  .notes-app.sidebar-collapsed:not(.is-compact-window) .editor-content-grid {
+    --editor-toolbar-offset: 72px;
   }
 }

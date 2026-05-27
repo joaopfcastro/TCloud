@@ -1,4 +1,4 @@
-import { CodeBlockTool, DividerTool, QuoteTool, TextColorTool, TodoTool } from "./editor-tools.js";
+import { CodeBlockTool, DividerTool, QuoteTool, TextColorTool, TodoTool } from "./editor-tools.js?v=notes-editor-visual-polish-20260526-9";
 import {
   TCloudAudioTool,
   TCloudFileTool,
@@ -128,10 +128,17 @@ export class EditorAdapter {
             Italic: "Itálico",
             Link: "Link",
             Color: "Cor",
+            TextColor: "Cor",
+            textColor: "Cor",
+            "Convert to": "Converter para",
             "Inline Code": "Código inline",
             text: "Texto",
             heading: "Título",
             list: "Lista",
+            ordered: "Lista numerada",
+            unordered: "Lista",
+            Ordered: "Lista numerada",
+            Unordered: "Lista",
             checklist: "Checklist",
             quote: "Citação",
             code: "Código",

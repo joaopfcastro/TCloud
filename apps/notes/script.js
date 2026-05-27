@@ -1,9 +1,9 @@
-import { EditorAdapter, buildBlock, normalizeEditorData } from "./editor-adapter.js";
+import { EditorAdapter, buildBlock, normalizeEditorData } from "./editor-adapter.js?v=notes-editor-visual-polish-20260526-9";
 import { NotesApi } from "./notes-api.js";
 import { NotesFilePicker } from "./file-picker.js";
 import { IMPORT_ACCEPT, isSupportedImportFile, readFileAsText } from "./export-import.js";
 import { blocksToMarkdownPreview } from "./markdown-converter.js";
-import { installWikiLinkAutocomplete } from "./relations.js";
+import { installWikiLinkAutocomplete } from "./relations.js?v=notes-audit-overlays-20260526-1";
 import {
   buildBulkSelectionActions,
   buildEditorMoreActions,
@@ -664,6 +664,20 @@ function positionFloatingElement(element, x, y, { width = 0, margin = 10 } = {})
   element.style.left = `${left}px`;
   element.style.right = "auto";
   element.style.top = `${top}px`;
+  const keepInViewport = () => {
+    if (!element.isConnected || element.classList.contains("hidden")) return;
+    const edgeMargin = margin + 4;
+    const rectNow = element.getBoundingClientRect();
+    if (rectNow.right > window.innerWidth - edgeMargin) {
+      element.style.left = `${Math.max(edgeMargin, window.innerWidth - rectNow.width - edgeMargin)}px`;
+    }
+    if (rectNow.bottom > window.innerHeight - edgeMargin) {
+      element.style.top = `${Math.max(edgeMargin, window.innerHeight - rectNow.height - edgeMargin)}px`;
+    }
+  };
+  keepInViewport();
+  requestAnimationFrame(keepInViewport);
+  setTimeout(keepInViewport, 80);
 }
 
 function positionAnchoredElement(element, anchor, { align = "start", gap = 8, width = 0 } = {}) {
@@ -1177,6 +1191,9 @@ function applyLayoutState() {
   els.sidebarBackdrop?.classList.toggle("hidden", !drawerOpen);
   els.sidebarBackdrop?.setAttribute("aria-hidden", drawerOpen ? "false" : "true");
   const shouldShowRestore = Boolean(state.ui.sidebarCollapsed);
+  if (!shouldShowRestore && document.activeElement === els.sidebarOpenButton) {
+    els.sidebarOpenButton.blur();
+  }
   els.sidebarOpenButton?.classList.toggle("hidden", !shouldShowRestore);
   els.sidebarOpenButton?.setAttribute("aria-hidden", shouldShowRestore ? "false" : "true");
   els.sidebarOpenButton?.setAttribute("aria-expanded", state.ui.sidebarCollapsed ? "false" : "true");
