@@ -367,7 +367,26 @@
         }
         if (shield) {
             shield.hidden = !enabled;
+            shield.dataset.active = enabled ? 'true' : 'false';
         }
+    }
+
+    function hasActiveWindowGesture() {
+        return Boolean(document.querySelector('.tcloud-window.is-dragging, .tcloud-window.is-resizing'));
+    }
+
+    function cleanupOrphanIframeShields() {
+        if (hasActiveWindowGesture()) return;
+        state.windows.forEach((record) => {
+            if (!record?.element) return;
+            record.element.classList.remove('is-dragging', 'is-resizing');
+            setIframeShield(record, false);
+        });
+        document.querySelectorAll('.tcloud-window-iframe-shield:not([hidden])').forEach((shield) => {
+            shield.hidden = true;
+            shield.dataset.active = 'false';
+        });
+        document.documentElement.style.cursor = '';
     }
 
     function saveRestoreRect(record) {
@@ -861,6 +880,7 @@
                     pointerY: event.clientY,
                     rect: startRect,
                     dragging: false,
+                    ended: false,
                 };
                 titlebar.setPointerCapture(event.pointerId);
 
@@ -927,6 +947,8 @@
                 };
 
                 const onEnd = () => {
+                    if (start.ended) return;
+                    start.ended = true;
                     try {
                         titlebar.releasePointerCapture(start.pointerId);
                     } catch (error) {
@@ -935,6 +957,11 @@
                     titlebar.removeEventListener('pointermove', onMove);
                     titlebar.removeEventListener('pointerup', onEnd);
                     titlebar.removeEventListener('pointercancel', onEnd);
+                    titlebar.removeEventListener('lostpointercapture', onEnd);
+                    document.removeEventListener('pointerup', onEnd, true);
+                    document.removeEventListener('pointercancel', onEnd, true);
+                    window.removeEventListener('blur', onEnd);
+                    document.removeEventListener('visibilitychange', onVisibilityEnd);
                     if (!start.dragging) return;
                     record.element.classList.remove('is-dragging');
                     setIframeShield(record, false);
@@ -942,11 +969,21 @@
                     record.restoreRect = cloneRect(record.rect);
                     maybeSnapFromPointer(record);
                     notifyStateChange(record, 'drag-end');
+                    window.requestAnimationFrame(cleanupOrphanIframeShields);
+                };
+
+                const onVisibilityEnd = () => {
+                    if (document.visibilityState === 'hidden') onEnd();
                 };
 
                 titlebar.addEventListener('pointermove', onMove);
                 titlebar.addEventListener('pointerup', onEnd);
                 titlebar.addEventListener('pointercancel', onEnd);
+                titlebar.addEventListener('lostpointercapture', onEnd);
+                document.addEventListener('pointerup', onEnd, true);
+                document.addEventListener('pointercancel', onEnd, true);
+                window.addEventListener('blur', onEnd);
+                document.addEventListener('visibilitychange', onVisibilityEnd);
             });
         }
 
@@ -976,6 +1013,7 @@
                     x: event.clientX,
                     y: event.clientY,
                     rect: cloneRect(record.rect),
+                    ended: false,
                 };
                 handle.setPointerCapture(event.pointerId);
                 record.element.classList.add('is-resizing');
@@ -1019,6 +1057,8 @@
                 };
 
                 const onEnd = () => {
+                    if (start.ended) return;
+                    start.ended = true;
                     try {
                         handle.releasePointerCapture(start.pointerId);
                     } catch (error) {
@@ -1027,17 +1067,32 @@
                     handle.removeEventListener('pointermove', onMove);
                     handle.removeEventListener('pointerup', onEnd);
                     handle.removeEventListener('pointercancel', onEnd);
+                    handle.removeEventListener('lostpointercapture', onEnd);
+                    document.removeEventListener('pointerup', onEnd, true);
+                    document.removeEventListener('pointercancel', onEnd, true);
+                    window.removeEventListener('blur', onEnd);
+                    document.removeEventListener('visibilitychange', onVisibilityEnd);
                     record.element.classList.remove('is-resizing');
                     clearResizeHover(record);
                     setIframeShield(record, false);
                     record.userInteracted = true;
                     record.restoreRect = cloneRect(record.rect);
                     notifyStateChange(record, 'resize-end');
+                    window.requestAnimationFrame(cleanupOrphanIframeShields);
+                };
+
+                const onVisibilityEnd = () => {
+                    if (document.visibilityState === 'hidden') onEnd();
                 };
 
                 handle.addEventListener('pointermove', onMove);
                 handle.addEventListener('pointerup', onEnd);
                 handle.addEventListener('pointercancel', onEnd);
+                handle.addEventListener('lostpointercapture', onEnd);
+                document.addEventListener('pointerup', onEnd, true);
+                document.addEventListener('pointercancel', onEnd, true);
+                window.addEventListener('blur', onEnd);
+                document.addEventListener('visibilitychange', onVisibilityEnd);
             });
         });
     }
@@ -1415,10 +1470,18 @@
     window.addEventListener('resize', () => {
         window.requestAnimationFrame(reflowAll);
     });
-    window.addEventListener('blur', clearAllResizeHover);
-    document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'hidden') clearAllResizeHover();
+    window.addEventListener('blur', () => {
+        clearAllResizeHover();
+        cleanupOrphanIframeShields();
     });
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') {
+            clearAllResizeHover();
+            cleanupOrphanIframeShields();
+        }
+    });
+    document.addEventListener('pointerup', () => window.requestAnimationFrame(cleanupOrphanIframeShields), true);
+    document.addEventListener('pointercancel', () => window.requestAnimationFrame(cleanupOrphanIframeShields), true);
     wireGlobalFocusCapture();
     wireGlobalResizeHoverTracking();
     wireGlobalWindowControlCapture();

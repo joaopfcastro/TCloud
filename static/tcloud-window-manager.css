@@ -52,7 +52,7 @@
 .tcloud-window-layer {
     position: fixed;
     inset: 0;
-    z-index: 800;
+    z-index: 1800;
     pointer-events: none;
 }
 

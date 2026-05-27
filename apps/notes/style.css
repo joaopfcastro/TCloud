@@ -4554,12 +4554,17 @@ body,
   --notes-page-padding-x: clamp(20px, 5vw, 72px);
   --notes-editor-width-open: 760px;
   --notes-editor-width-collapsed: 860px;
-  --z-sidebar: 40;
-  --z-backdrop: 45;
+  --z-sidebar: 60;
+  --z-backdrop: 50;
   --z-popover: 170;
   --z-editor-toolbar: 150;
   --z-menu: 180;
   --z-modal: 220;
+}
+
+.notes-app {
+  container-type: inline-size;
+  overflow-x: hidden;
 }
 
 .notes-layout {
@@ -4587,13 +4592,39 @@ body,
   position: absolute;
   inset: 0 auto 0 0;
   z-index: var(--z-sidebar);
-  width: min(320px, 86vw);
-  max-width: calc(100vw - 20px);
+  width: clamp(280px, 82cqw, 340px);
+  max-width: calc(100% - 16px);
   height: 100%;
+  min-width: 0;
+  transform: translateX(calc(-100% - 2px));
+  transition: transform 180ms ease;
+  pointer-events: none;
 }
 
 .sidebar-backdrop {
   z-index: var(--z-backdrop);
+}
+
+.notes-app.is-compact-window.has-sidebar-drawer-open .sidebar {
+  left: 0;
+  transform: translateX(0) !important;
+  pointer-events: auto;
+}
+
+.notes-app.is-compact-window:not(.has-sidebar-drawer-open) .sidebar {
+  left: 0;
+  transform: translateX(calc(-100% - 2px)) !important;
+  pointer-events: none;
+}
+
+.notes-app.is-compact-window .sidebar-backdrop:not(.hidden) {
+  display: block;
+  pointer-events: auto;
+}
+
+.notes-app.is-compact-window .editor-shell {
+  width: 100%;
+  min-width: 0;
 }
 
 .editor-shell,
@@ -4628,6 +4659,9 @@ body,
 .editor-topbar {
   min-height: var(--notes-topbar-height);
   padding: 7px clamp(14px, 2.4vw, 30px);
+  gap: 8px;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .notes-app.is-shell-hosted .notes-local-actions,
@@ -4658,6 +4692,7 @@ body,
 }
 
 .note-breadcrumb {
+  flex: 1 1 auto;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -4713,6 +4748,8 @@ body,
 
 .note-page-tools {
   align-items: center;
+  flex-wrap: wrap;
+  min-width: 0;
 }
 
 .note-icon,
@@ -4757,13 +4794,15 @@ body,
 }
 
 .note-title {
+  min-width: 0;
+  width: 100%;
   min-height: auto;
   font-size: clamp(36px, 4.6vw, 58px) !important;
   line-height: 1.06;
 }
 
 .notes-app.is-compact-window .note-title {
-  font-size: clamp(30px, 7.5vw, 42px) !important;
+  font-size: clamp(28px, 7cqw, 42px) !important;
 }
 
 .tags-shell {
