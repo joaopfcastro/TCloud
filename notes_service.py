@@ -737,30 +737,59 @@ class NotesService:
         block_type = str((block or {}).get("type") or "")
         data = (block or {}).get("data") if isinstance((block or {}).get("data"), dict) else {}
         text = cls._render_text_value(data.get("text"))
+        indent_prefix = cls._markdown_indent_prefix(data)
         if block_type == "header":
             level = max(1, min(int(data.get("level") or 2), 6))
-            return f'{"#" * level} {text}'.rstrip()
+            return f'{indent_prefix}{"#" * level} {text}'.rstrip()
         if block_type == "list":
             items = data.get("items") if isinstance(data.get("items"), list) else []
             ordered = str(data.get("style") or "") == "ordered"
-            return cls._render_list_items_markdown(items, ordered=ordered)
+            rendered = cls._render_list_items_markdown(items, ordered=ordered)
+            return cls._prefix_multiline(rendered, indent_prefix)
         if block_type == "todo":
             checked = "x" if bool(data.get("checked")) else " "
-            return f"- [{checked}] {text}".rstrip()
+            return f"{indent_prefix}- [{checked}] {text}".rstrip()
         if block_type == "quote":
             caption = cls._render_text_value(data.get("caption"))
-            body = f"> {text}".rstrip()
-            return f"{body}\n>\n> {caption}".rstrip() if caption else body
+            body = f"{indent_prefix}> {text}".rstrip()
+            return f"{body}\n{indent_prefix}>\n{indent_prefix}> {caption}".rstrip() if caption else body
         if block_type == "codeBlock":
             code = str(data.get("code") or "")
-            return f"```\n{code}\n```"
+            return cls._prefix_multiline(f"```\n{code}\n```", indent_prefix)
         if block_type == "divider":
-            return "---"
+            return f"{indent_prefix}---"
         attachment = cls._normalize_attachment(block_type, data)
         if attachment:
             label = attachment["name"] or attachment["path"]
-            return f"[{label}]({attachment['path']})"
-        return text
+            return f"{indent_prefix}[{label}]({attachment['path']})"
+        return f"{indent_prefix}{text}".rstrip()
+
+    @classmethod
+    def _block_indent_level(cls, data: dict) -> int:
+        raw = data.get("tcloudIndent") if isinstance(data, dict) else None
+        value = raw.get("level") if isinstance(raw, dict) else raw
+        try:
+            return max(0, min(int(value or 0), 6))
+        except (TypeError, ValueError):
+            return 0
+
+    @classmethod
+    def _markdown_indent_prefix(cls, data: dict) -> str:
+        return "  " * cls._block_indent_level(data)
+
+    @classmethod
+    def _prefix_multiline(cls, text: str, prefix: str) -> str:
+        if not prefix or not text:
+            return text
+        return "\n".join(f"{prefix}{line}" if line else line for line in text.splitlines())
+
+    @classmethod
+    def _html_indent_attrs(cls, data: dict) -> str:
+        level = cls._block_indent_level(data)
+        if not level:
+            return ""
+        margin = min(level * 32, 192)
+        return f' class="tcloud-indent" data-tcloud-indent="{level}" style="margin-left:{margin}px;max-width:calc(100% - {margin}px)"'
 
     @classmethod
     def _render_text_value(cls, value) -> str:
@@ -821,31 +850,33 @@ class NotesService:
         block_type = str((block or {}).get("type") or "")
         data = (block or {}).get("data") if isinstance((block or {}).get("data"), dict) else {}
         text = html.escape(cls._render_text_value(data.get("text")))
+        indent_attrs = cls._html_indent_attrs(data)
         if block_type == "header":
             level = max(1, min(int(data.get("level") or 2), 6))
-            return f"<h{level}>{text}</h{level}>"
+            return f"<h{level}{indent_attrs}>{text}</h{level}>"
         if block_type == "list":
             items = data.get("items") if isinstance(data.get("items"), list) else []
             ordered = str(data.get("style") or "") == "ordered"
-            return cls._render_list_items_html(items, ordered=ordered)
+            rendered = cls._render_list_items_html(items, ordered=ordered)
+            return rendered.replace("<ol>", f"<ol{indent_attrs}>", 1).replace("<ul>", f"<ul{indent_attrs}>", 1) if indent_attrs and rendered else rendered
         if block_type == "todo":
             checked = " checked" if bool(data.get("checked")) else ""
-            return f'<div class="note-check"><input type="checkbox" disabled{checked}> <span>{text}</span></div>'
+            return f'<div class="note-check"{indent_attrs}><input type="checkbox" disabled{checked}> <span>{text}</span></div>'
         if block_type == "quote":
             caption = html.escape(cls._render_text_value(data.get("caption")))
             footer = f"<footer>{caption}</footer>" if caption else ""
-            return f"<blockquote><p>{text}</p>{footer}</blockquote>"
+            return f"<blockquote{indent_attrs}><p>{text}</p>{footer}</blockquote>"
         if block_type == "codeBlock":
-            return f"<pre><code>{html.escape(str(data.get('code') or ''))}</code></pre>"
+            return f"<pre{indent_attrs}><code>{html.escape(str(data.get('code') or ''))}</code></pre>"
         if block_type == "divider":
-            return "<hr>"
+            return f"<hr{indent_attrs}>"
         attachment = cls._normalize_attachment(block_type, data)
         if attachment:
             label = html.escape(attachment["name"] or attachment["path"])
             path = html.escape(attachment["path"])
             kind = html.escape(attachment["kind"])
-            return f'<p><a href="{path}" data-kind="{kind}">{label}</a></p>'
-        return f"<p>{text}</p>"
+            return f'<p{indent_attrs}><a href="{path}" data-kind="{kind}">{label}</a></p>'
+        return f"<p{indent_attrs}>{text}</p>"
 
     @classmethod
     def _render_markdown(cls, note: dict) -> str:
@@ -857,7 +888,7 @@ class NotesService:
             lines.append("")
             lines.append("Tags: " + ", ".join(f"#{tag}" for tag in tags))
         for block in blocks:
-            chunk = cls._render_block_markdown(block).strip()
+            chunk = cls._render_block_markdown(block).rstrip()
             if chunk:
                 lines.extend(["", chunk])
         return "\n".join(lines).strip() + "\n"
@@ -878,6 +909,7 @@ class NotesService:
             "pre{background:#111827;color:#f9fafb;padding:16px;border-radius:12px;overflow:auto}"
             "blockquote{border-left:4px solid #d97706;padding-left:16px;color:#4b5563}"
             "a{color:#b45309;text-decoration:none}hr{border:none;border-top:1px solid #d1d5db;margin:24px 0}"
+            ".tcloud-indent{box-sizing:border-box}"
             "</style></head><body>"
             f"<h1>{title}</h1>{tag_html}{body}</body></html>"
         )

@@ -29,34 +29,47 @@ function listItemsToMarkdown(items = [], level = 0, ordered = false) {
     .filter(Boolean);
 }
 
+function blockIndentPrefix(data = {}) {
+  const raw = data?.tcloudIndent;
+  const value = typeof raw === "object" && raw !== null ? raw.level : raw;
+  const level = Math.max(0, Math.min(Number(value || 0), 6));
+  return "  ".repeat(Number.isFinite(level) ? level : 0);
+}
+
+function prefixMultiline(text, prefix) {
+  if (!prefix || !text) return text;
+  return String(text).split("\n").map((line) => line ? `${prefix}${line}` : line).join("\n");
+}
+
 export function blocksToMarkdownPreview(blocks = []) {
   return blocks
     .map((block) => {
       const type = String(block?.type || "");
       const data = block?.data && typeof block.data === "object" ? block.data : {};
+      const indent = blockIndentPrefix(data);
       if (type === "header") {
         const level = Math.max(1, Math.min(Number(data.level || 2), 6));
-        return `${"#".repeat(level)} ${stripHtml(data.text)}`.trim();
+        return `${indent}${"#".repeat(level)} ${stripHtml(data.text)}`.trimEnd();
       }
       if (type === "list") {
-        return listItemsToMarkdown(data.items, 0, String(data.style || "") === "ordered").join("\n");
+        return prefixMultiline(listItemsToMarkdown(data.items, 0, String(data.style || "") === "ordered").join("\n"), indent);
       }
       if (type === "todo") {
-        return `- [${data.checked ? "x" : " "}] ${blockText(data.text)}`.trim();
+        return `${indent}- [${data.checked ? "x" : " "}] ${blockText(data.text)}`.trimEnd();
       }
       if (type === "quote") {
-        return `> ${blockText(data.text)}`.trim();
+        return `${indent}> ${blockText(data.text)}`.trimEnd();
       }
       if (type === "codeBlock") {
-        return blockText(data.code) ? "```" : "";
+        return blockText(data.code) ? `${indent}\`\`\`` : "";
       }
       if (type === "divider") {
-        return "---";
+        return `${indent}---`;
       }
       if (String(type).startsWith("tcloud")) {
-        return `[${blockText(data.name || data.path) || "Arquivo do TCloud"}](${String(data.path || "").trim()})`;
+        return `${indent}[${blockText(data.name || data.path) || "Arquivo do TCloud"}](${String(data.path || "").trim()})`;
       }
-      return blockText(data.text || data.code || data);
+      return `${indent}${blockText(data.text || data.code || data)}`.trimEnd();
     })
     .filter(Boolean)
     .join("\n\n");
