@@ -5159,6 +5159,7 @@ body,
 }
 
 /* Notes editor visual system - Phase 3 final consolidation */
+:root,
 .notes-app,
 .editorjs-host,
 .codex-editor {
@@ -6915,4 +6916,238 @@ body,
 .tcloud-image-wrapper,
 .tcloud-image-content {
   max-width: 100% !important;
+}
+
+/* Editor.js block toolbar and editorial overlays - final consolidation */
+:root,
+.notes-app,
+.editorjs-host,
+.codex-editor {
+  --tcloud-editor-menu-bg: rgba(18, 21, 26, 0.94);
+  --tcloud-editor-menu-bg-strong: rgba(24, 28, 35, 0.98);
+  --tcloud-editor-menu-border: rgba(255, 255, 255, 0.13);
+  --tcloud-editor-menu-text: #f8fafc;
+  --tcloud-editor-menu-muted: #c3cad5;
+  --tcloud-editor-menu-hover: rgba(255, 255, 255, 0.09);
+  --tcloud-editor-menu-active: rgba(52, 120, 246, 0.28);
+  --tcloud-editor-menu-danger: #ff8a8a;
+  --tcloud-editor-menu-danger-bg: rgba(255, 107, 107, 0.14);
+  --tcloud-editor-menu-shadow: 0 18px 44px rgba(0, 0, 0, 0.24), 0 2px 8px rgba(0, 0, 0, 0.18);
+  --tcloud-editor-menu-radius: 13px;
+}
+
+.editorjs-host .ce-toolbar,
+.editorjs-host .ce-toolbar__content,
+.editorjs-host .ce-toolbar__actions {
+  pointer-events: auto !important;
+}
+
+.editorjs-host .ce-toolbar {
+  z-index: var(--z-editor-toolbar) !important;
+}
+
+.editorjs-host .ce-toolbar__content {
+  overflow: visible !important;
+}
+
+.editorjs-host .ce-toolbar__actions,
+.notes-app.is-compact-window .editorjs-host .ce-toolbar__actions,
+.notes-app.sidebar-collapsed:not(.is-compact-window) .editorjs-host .ce-toolbar__actions {
+  left: calc(var(--editor-toolbar-offset) * -1) !important;
+  right: auto !important;
+  z-index: calc(var(--z-editor-toolbar) + 4) !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: var(--block-action-gap, 6px) !important;
+  width: max-content !important;
+  max-width: none !important;
+  transform: none !important;
+  pointer-events: auto !important;
+}
+
+.editorjs-host .ce-toolbar__plus,
+.editorjs-host .ce-toolbar__settings-btn,
+.notes-app.is-compact-window .editorjs-host .ce-toolbar__plus,
+.notes-app.is-compact-window .editorjs-host .ce-toolbar__settings-btn,
+.notes-app.is-mobile-sidebar-drawer .editorjs-host .ce-toolbar__plus,
+.notes-app.is-mobile-sidebar-drawer .editorjs-host .ce-toolbar__settings-btn {
+  position: relative !important;
+  z-index: calc(var(--z-editor-toolbar) + 5) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex: 0 0 var(--block-action-size, 34px) !important;
+  width: var(--block-action-size, 34px) !important;
+  min-width: var(--block-action-size, 34px) !important;
+  max-width: var(--block-action-size, 34px) !important;
+  height: var(--block-action-size, 34px) !important;
+  min-height: var(--block-action-size, 34px) !important;
+  max-height: var(--block-action-size, 34px) !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 1px solid var(--tcloud-editor-menu-border) !important;
+  border-radius: 9px !important;
+  background: var(--tcloud-editor-menu-bg) !important;
+  color: var(--tcloud-editor-menu-muted) !important;
+  box-shadow: var(--tcloud-editor-menu-shadow) !important;
+  cursor: pointer !important;
+  pointer-events: auto !important;
+}
+
+.editorjs-host .ce-toolbar__plus:hover,
+.editorjs-host .ce-toolbar__plus:focus-visible,
+.editorjs-host .ce-toolbar__settings-btn:hover,
+.editorjs-host .ce-toolbar__settings-btn:focus-visible {
+  background: var(--tcloud-editor-menu-hover) !important;
+  color: var(--tcloud-editor-menu-text) !important;
+}
+
+.editorjs-host .ce-toolbar__plus:focus-visible,
+.editorjs-host .ce-toolbar__settings-btn:focus-visible {
+  outline: 2px solid rgba(82, 103, 216, 0.5) !important;
+  outline-offset: 2px !important;
+}
+
+.editorjs-host .ce-popover:not(.ce-popover--inline),
+.editorjs-host .ce-popover:not(.ce-popover--inline) .ce-popover__container,
+.editorjs-host .ce-settings,
+.editorjs-host .ce-conversion-toolbar,
+.ce-popover:not(.ce-popover--inline),
+.ce-popover:not(.ce-popover--inline) .ce-popover__container,
+.ce-settings,
+.ce-conversion-toolbar,
+.slash-menu,
+.wiki-link-menu,
+.tcloud-context-menu {
+  box-sizing: border-box !important;
+  z-index: var(--z-menu) !important;
+  border: 1px solid var(--tcloud-editor-menu-border) !important;
+  border-radius: var(--tcloud-editor-menu-radius) !important;
+  background: var(--tcloud-editor-menu-bg) !important;
+  color: var(--tcloud-editor-menu-text) !important;
+  box-shadow: var(--tcloud-editor-menu-shadow) !important;
+  backdrop-filter: blur(18px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(160%) !important;
+}
+
+.editorjs-host .ce-popover:not(.ce-popover--inline) .ce-popover__container,
+.ce-popover:not(.ce-popover--inline) .ce-popover__container,
+.editorjs-host .ce-conversion-toolbar,
+.ce-conversion-toolbar {
+  min-width: 244px !important;
+  max-width: min(340px, calc(100vw - 24px)) !important;
+  padding: 6px !important;
+}
+
+.editorjs-host .ce-popover__items,
+.editorjs-host .ce-settings,
+.editorjs-host .ce-conversion-toolbar,
+.ce-popover__items,
+.ce-settings,
+.ce-conversion-toolbar {
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.editorjs-host .ce-popover-item,
+.editorjs-host .ce-settings__button,
+.editorjs-host .ce-conversion-tool,
+.ce-popover-item,
+.ce-settings__button,
+.ce-conversion-tool,
+.slash-menu button,
+.wiki-link-menu button,
+.context-menu-item {
+  min-height: 36px !important;
+  border-radius: 8px !important;
+  background: transparent !important;
+  color: var(--tcloud-editor-menu-muted) !important;
+}
+
+.editorjs-host .ce-popover-item:hover,
+.editorjs-host .ce-popover-item--focused,
+.editorjs-host .ce-settings__button:hover,
+.editorjs-host .ce-settings__button:focus-visible,
+.editorjs-host .ce-conversion-tool:hover,
+.editorjs-host .ce-conversion-tool:focus-visible,
+.ce-popover-item:hover,
+.ce-popover-item--focused,
+.ce-settings__button:hover,
+.ce-settings__button:focus-visible,
+.ce-conversion-tool:hover,
+.ce-conversion-tool:focus-visible,
+.slash-menu button:hover,
+.slash-menu button.is-active,
+.wiki-link-menu button:hover,
+.wiki-link-menu button:focus-visible,
+.context-menu-item:hover,
+.context-menu-item:focus-visible {
+  background: var(--tcloud-editor-menu-hover) !important;
+  color: var(--tcloud-editor-menu-text) !important;
+}
+
+.editorjs-host .ce-popover-item--active,
+.editorjs-host .ce-conversion-tool--focused,
+.ce-popover-item--active,
+.ce-conversion-tool--focused,
+.slash-menu button.is-active,
+.context-menu-item[aria-selected="true"] {
+  background: var(--tcloud-editor-menu-active) !important;
+  color: var(--tcloud-editor-menu-text) !important;
+}
+
+.editorjs-host .ce-popover-item__title,
+.editorjs-host .ce-popover-item__secondary-title,
+.editorjs-host .ce-conversion-tool__label,
+.ce-popover-item__title,
+.ce-popover-item__secondary-title,
+.ce-conversion-tool__label {
+  color: inherit !important;
+}
+
+.editorjs-host .ce-popover-item__icon,
+.editorjs-host .ce-conversion-tool__icon,
+.ce-popover-item__icon,
+.ce-conversion-tool__icon {
+  border-color: var(--tcloud-editor-menu-border) !important;
+  background: var(--tcloud-editor-menu-bg-strong) !important;
+  color: inherit !important;
+}
+
+.editorjs-host .cdx-search-field,
+.cdx-search-field {
+  border-color: var(--tcloud-editor-menu-border) !important;
+  background: var(--tcloud-editor-menu-bg-strong) !important;
+  color: var(--tcloud-editor-menu-text) !important;
+}
+
+.editorjs-host .cdx-search-field input,
+.cdx-search-field input {
+  color: var(--tcloud-editor-menu-text) !important;
+}
+
+.editorjs-host .ce-popover-item[data-item-name="delete"],
+.editorjs-host .ce-settings__button[data-item-name="delete"],
+.editorjs-host .ce-settings__button[title="Excluir"],
+.ce-popover-item[data-item-name="delete"],
+.ce-settings__button[data-item-name="delete"],
+.ce-settings__button[title="Excluir"],
+.context-menu-item.danger {
+  color: var(--tcloud-editor-menu-danger) !important;
+}
+
+.editorjs-host .ce-popover-item[data-item-name="delete"]:hover,
+.editorjs-host .ce-settings__button[data-item-name="delete"]:hover,
+.editorjs-host .ce-settings__button[title="Excluir"]:hover,
+.ce-popover-item[data-item-name="delete"]:hover,
+.ce-settings__button[data-item-name="delete"]:hover,
+.ce-settings__button[title="Excluir"]:hover,
+.context-menu-item.danger:hover,
+.context-menu-item.danger:focus-visible {
+  background: var(--tcloud-editor-menu-danger-bg) !important;
+  color: var(--tcloud-editor-menu-danger) !important;
+}
+
+.appearance-popover {
+  border-radius: var(--tcloud-editor-menu-radius) !important;
+  box-shadow: var(--tcloud-editor-menu-shadow) !important;
 }

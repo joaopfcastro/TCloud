@@ -715,6 +715,19 @@ class TCloudInlineToolbarController {
     });
   }
 
+  scheduleExternalEditorMenuDetection() {
+    if (this.externalMenuFrame) cancelAnimationFrame(this.externalMenuFrame);
+    this.externalMenuFrame = requestAnimationFrame(() => {
+      this.externalMenuFrame = null;
+      if (this.externalEditorMenuOpen()) {
+        this.markExternalEditorMenuActive();
+        this.scheduleSelectionSyncAfterExternalMenu();
+        return;
+      }
+      this.clearExternalMenuState();
+    });
+  }
+
   updateToolbarPosition(range) {
     if (!rangeInsideEditor(range, this.root)) return false;
     const anchor = rangeSelectionRect(range);
@@ -753,9 +766,8 @@ class TCloudInlineToolbarController {
     if (this.isToolbarTarget(target)) return;
     this.closeAllInlineSubmenus();
     if (target?.closest?.(".ce-toolbar__plus, .ce-toolbar__settings-btn")) {
-      this.markExternalEditorMenuActive();
       this.hideInlineToolbar("external-menu");
-      this.scheduleSelectionSyncAfterExternalMenu();
+      this.scheduleExternalEditorMenuDetection();
       return;
     }
     if (target?.closest?.(".ce-toolbar__plus, .ce-toolbar__settings-btn, .ce-popover, .ce-settings, .ce-conversion-toolbar, #slash-menu, .tcloud-context-menu, .modal")) {

@@ -1,4 +1,4 @@
-import { EditorAdapter, buildBlock, normalizeEditorData } from "./editor-adapter.js?v=notes-inline-toolbar-menu-20260528-1";
+import { EditorAdapter, buildBlock, normalizeEditorData } from "./editor-adapter.js?v=notes-editorjs-menus-20260528-1";
 import { NotesApi } from "./notes-api.js";
 import { NotesFilePicker } from "./file-picker.js";
 import { IMPORT_ACCEPT, isSupportedImportFile, readFileAsText } from "./export-import.js";
@@ -2679,7 +2679,7 @@ function updateSlashMenuFilter() {
   renderSlashMenu();
 }
 
-function closeEditorJsTransientMenus() {
+function closeEditorJsMenusForSlashOnly() {
   document.querySelectorAll(".ce-popover:not(.ce-popover--inline), .ce-settings, .ce-conversion-toolbar").forEach((element) => {
     element.setAttribute("aria-hidden", "true");
     element.hidden = true;
@@ -2690,8 +2690,8 @@ function closeEditorJsTransientMenus() {
 
 function openSlashMenu(position, replaceCurrent = true) {
   state.editor?.hideInlineToolbar?.("slash-menu");
-  closeEditorJsTransientMenus();
-  requestAnimationFrame(closeEditorJsTransientMenus);
+  closeEditorJsMenusForSlashOnly();
+  requestAnimationFrame(closeEditorJsMenusForSlashOnly);
   state.slashMenu.open = true;
   state.slashMenu.index = 0;
   state.slashMenu.replaceCurrent = replaceCurrent;
@@ -2709,7 +2709,6 @@ function closeSlashMenu() {
   state.slashMenu.open = false;
   state.slashMenu.filteredOptions = null;
   els.slashMenu.classList.add("hidden");
-  closeEditorJsTransientMenus();
 }
 
 function renderSlashMenu() {
