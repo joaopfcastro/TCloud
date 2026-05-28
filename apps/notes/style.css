@@ -6317,3 +6317,32 @@ body,
     --tcloud-indent-step: clamp(14px, 6vw, 24px);
   }
 }
+
+/* Keep the Editor.js block toolbar inside the usable editor area on narrow windows. */
+.notes-app.is-compact-window .editor-content-grid {
+  --editor-block-toolbar-gutter: clamp(88px, 18vw, 92px);
+  --editor-toolbar-offset: var(--editor-block-toolbar-gutter);
+  padding-left: var(--editor-block-toolbar-gutter);
+  overflow: visible;
+}
+
+.notes-app.is-compact-window .editorjs-host {
+  width: 100%;
+  overflow: visible;
+}
+
+.notes-app.is-compact-window .editorjs-host .codex-editor,
+.notes-app.is-compact-window .editorjs-host .codex-editor__redactor,
+.notes-app.is-compact-window .editorjs-host .ce-block__content,
+.notes-app.is-compact-window .editorjs-host .ce-toolbar__content {
+  max-width: 100% !important;
+}
+
+.notes-app.is-compact-window .editorjs-host .ce-toolbar {
+  overflow: visible !important;
+}
+
+.notes-app.is-compact-window .editorjs-host .ce-toolbar__actions {
+  left: calc(var(--editor-toolbar-offset) * -1) !important;
+  z-index: var(--z-editor-toolbar) !important;
+}
