@@ -228,6 +228,7 @@ const state = {
   ui: {
     sidebarCollapsed: false,
     compactWindow: false,
+    mobileSidebarDrawer: false,
     chromeMode: "standalone",
     iconQuery: "",
     coverColorDraft: "",
@@ -1187,7 +1188,8 @@ function applyLayoutState() {
   els.app?.classList.toggle("is-standalone", state.ui.chromeMode === "standalone");
   els.app?.classList.toggle("sidebar-collapsed", Boolean(state.ui.sidebarCollapsed));
   els.app?.classList.toggle("is-compact-window", Boolean(state.ui.compactWindow));
-  const drawerOpen = Boolean(state.ui.compactWindow && !state.ui.sidebarCollapsed);
+  els.app?.classList.toggle("is-mobile-sidebar-drawer", Boolean(state.ui.mobileSidebarDrawer));
+  const drawerOpen = Boolean(state.ui.mobileSidebarDrawer && !state.ui.sidebarCollapsed);
   els.app?.classList.toggle("has-sidebar-drawer-open", drawerOpen);
   els.sidebarBackdrop?.classList.toggle("hidden", !drawerOpen);
   els.sidebarBackdrop?.setAttribute("aria-hidden", drawerOpen ? "false" : "true");
@@ -1210,9 +1212,12 @@ function setSidebarCollapsed(collapsed) {
 }
 
 function updateCompactWindowMode(width) {
-  const nextCompact = Number(width || 0) > 0 && Number(width) < 900;
-  if (state.ui.compactWindow === nextCompact) return;
+  const measuredWidth = Number(width || 0);
+  const nextCompact = measuredWidth > 0 && measuredWidth < 900;
+  const nextMobileDrawer = measuredWidth > 0 && measuredWidth < 640;
+  if (state.ui.compactWindow === nextCompact && state.ui.mobileSidebarDrawer === nextMobileDrawer) return;
   state.ui.compactWindow = nextCompact;
+  state.ui.mobileSidebarDrawer = nextMobileDrawer;
   if (nextCompact && !state.ui.sidebarCollapsed) {
     state.ui.sidebarCollapsed = true;
   }
@@ -3963,18 +3968,20 @@ function wireContextMenus() {
     if (!item) return;
     if (item.classList.contains("is-disabled") || item.getAttribute("aria-disabled") === "true") return;
     const action = item.dataset.action;
-    console.log(`[Editor Context Menu] Ação disparada: ${action}`);
+    if (window.TCLOUD_NOTES_DEBUG_LAYOUT === true) console.debug(`[Editor Context Menu] Ação disparada: ${action}`);
 
     if (action === "copy") {
       const selectedText = window.getSelection().toString();
       navigator.clipboard.writeText(selectedText)
-        .then(() => console.log(`[Editor Context Menu] Copiado para a área de transferência: "${selectedText}"`))
+        .then(() => {
+          if (window.TCLOUD_NOTES_DEBUG_LAYOUT === true) console.debug(`[Editor Context Menu] Copiado para a área de transferência: "${selectedText}"`);
+        })
         .catch(err => console.error("Erro ao copiar:", err));
     } else if (action === "cut") {
       const selectedText = window.getSelection().toString();
       navigator.clipboard.writeText(selectedText)
         .then(() => {
-          console.log(`[Editor Context Menu] Recortado para a área de transferência: "${selectedText}"`);
+          if (window.TCLOUD_NOTES_DEBUG_LAYOUT === true) console.debug(`[Editor Context Menu] Recortado para a área de transferência: "${selectedText}"`);
           document.execCommand("delete");
         })
         .catch(err => console.error("Erro ao recortar:", err));

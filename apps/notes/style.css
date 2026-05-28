@@ -6346,3 +6346,178 @@ body,
   left: calc(var(--editor-toolbar-offset) * -1) !important;
   z-index: var(--z-editor-toolbar) !important;
 }
+
+/* Window-mode alignment and sidebar behavior.
+   The page column stays on .note-page; Editor.js block controls live in a side gutter. */
+:root {
+  --notes-sidebar-compact-width: clamp(276px, 34cqw, 312px);
+  --notes-sidebar-drawer-width: min(320px, 86vw);
+}
+
+.editor-content-grid,
+.notes-app.is-compact-window .editor-content-grid,
+.notes-app.sidebar-collapsed:not(.is-compact-window) .editor-content-grid {
+  --editor-toolbar-offset: clamp(58px, 6vw, 82px);
+  width: min(var(--note-editor-width), 100%);
+  max-width: 100%;
+  margin-left: 0;
+  padding-left: 0;
+  overflow: visible;
+}
+
+.notes-app.is-compact-window .editor-content-grid {
+  --editor-toolbar-offset: clamp(42px, 8cqw, 64px);
+}
+
+.notes-app.is-compact-window.sidebar-collapsed .editor-content-grid {
+  --editor-toolbar-offset: clamp(10px, 2cqw, 18px);
+}
+
+.editorjs-host,
+.notes-app.is-compact-window .editorjs-host {
+  width: min(var(--note-editor-width), 100%);
+  max-width: 100%;
+  overflow: visible;
+}
+
+.editorjs-host .codex-editor,
+.editorjs-host .codex-editor__redactor,
+.notes-app.is-compact-window .editorjs-host .codex-editor,
+.notes-app.is-compact-window .editorjs-host .codex-editor__redactor {
+  width: 100%;
+  max-width: 100% !important;
+}
+
+.editorjs-host .ce-block__content,
+.editorjs-host .ce-toolbar__content,
+.notes-app.is-compact-window .editorjs-host .ce-block__content,
+.notes-app.is-compact-window .editorjs-host .ce-toolbar__content {
+  width: 100%;
+  max-width: 100% !important;
+  margin-left: 0 !important;
+  margin-right: auto !important;
+  padding-left: 0 !important;
+}
+
+.editorjs-host .ce-toolbar__actions,
+.notes-app.is-compact-window .editorjs-host .ce-toolbar__actions {
+  left: calc(var(--editor-toolbar-offset) * -1) !important;
+  right: auto !important;
+  display: flex !important;
+  align-items: flex-start !important;
+  gap: 5px !important;
+  width: max-content !important;
+  max-width: none !important;
+  transform: none !important;
+  pointer-events: auto;
+}
+
+.editorjs-host .ce-toolbar__plus,
+.editorjs-host .ce-toolbar__settings-btn {
+  width: 32px !important;
+  min-width: 32px !important;
+  max-width: 32px !important;
+  height: 32px !important;
+  min-height: 32px !important;
+  max-height: 32px !important;
+  border-radius: 8px !important;
+  box-shadow: 0 6px 16px rgba(26, 33, 43, 0.1) !important;
+}
+
+.notes-app.is-compact-window .editorjs-host .ce-toolbar__plus,
+.notes-app.is-compact-window .editorjs-host .ce-toolbar__settings-btn {
+  width: 30px !important;
+  min-width: 30px !important;
+  max-width: 30px !important;
+  height: 30px !important;
+  min-height: 30px !important;
+  max-height: 30px !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 12px rgba(26, 33, 43, 0.1) !important;
+}
+
+.notes-app.is-compact-window:not(.is-mobile-sidebar-drawer) .notes-layout {
+  grid-template-columns: var(--notes-sidebar-compact-width) minmax(0, 1fr);
+}
+
+.notes-app.is-compact-window.sidebar-collapsed:not(.is-mobile-sidebar-drawer) .notes-layout {
+  grid-template-columns: 0 minmax(0, 1fr);
+}
+
+.notes-app.is-compact-window:not(.is-mobile-sidebar-drawer) .sidebar {
+  position: relative;
+  inset: auto;
+  z-index: auto;
+  width: auto;
+  max-width: none;
+  height: 100%;
+  transform: none !important;
+  transition: width 180ms ease, padding 180ms ease, border-color 180ms ease;
+  pointer-events: auto;
+  box-shadow: none;
+}
+
+.notes-app.is-compact-window.sidebar-collapsed:not(.is-mobile-sidebar-drawer) .sidebar {
+  width: 0;
+  min-width: 0;
+  padding-inline: 0;
+  border-right: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.notes-app.is-compact-window.sidebar-collapsed:not(.is-mobile-sidebar-drawer) .sidebar > * {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.notes-app.is-compact-window:not(.is-mobile-sidebar-drawer) .sidebar-backdrop {
+  display: none !important;
+  pointer-events: none !important;
+}
+
+.notes-app.is-mobile-sidebar-drawer .notes-layout,
+.notes-app.is-mobile-sidebar-drawer.sidebar-collapsed .notes-layout {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.notes-app.is-mobile-sidebar-drawer .sidebar {
+  position: absolute;
+  inset: 0 auto 0 0;
+  z-index: var(--z-sidebar);
+  width: var(--notes-sidebar-drawer-width);
+  max-width: calc(100% - 16px);
+  height: 100%;
+  transform: translateX(calc(-100% - 2px)) !important;
+  transition: transform 180ms ease;
+  pointer-events: none;
+  box-shadow: 18px 0 44px rgba(26, 33, 43, 0.18);
+}
+
+.notes-app.is-mobile-sidebar-drawer.has-sidebar-drawer-open .sidebar {
+  transform: translateX(0) !important;
+  pointer-events: auto;
+}
+
+.notes-app.is-mobile-sidebar-drawer .sidebar-backdrop:not(.hidden) {
+  display: block;
+  pointer-events: auto;
+}
+
+.notes-app.is-mobile-sidebar-drawer .editorjs-host .ce-toolbar__plus,
+.notes-app.is-mobile-sidebar-drawer .editorjs-host .ce-toolbar__settings-btn {
+  width: 28px !important;
+  min-width: 28px !important;
+  max-width: 28px !important;
+  height: 28px !important;
+  min-height: 28px !important;
+  max-height: 28px !important;
+}
+
+.notes-app.is-compact-window .note-cover.is-hidden + .note-page {
+  padding-top: clamp(28px, 4cqh, 40px);
+}
+
+.notes-app.is-compact-window .note-title {
+  padding-block: 2px;
+}
