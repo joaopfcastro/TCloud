@@ -6521,3 +6521,147 @@ body,
 .notes-app.is-compact-window .note-title {
   padding-block: 2px;
 }
+
+/* Reserve the block-action rail in the page layout so Editor.js controls never sit on text. */
+:root {
+  --note-content-width: var(--note-editor-width);
+  --note-block-rail: clamp(84px, 7vw, 92px);
+  --note-window-padding: var(--notes-page-padding-x);
+  --block-action-size: 32px;
+  --block-action-gap: 8px;
+}
+
+.notes-app.is-compact-window {
+  --note-block-rail: clamp(78px, 12cqw, 84px);
+  --note-window-padding: clamp(12px, 4cqw, 28px);
+  --block-action-size: 29px;
+  --block-action-gap: 6px;
+}
+
+.notes-app.is-mobile-sidebar-drawer {
+  --note-block-rail: clamp(78px, 12cqw, 84px);
+  --block-action-size: 28px;
+  --block-action-gap: 5px;
+}
+
+.notes-app.is-mobile-sidebar-drawer.has-sidebar-drawer-open .editor-shell {
+  pointer-events: auto;
+}
+
+.note-page,
+.notes-app.sidebar-collapsed:not(.is-compact-window) .note-page,
+.notes-app.is-compact-window .note-page,
+.notes-app.is-compact-window.sidebar-collapsed:not(.is-mobile-sidebar-drawer) .note-page {
+  width: min(
+    calc(var(--note-content-width) + var(--note-block-rail)),
+    calc(100% - (var(--note-window-padding) * 2))
+  );
+  padding-inline-start: var(--note-block-rail);
+  box-sizing: border-box;
+}
+
+.notes-app.is-compact-window .note-page {
+  width: min(calc(100% - 24px), calc(var(--note-content-width) + var(--note-block-rail)));
+}
+
+.note-page-header,
+.editor-content-grid,
+.notes-app.is-compact-window .editor-content-grid,
+.notes-app.sidebar-collapsed:not(.is-compact-window) .editor-content-grid {
+  width: min(var(--note-content-width), 100%);
+  max-width: 100%;
+}
+
+.editor-content-grid,
+.notes-app.is-compact-window .editor-content-grid,
+.notes-app.sidebar-collapsed:not(.is-compact-window) .editor-content-grid,
+.notes-app.is-compact-window.sidebar-collapsed .editor-content-grid {
+  --editor-toolbar-offset: var(--note-block-rail);
+  padding-left: 0;
+  margin-left: 0;
+}
+
+.editorjs-host .ce-toolbar__actions,
+.notes-app.is-compact-window .editorjs-host .ce-toolbar__actions {
+  left: calc(var(--editor-toolbar-offset) * -1) !important;
+  right: auto !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: var(--block-action-gap) !important;
+  width: max-content !important;
+  max-width: none !important;
+  padding: 0 !important;
+  transform: none !important;
+  pointer-events: auto;
+}
+
+.editorjs-host .ce-toolbar__plus,
+.editorjs-host .ce-toolbar__settings-btn,
+.notes-app.is-compact-window .editorjs-host .ce-toolbar__plus,
+.notes-app.is-compact-window .editorjs-host .ce-toolbar__settings-btn,
+.notes-app.is-mobile-sidebar-drawer .editorjs-host .ce-toolbar__plus,
+.notes-app.is-mobile-sidebar-drawer .editorjs-host .ce-toolbar__settings-btn {
+  width: var(--block-action-size) !important;
+  min-width: var(--block-action-size) !important;
+  max-width: var(--block-action-size) !important;
+  height: var(--block-action-size) !important;
+  min-height: var(--block-action-size) !important;
+  max-height: var(--block-action-size) !important;
+  border-radius: 8px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex: 0 0 var(--block-action-size) !important;
+  left: 0 !important;
+  right: auto !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border-color: var(--border) !important;
+  background: rgba(255, 255, 255, 0.96) !important;
+  color: var(--muted-strong) !important;
+  box-shadow: 0 4px 12px rgba(26, 33, 43, 0.08) !important;
+}
+
+.notes-app.is-compact-window .editorjs-host .ce-toolbar__plus,
+.notes-app.is-compact-window .editorjs-host .ce-toolbar__settings-btn,
+.notes-app.is-mobile-sidebar-drawer .editorjs-host .ce-toolbar__plus,
+.notes-app.is-mobile-sidebar-drawer .editorjs-host .ce-toolbar__settings-btn {
+  box-shadow: 0 3px 9px rgba(26, 33, 43, 0.07) !important;
+}
+
+.editorjs-host .ce-toolbar__plus:hover,
+.editorjs-host .ce-toolbar__plus:focus-visible,
+.editorjs-host .ce-toolbar__settings-btn:hover,
+.editorjs-host .ce-toolbar__settings-btn:focus-visible {
+  background: var(--hover) !important;
+  color: var(--text) !important;
+  box-shadow: 0 5px 14px rgba(26, 33, 43, 0.1) !important;
+}
+
+.editorjs-host .ce-toolbar__plus:focus-visible,
+.editorjs-host .ce-toolbar__settings-btn:focus-visible {
+  outline: 2px solid rgba(10, 132, 255, 0.42) !important;
+  outline-offset: 2px !important;
+}
+
+.notes-app.is-mobile-sidebar-drawer .notes-layout,
+.notes-app.is-mobile-sidebar-drawer.sidebar-collapsed .notes-layout {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.notes-app.is-mobile-sidebar-drawer .sidebar-backdrop.hidden,
+.sidebar-backdrop.hidden {
+  display: none !important;
+  pointer-events: none !important;
+}
+
+.editorjs-host .codex-editor,
+.editorjs-host .codex-editor__redactor,
+.editorjs-host .ce-block__content,
+.editorjs-host .ce-toolbar__content,
+.tcloud-block-card,
+.tcloud-image-container,
+.tcloud-image-wrapper,
+.tcloud-image-content {
+  max-width: 100% !important;
+}

@@ -1214,7 +1214,7 @@ function setSidebarCollapsed(collapsed) {
 function updateCompactWindowMode(width) {
   const measuredWidth = Number(width || 0);
   const nextCompact = measuredWidth > 0 && measuredWidth < 900;
-  const nextMobileDrawer = measuredWidth > 0 && measuredWidth < 640;
+  const nextMobileDrawer = measuredWidth > 0 && measuredWidth < 900;
   if (state.ui.compactWindow === nextCompact && state.ui.mobileSidebarDrawer === nextMobileDrawer) return;
   state.ui.compactWindow = nextCompact;
   state.ui.mobileSidebarDrawer = nextMobileDrawer;
