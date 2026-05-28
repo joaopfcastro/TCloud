@@ -66,13 +66,28 @@ function nodeToElement(node) {
   return node.nodeType === Node.TEXT_NODE ? node.parentElement : node;
 }
 
+function editorRootForNode(node) {
+  return nodeToElement(node)?.closest?.(".editorjs-host, #editorjs, .codex-editor") || null;
+}
+
+function isEditorContentElement(element) {
+  if (!element) return false;
+  if (element.closest?.(".ce-inline-toolbar, .tcloud-inline-toolbar, .tcloud-color-popover, .ce-popover, .ce-settings, .ce-toolbar, .tcloud-context-menu, .modal, .sidebar, .tcloud-block-card.is-image")) {
+    return false;
+  }
+  return Boolean(element.closest?.("[contenteditable='true'], .ce-block__content"));
+}
+
 function isNodeInsideEditor(node) {
   const element = nodeToElement(node);
-  return Boolean(element?.closest?.(".editorjs-host, #editorjs, .codex-editor"));
+  return Boolean(editorRootForNode(node) && isEditorContentElement(element));
 }
 
 function isRangeInsideEditor(range) {
   if (!range || range.collapsed) return false;
+  const startRoot = editorRootForNode(range.startContainer);
+  const endRoot = editorRootForNode(range.endContainer);
+  if (!startRoot || startRoot !== endRoot) return false;
   return isNodeInsideEditor(range.startContainer) && isNodeInsideEditor(range.endContainer);
 }
 
@@ -573,7 +588,11 @@ class ColorInlineTool {
     const selection = window.getSelection();
     if (!selection?.rangeCount) return;
     const range = selection.getRangeAt(0);
-    if (isRangeInsideEditor(range)) this.savedRange = range.cloneRange();
+    if (isRangeInsideEditor(range)) {
+      this.savedRange = range.cloneRange();
+    } else if (!this.popover?.classList.contains("is-open")) {
+      this.savedRange = null;
+    }
   }
 
   openPopover() {

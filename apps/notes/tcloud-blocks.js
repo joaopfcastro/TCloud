@@ -196,6 +196,10 @@ class TCloudReferenceTool {
         }
       });
 
+      if (this.onDocumentClick) {
+        document.removeEventListener("click", this.onDocumentClick);
+        this.onDocumentClick = null;
+      }
       const onDocumentClick = (e) => {
         if (!wrapperEl || !document.body.contains(wrapperEl)) {
           document.removeEventListener("click", onDocumentClick);
@@ -205,6 +209,7 @@ class TCloudReferenceTool {
           wrapperEl.classList.remove("is-focused");
         }
       };
+      this.onDocumentClick = onDocumentClick;
       document.addEventListener("click", onDocumentClick);
 
       // Setup drag resize logic
@@ -440,6 +445,13 @@ class TCloudReferenceTool {
 
   save() {
     return normalizeTCloudBlockData(this.type, this.data);
+  }
+
+  destroy() {
+    if (this.onDocumentClick) {
+      document.removeEventListener("click", this.onDocumentClick);
+      this.onDocumentClick = null;
+    }
   }
 }
 

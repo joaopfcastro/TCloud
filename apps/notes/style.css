@@ -3074,6 +3074,8 @@ button:disabled,
   overflow: visible;
   background: transparent;
   transition: outline 0.15s ease;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .tcloud-image-wrapper.is-focused {
@@ -3092,6 +3094,9 @@ button:disabled,
   opacity: 0;
   border-radius: 8px;
   transition: opacity 0.3s ease;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
 }
 
 .tcloud-image-content.loaded {
@@ -3185,6 +3190,8 @@ button:disabled,
   transform: translateY(-5px);
   transition: opacity 0.2s ease, transform 0.2s ease;
   pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .tcloud-image-wrapper:hover .tcloud-image-overlay {
@@ -5931,8 +5938,9 @@ body,
 .editorjs-host .ce-inline-toolbar.tcloud-inline-toolbar .ce-inline-tool,
 .ce-inline-toolbar.tcloud-inline-toolbar .ce-inline-tool,
 .tcloud-inline-toolbar__button {
-  display: inline-grid !important;
-  place-items: center !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
   width: 32px !important;
   min-width: 32px !important;
   height: 32px !important;
@@ -5980,9 +5988,8 @@ body,
 }
 
 .tcloud-inline-toolbar__block-button {
-  grid-auto-flow: column !important;
-  grid-template-columns: minmax(76px, 1fr) auto !important;
-  justify-content: space-between !important;
+  justify-content: center !important;
+  gap: 8px !important;
   width: auto !important;
   min-width: 118px !important;
   max-width: 148px !important;
@@ -5993,8 +6000,14 @@ body,
 
 .tcloud-inline-toolbar__block-button::after {
   content: "⌄";
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 12px;
+  height: 12px;
   color: var(--tcloud-toolbar-muted);
   font-size: 13px;
+  line-height: 1;
 }
 
 .tcloud-inline-toolbar__text-color-icon {

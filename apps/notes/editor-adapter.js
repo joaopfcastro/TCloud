@@ -7,7 +7,7 @@ import {
   applyInlineStyle,
   getSelectedInlineState,
   normalizeHex,
-} from "./editor-tools.js?v=notes-inline-toolbar-contextual-20260527-6";
+} from "./editor-tools.js?v=notes-inline-toolbar-contextual-20260527-7";
 import {
   TCloudAudioTool,
   TCloudFileTool,
@@ -211,6 +211,9 @@ function clampNumber(value, min, max) {
 
 function editorEditableForNode(node, root) {
   const element = nodeToElement(node);
+  if (element?.closest?.(".tcloud-inline-toolbar, .ce-inline-toolbar, .tcloud-inline-toolbar__menu, .ce-popover, .ce-settings, .ce-toolbar, .tcloud-context-menu, .modal, .sidebar, .tcloud-block-card.is-image")) {
+    return null;
+  }
   const editable = element?.closest?.("[contenteditable='true']");
   return editable && root?.contains(editable) ? editable : null;
 }
@@ -405,13 +408,17 @@ class TCloudInlineToolbarController {
     this.closedSelectionSignature = null;
     this.submenu = null;
     this.lastReason = "";
+    this.selectionFrame = null;
+    this.pendingSelectionReason = "";
     this.toolbar = this.buildToolbar();
-    this.onSelectionChange = () => this.syncFromSelection("selectionchange");
+    this.onSelectionChange = () => this.scheduleSelectionSync("selectionchange");
     this.onPointerDown = (event) => this.handlePointerDown(event);
-    this.onPointerUp = () => this.syncFromSelection("pointerup");
-    this.onKeyUp = () => this.syncFromSelection("keyup");
+    this.onPointerUp = () => this.scheduleSelectionSync("pointerup");
+    this.onMouseUp = () => this.scheduleSelectionSync("mouseup");
+    this.onTouchEnd = () => this.scheduleSelectionSync("touchend");
+    this.onKeyUp = () => this.scheduleSelectionSync("keyup");
     this.onInput = (event) => {
-      if (this.isEditorTarget(event.target)) this.syncFromSelection("input");
+      if (this.isEditorTarget(event.target)) this.scheduleSelectionSync("input");
     };
     this.onFocusIn = (event) => {
       if (this.isEditorTarget(event.target)) {
@@ -434,6 +441,8 @@ class TCloudInlineToolbarController {
     document.addEventListener("selectionchange", this.onSelectionChange);
     document.addEventListener("pointerdown", this.onPointerDown, true);
     document.addEventListener("pointerup", this.onPointerUp, true);
+    document.addEventListener("mouseup", this.onMouseUp, true);
+    document.addEventListener("touchend", this.onTouchEnd, true);
     document.addEventListener("keyup", this.onKeyUp, true);
     document.addEventListener("input", this.onInput, true);
     document.addEventListener("focusin", this.onFocusIn, true);
@@ -454,6 +463,8 @@ class TCloudInlineToolbarController {
     document.removeEventListener("selectionchange", this.onSelectionChange);
     document.removeEventListener("pointerdown", this.onPointerDown, true);
     document.removeEventListener("pointerup", this.onPointerUp, true);
+    document.removeEventListener("mouseup", this.onMouseUp, true);
+    document.removeEventListener("touchend", this.onTouchEnd, true);
     document.removeEventListener("keyup", this.onKeyUp, true);
     document.removeEventListener("input", this.onInput, true);
     document.removeEventListener("focusin", this.onFocusIn, true);
@@ -462,6 +473,7 @@ class TCloudInlineToolbarController {
     window.removeEventListener("scroll", this.onViewportChange, true);
     window.visualViewport?.removeEventListener("resize", this.onViewportChange);
     window.visualViewport?.removeEventListener("scroll", this.onViewportChange);
+    if (this.selectionFrame) cancelAnimationFrame(this.selectionFrame);
     this.observer?.disconnect();
     this.closeAllInlineSubmenus();
     this.toolbar.remove();
@@ -583,6 +595,15 @@ class TCloudInlineToolbarController {
     if (this.externalEditorMenuOpen()) return false;
     const signature = rangeSignature(range);
     return !sameRangeSignature(signature, this.closedSelectionSignature);
+  }
+
+  scheduleSelectionSync(reason = "selectionchange") {
+    this.pendingSelectionReason = reason;
+    if (this.selectionFrame) return;
+    this.selectionFrame = requestAnimationFrame(() => {
+      this.selectionFrame = null;
+      this.syncFromSelection(this.pendingSelectionReason || reason);
+    });
   }
 
   syncFromSelection(reason = "selectionchange") {
@@ -1524,6 +1545,8 @@ export class EditorAdapter {
     }
     const inheritedIndent = copyIndentData(currentBlock?.data || {});
     const nextBlock = buildBlock(type, replaceCurrent ? convertBlockData(type, sourceText, { ...data, ...inheritedIndent }) : { ...data, ...inheritedIndent });
+    const shouldInsertTextAfter = isTCloudBlockType(type);
+    let caretIndex = index;
 
     if (replaceCurrent && content.blocks[index]) {
       content.blocks.splice(index, 1, nextBlock);
@@ -1532,11 +1555,21 @@ export class EditorAdapter {
       index += 1;
     }
 
+    caretIndex = index;
+    if (shouldInsertTextAfter) {
+      const next = content.blocks[index + 1];
+      const nextHasEditableText = next && ["paragraph", "header", "list", "todo", "quote", "codeBlock"].includes(next.type);
+      if (!nextHasEditableText) {
+        content.blocks.splice(index + 1, 0, buildBlock("paragraph", { text: "" }));
+      }
+      caretIndex = index + 1;
+    }
+
     content.time = Date.now();
     await this.render(content);
     if (typeof this.editor.caret?.setToBlock === "function") {
       try {
-        this.editor.caret.setToBlock(index, "end");
+        this.editor.caret.setToBlock(caretIndex, "end");
       } catch (error) {
         await this.focus();
       }
