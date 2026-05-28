@@ -38,7 +38,7 @@ const BG_COLORS = [
 
 const RECENT_COLORS_KEY = "tcloud.notes.recentColors";
 
-function normalizeHex(value) {
+export function normalizeHex(value) {
   if (!value) return "";
   let raw = String(value).trim().replace(/^#/, "");
   if (/^[0-9a-f]{3}$/i.test(raw)) {
@@ -166,9 +166,24 @@ function patchFragmentStyles(fragment, stylePatch) {
   });
 }
 
-function applyInlineStyle(range, stylePatch) {
+export function applyInlineStyle(range, stylePatch) {
   if (!isRangeInsideEditor(range)) return null;
   const cleanupRoot = getCleanupRoot(range);
+  const clearingKeys = Object.entries(stylePatch)
+    .filter(([, value]) => value === null || value === "")
+    .map(([key]) => key);
+  if (clearingKeys.length) {
+    const selectedText = range.toString();
+    const styledElement = nodeToElement(range.commonAncestorContainer)?.closest?.("span[style]");
+    if (styledElement && styledElement.textContent === selectedText) {
+      clearingKeys.forEach((key) => {
+        styledElement.style[key] = "";
+      });
+      if (!styledElement.getAttribute("style")) styledElement.removeAttribute("style");
+      cleanupInlineSpans(cleanupRoot);
+      return range.cloneRange();
+    }
+  }
   const activeRange = range.cloneRange();
   const fragment = activeRange.extractContents();
   patchFragmentStyles(fragment, stylePatch);
@@ -248,7 +263,7 @@ function rgbToHex(value) {
   return cssColorToHex(value);
 }
 
-function getSelectedInlineState(range) {
+export function getSelectedInlineState(range) {
   const element = nodeToElement(range?.startContainer);
   if (!element) return { color: "", backgroundColor: "" };
   const styled = element.closest("span[style]") || element;

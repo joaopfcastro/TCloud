@@ -5836,7 +5836,14 @@ body,
   }
 }
 
+.ce-inline-toolbar.tcloud-native-inline-toolbar-hidden,
+.ce-inline-toolbar:not(.tcloud-inline-toolbar--custom) {
+  display: none !important;
+  pointer-events: none !important;
+}
+
 /* TCloud premium inline selection toolbar */
+.tcloud-inline-toolbar--custom,
 .editorjs-host .ce-inline-toolbar.tcloud-inline-toolbar,
 .ce-inline-toolbar.tcloud-inline-toolbar {
   --tcloud-toolbar-bg: rgba(18, 21, 26, 0.94);
@@ -5847,6 +5854,7 @@ body,
   --tcloud-toolbar-text: #f8fafc;
   --tcloud-toolbar-muted: #c3cad5;
   --tcloud-toolbar-disabled: rgba(195, 202, 213, 0.36);
+  position: fixed !important;
   z-index: 190 !important;
   display: flex !important;
   align-items: center !important;
@@ -5866,11 +5874,17 @@ body,
   scrollbar-width: none;
 }
 
+.tcloud-inline-toolbar--custom:not(.is-open) {
+  display: none !important;
+}
+
 .editorjs-host .ce-inline-toolbar.tcloud-inline-toolbar::-webkit-scrollbar,
-.ce-inline-toolbar.tcloud-inline-toolbar::-webkit-scrollbar {
+.ce-inline-toolbar.tcloud-inline-toolbar::-webkit-scrollbar,
+.tcloud-inline-toolbar--custom::-webkit-scrollbar {
   display: none;
 }
 
+.tcloud-inline-toolbar--custom::after,
 .editorjs-host .ce-inline-toolbar.tcloud-inline-toolbar::after,
 .ce-inline-toolbar.tcloud-inline-toolbar::after {
   content: "";
@@ -5885,6 +5899,12 @@ body,
   transform: rotate(45deg);
 }
 
+.tcloud-inline-toolbar--custom[data-placement="bottom"]::after {
+  top: -7px;
+  bottom: auto;
+  transform: rotate(225deg);
+}
+
 .editorjs-host .tcloud-inline-toolbar__native,
 .tcloud-inline-toolbar__native {
   display: flex !important;
@@ -5897,6 +5917,7 @@ body,
   display: inline-flex;
   align-items: center;
   gap: 5px;
+  flex: 0 0 auto;
 }
 
 .tcloud-inline-toolbar__divider {
@@ -5952,6 +5973,37 @@ body,
   color: var(--tcloud-toolbar-disabled) !important;
   cursor: not-allowed !important;
   opacity: 1 !important;
+}
+
+.tcloud-inline-toolbar__button[aria-disabled="true"] {
+  color: var(--tcloud-toolbar-disabled) !important;
+}
+
+.tcloud-inline-toolbar__block-button {
+  grid-auto-flow: column !important;
+  grid-template-columns: minmax(76px, 1fr) auto !important;
+  justify-content: space-between !important;
+  width: auto !important;
+  min-width: 118px !important;
+  max-width: 148px !important;
+  padding: 0 10px !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+}
+
+.tcloud-inline-toolbar__block-button::after {
+  content: "⌄";
+  color: var(--tcloud-toolbar-muted);
+  font-size: 13px;
+}
+
+.tcloud-inline-toolbar__text-color-icon {
+  display: inline-block;
+  font-weight: 850;
+  text-decoration: underline;
+  text-decoration-color: #60a5fa;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
 }
 
 .tcloud-inline-toolbar__dropdown {
@@ -6017,6 +6069,10 @@ body,
 
 .tcloud-inline-toolbar__dropdown-menu button,
 .tcloud-inline-toolbar__menu button {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
   min-height: 32px;
   border: 0;
   border-radius: 8px;
@@ -6026,6 +6082,14 @@ body,
   font-size: 13px;
   font-weight: 620;
   padding: 0 9px;
+  cursor: pointer;
+}
+
+.tcloud-inline-toolbar__menu button > span:first-child {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  color: var(--tcloud-toolbar-muted);
 }
 
 .tcloud-inline-toolbar__dropdown-menu button:hover,
@@ -6037,12 +6101,15 @@ body,
 }
 
 .tcloud-inline-toolbar__color-grid {
-  grid-template-columns: repeat(5, 32px);
+  display: grid;
+  grid-template-columns: repeat(6, 32px);
   width: auto;
+  gap: 6px;
 }
 
 .tcloud-inline-toolbar__color-grid button {
   display: grid;
+  grid-template-columns: 1fr;
   place-items: center;
   width: 32px;
   min-width: 32px;
@@ -6056,6 +6123,96 @@ body,
   height: 21px;
   border: 1px solid rgba(255, 255, 255, 0.24);
   border-radius: 7px;
+}
+
+.tcloud-inline-toolbar__color-menu {
+  width: 286px;
+  gap: 10px;
+}
+
+.tcloud-inline-toolbar__menu-title {
+  padding: 2px 4px 0;
+  color: #f8fafc;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.tcloud-inline-toolbar__color-section {
+  display: grid;
+  gap: 6px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.11);
+}
+
+.tcloud-inline-toolbar__color-section > span {
+  color: var(--tcloud-toolbar-muted);
+  font-size: 11px;
+  font-weight: 760;
+}
+
+.tcloud-inline-toolbar__color-grid button {
+  border: 1px solid rgba(255, 255, 255, 0.13);
+}
+
+.tcloud-inline-toolbar__color-grid button.is-active {
+  border-color: rgba(96, 165, 250, 0.82);
+  box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.18);
+}
+
+.tcloud-inline-toolbar__color-grid span.is-empty {
+  position: relative;
+  background:
+    linear-gradient(135deg, transparent 46%, rgba(239, 68, 68, 0.9) 48%, rgba(239, 68, 68, 0.9) 52%, transparent 54%),
+    rgba(255, 255, 255, 0.08);
+}
+
+.tcloud-inline-toolbar__hex-row {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto auto;
+  gap: 6px;
+  align-items: center;
+}
+
+.tcloud-inline-toolbar__hex-row input[type="color"],
+.tcloud-inline-toolbar__hex-row input[type="text"] {
+  min-width: 0;
+  height: 32px;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.07);
+  color: #f8fafc;
+}
+
+.tcloud-inline-toolbar__hex-row input[type="color"] {
+  padding: 2px;
+}
+
+.tcloud-inline-toolbar__hex-row input[type="text"] {
+  padding: 0 8px;
+  font-size: 12px;
+  font-weight: 650;
+  text-transform: uppercase;
+}
+
+.tcloud-inline-toolbar__hex-row input.is-invalid {
+  border-color: rgba(248, 113, 113, 0.75);
+  box-shadow: 0 0 0 2px rgba(248, 113, 113, 0.16);
+}
+
+.tcloud-inline-toolbar__hex-row button {
+  display: inline-grid;
+  grid-template-columns: 1fr;
+  min-height: 32px;
+  padding: 0 9px;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.tcloud-inline-toolbar__color-error {
+  min-height: 14px;
+  color: #f87171;
+  font-size: 11px;
+  font-weight: 700;
 }
 
 .tcloud-color-popover {
@@ -6082,6 +6239,7 @@ body,
 }
 
 @media (max-width: 760px) {
+  .tcloud-inline-toolbar--custom,
   .editorjs-host .ce-inline-toolbar.tcloud-inline-toolbar,
   .ce-inline-toolbar.tcloud-inline-toolbar {
     width: calc(100vw - 12px) !important;
@@ -6094,6 +6252,11 @@ body,
   .tcloud-inline-toolbar__dropdown {
     width: 116px;
     min-width: 116px;
+  }
+
+  .tcloud-inline-toolbar__block-button {
+    min-width: 104px !important;
+    max-width: 128px !important;
   }
 
   .editorjs-host .ce-block {

@@ -1,4 +1,4 @@
-import { EditorAdapter, buildBlock, normalizeEditorData } from "./editor-adapter.js?v=notes-inline-toolbar-indent-20260527-3";
+import { EditorAdapter, buildBlock, normalizeEditorData } from "./editor-adapter.js?v=notes-inline-toolbar-contextual-20260527-6";
 import { NotesApi } from "./notes-api.js";
 import { NotesFilePicker } from "./file-picker.js";
 import { IMPORT_ACCEPT, isSupportedImportFile, readFileAsText } from "./export-import.js";
@@ -733,6 +733,7 @@ function closeIconMenu() {
 }
 
 function closeTransientOverlays() {
+  state.editor?.hideInlineToolbar?.("transient-overlay");
   closeIconMenu();
   closeCoverMenu();
   closeSlashMenu();
@@ -1300,6 +1301,7 @@ function renderEmptyState() {
 
 function setEditorVisibility(visible) {
   const readOnly = Boolean(state.currentNote?.deleted_at);
+  if (!visible) state.editor?.hideInlineToolbar?.("editor-hidden");
   els.editorPanel.classList.toggle("hidden", !visible);
   els.emptyState.classList.toggle("hidden", visible);
   els.titleInput.disabled = !visible || readOnly;
@@ -2517,6 +2519,7 @@ async function restoreRevision(version) {
 }
 
 function openModal(name) {
+  state.editor?.hideInlineToolbar?.("modal");
   state.modal = name;
   els.templatesModal.classList.toggle("hidden", name !== "templates");
   els.revisionsModal.classList.toggle("hidden", name !== "revisions");
@@ -2671,7 +2674,19 @@ function updateSlashMenuFilter() {
   renderSlashMenu();
 }
 
+function closeEditorJsTransientMenus() {
+  document.querySelectorAll(".ce-popover:not(.ce-popover--inline), .ce-settings, .ce-conversion-toolbar").forEach((element) => {
+    element.setAttribute("aria-hidden", "true");
+    element.hidden = true;
+    element.style.display = "none";
+    element.classList.add("hidden");
+  });
+}
+
 function openSlashMenu(position, replaceCurrent = true) {
+  state.editor?.hideInlineToolbar?.("slash-menu");
+  closeEditorJsTransientMenus();
+  requestAnimationFrame(closeEditorJsTransientMenus);
   state.slashMenu.open = true;
   state.slashMenu.index = 0;
   state.slashMenu.replaceCurrent = replaceCurrent;
@@ -2689,6 +2704,7 @@ function closeSlashMenu() {
   state.slashMenu.open = false;
   state.slashMenu.filteredOptions = null;
   els.slashMenu.classList.add("hidden");
+  closeEditorJsTransientMenus();
 }
 
 function renderSlashMenu() {
@@ -3795,6 +3811,7 @@ function handleSidebarDrop(event, targetFolderId = "") {
 function openNoteMoreMenu(event) {
   event.preventDefault();
   event.stopPropagation();
+  state.editor?.hideInlineToolbar?.("note-more-menu");
   const context = currentMenuContext(state.currentNote, { compactWindow: false });
   const directStandaloneIds = context.noteTrashed
     ? new Set(["note.restore"])
@@ -3900,6 +3917,7 @@ function wireContextMenus() {
 
     if (targetMenu) {
       event.preventDefault();
+      state.editor?.hideInlineToolbar?.("context-menu");
       showContextMenuAt(targetMenu, event.clientX, event.clientY);
     }
   });
