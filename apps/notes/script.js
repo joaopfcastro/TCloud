@@ -1,4 +1,4 @@
-import { EditorAdapter, buildBlock, normalizeEditorData } from "./editor-adapter.js?v=notes-inline-toolbar-contextual-20260527-7";
+import { EditorAdapter, buildBlock, normalizeEditorData } from "./editor-adapter.js?v=notes-inline-toolbar-menu-20260528-1";
 import { NotesApi } from "./notes-api.js";
 import { NotesFilePicker } from "./file-picker.js";
 import { IMPORT_ACCEPT, isSupportedImportFile, readFileAsText } from "./export-import.js";

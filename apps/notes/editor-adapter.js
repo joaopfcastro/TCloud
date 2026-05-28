@@ -289,20 +289,21 @@ function rangeSelectionRect(range) {
 }
 
 function visibleElement(element) {
-  if (!element || element.hidden || element.getAttribute?.("aria-hidden") === "true" || element.classList?.contains("hidden")) return false;
-  const style = window.getComputedStyle(element);
-  if (style.display === "none" || style.visibility === "hidden" || Number(style.opacity) === 0) return false;
-  const rect = element.getBoundingClientRect();
-  return Boolean(rect.width || rect.height);
-}
-
-function restoreEditorJsTransientMenus() {
-  document.querySelectorAll(".ce-popover:not(.ce-popover--inline), .ce-settings, .ce-conversion-toolbar").forEach((element) => {
-    element.hidden = false;
-    element.style.display = "";
-    element.removeAttribute("aria-hidden");
-    element.classList.remove("hidden");
-  });
+  if (!element || !element.isConnected || !document.documentElement.contains(element)) return false;
+  if (element.hidden || element.getAttribute?.("aria-hidden") === "true" || element.classList?.contains("hidden")) return false;
+  for (let node = element; node && node.nodeType === Node.ELEMENT_NODE; node = node.parentElement) {
+    if (node.hidden || node.getAttribute?.("aria-hidden") === "true" || node.classList?.contains("hidden")) return false;
+    const style = window.getComputedStyle(node);
+    if (style.display === "none" || style.visibility === "hidden" || Number(style.opacity) === 0) return false;
+  }
+  const rects = Array.from(element.getClientRects()).filter((rect) => rect.width > 0 && rect.height > 0);
+  if (!rects.length) return false;
+  const viewport = window.visualViewport;
+  const left = viewport?.offsetLeft || 0;
+  const top = viewport?.offsetTop || 0;
+  const right = left + (viewport?.width || window.innerWidth);
+  const bottom = top + (viewport?.height || window.innerHeight);
+  return rects.some((rect) => rect.right > left && rect.left < right && rect.bottom > top && rect.top < bottom);
 }
 
 function resetStickyNativeInlineCommands(root) {
@@ -409,6 +410,10 @@ class TCloudInlineToolbarController {
     this.submenu = null;
     this.lastReason = "";
     this.selectionFrame = null;
+    this.externalMenuFrame = null;
+    this.externalMenuTimeouts = [];
+    this.isExternalEditorMenuActive = false;
+    this.lastExternalMenuInteractionAt = 0;
     this.pendingSelectionReason = "";
     this.toolbar = this.buildToolbar();
     this.onSelectionChange = () => this.scheduleSelectionSync("selectionchange");
@@ -453,7 +458,15 @@ class TCloudInlineToolbarController {
     window.visualViewport?.addEventListener("scroll", this.onViewportChange, { passive: true });
     this.observer = new MutationObserver(() => {
       this.hideNativeInlineToolbar();
-      if (this.externalEditorMenuOpen()) this.hideInlineToolbar("editor-menu");
+      if (this.externalEditorMenuOpen()) {
+        this.markExternalEditorMenuActive();
+        this.hideInlineToolbar("editor-menu");
+        return;
+      }
+      if (this.isExternalEditorMenuActive) {
+        this.clearExternalMenuState();
+        this.scheduleSelectionSyncAfterExternalMenu();
+      }
     });
     this.observer.observe(document.body, { childList: true, subtree: true });
     this.hideNativeInlineToolbar();
@@ -474,6 +487,8 @@ class TCloudInlineToolbarController {
     window.visualViewport?.removeEventListener("resize", this.onViewportChange);
     window.visualViewport?.removeEventListener("scroll", this.onViewportChange);
     if (this.selectionFrame) cancelAnimationFrame(this.selectionFrame);
+    if (this.externalMenuFrame) cancelAnimationFrame(this.externalMenuFrame);
+    this.externalMenuTimeouts.forEach((timeoutId) => clearTimeout(timeoutId));
     this.observer?.disconnect();
     this.closeAllInlineSubmenus();
     this.toolbar.remove();
@@ -502,7 +517,7 @@ class TCloudInlineToolbarController {
       action: "block-menu",
       label: "Texto",
       title: "Tipo de bloco",
-      icon: '<span data-tcloud-block-label>Texto</span>',
+      icon: '<span class="tcloud-inline-toolbar__block-label" data-tcloud-block-label>Texto</span><span class="tcloud-inline-toolbar__block-chevron" aria-hidden="true">⌄</span>',
       menu: true,
     });
     blockButton.classList.add("tcloud-inline-toolbar__block-button");
@@ -592,6 +607,10 @@ class TCloudInlineToolbarController {
 
   shouldShowInlineToolbar(range = this.getValidEditorSelection()) {
     if (!range || !rangeInsideEditor(range, this.root)) return false;
+    if (this.isExternalEditorMenuActive) {
+      if (this.externalEditorMenuOpen()) return false;
+      this.clearExternalMenuState();
+    }
     if (this.externalEditorMenuOpen()) return false;
     const signature = rangeSignature(range);
     return !sameRangeSignature(signature, this.closedSelectionSignature);
@@ -608,6 +627,13 @@ class TCloudInlineToolbarController {
 
   syncFromSelection(reason = "selectionchange") {
     this.hideNativeInlineToolbar();
+    if (this.isExternalEditorMenuActive) {
+      if (this.externalEditorMenuOpen()) {
+        this.hideInlineToolbar("editor-menu");
+        return;
+      }
+      this.clearExternalMenuState();
+    }
     const range = this.getValidEditorSelection();
     if (range) {
       const signature = rangeSignature(range);
@@ -654,6 +680,41 @@ class TCloudInlineToolbarController {
     this.hideNativeInlineToolbar();
   }
 
+  markExternalEditorMenuActive() {
+    this.isExternalEditorMenuActive = true;
+    this.lastExternalMenuInteractionAt = Date.now();
+    this.closedSelectionSignature = null;
+  }
+
+  clearExternalMenuState() {
+    this.isExternalEditorMenuActive = false;
+    this.lastExternalMenuInteractionAt = 0;
+    this.closedSelectionSignature = null;
+    if (this.lastReason === "editor-menu" || this.lastReason === "external-menu") this.lastReason = "";
+  }
+
+  scheduleSelectionSyncAfterExternalMenu() {
+    if (this.externalMenuFrame) cancelAnimationFrame(this.externalMenuFrame);
+    this.externalMenuTimeouts.forEach((timeoutId) => clearTimeout(timeoutId));
+    this.externalMenuTimeouts = [];
+    const syncWhenClosed = () => {
+      if (this.externalEditorMenuOpen()) {
+        this.markExternalEditorMenuActive();
+        return;
+      }
+      this.clearExternalMenuState();
+      this.scheduleSelectionSync("external-menu-closed");
+    };
+    this.externalMenuFrame = requestAnimationFrame(() => {
+      this.externalMenuFrame = null;
+      syncWhenClosed();
+    });
+    [80, 180].forEach((delay) => {
+      const timeoutId = setTimeout(syncWhenClosed, delay);
+      this.externalMenuTimeouts.push(timeoutId);
+    });
+  }
+
   updateToolbarPosition(range) {
     if (!rangeInsideEditor(range, this.root)) return false;
     const anchor = rangeSelectionRect(range);
@@ -692,12 +753,15 @@ class TCloudInlineToolbarController {
     if (this.isToolbarTarget(target)) return;
     this.closeAllInlineSubmenus();
     if (target?.closest?.(".ce-toolbar__plus, .ce-toolbar__settings-btn")) {
-      restoreEditorJsTransientMenus();
+      this.markExternalEditorMenuActive();
       this.hideInlineToolbar("external-menu");
+      this.scheduleSelectionSyncAfterExternalMenu();
       return;
     }
     if (target?.closest?.(".ce-toolbar__plus, .ce-toolbar__settings-btn, .ce-popover, .ce-settings, .ce-conversion-toolbar, #slash-menu, .tcloud-context-menu, .modal")) {
+      this.markExternalEditorMenuActive();
       this.hideInlineToolbar("external-menu");
+      this.scheduleSelectionSyncAfterExternalMenu();
       return;
     }
     if (!this.isEditorTarget(target)) this.hideInlineToolbar("pointer-outside");

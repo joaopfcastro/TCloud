@@ -6028,6 +6028,8 @@ body,
 }
 
 .tcloud-inline-toolbar__block-button {
+  display: inline-flex !important;
+  align-items: center !important;
   flex: 0 0 auto !important;
   justify-content: center !important;
   gap: 8px !important;
@@ -6037,18 +6039,34 @@ body,
   padding: 0 10px !important;
   font-size: 13px !important;
   font-weight: 700 !important;
+  line-height: 1 !important;
 }
 
 .tcloud-inline-toolbar__block-button::after {
-  content: "⌄";
+  content: none !important;
+}
+
+.tcloud-inline-toolbar__block-label,
+.tcloud-inline-toolbar__block-chevron {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  line-height: 1;
+}
+
+.tcloud-inline-toolbar__block-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tcloud-inline-toolbar__block-chevron {
+  flex: 0 0 12px;
   width: 12px;
   height: 12px;
   color: var(--tcloud-toolbar-muted);
   font-size: 13px;
-  line-height: 1;
+  transform: translateY(-1px);
 }
 
 .tcloud-inline-toolbar__text-color-icon {
