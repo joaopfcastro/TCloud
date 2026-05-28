@@ -6524,16 +6524,37 @@ body,
 
 /* Reserve the block-action rail in the page layout so Editor.js controls never sit on text. */
 :root {
-  --note-content-width: var(--note-editor-width);
+  --note-page-max: 1040px;
+  --note-page-gutter: clamp(20px, 4vw, 72px);
+  --note-readable-max: 980px;
+  --note-content-width: min(var(--note-readable-max), var(--note-page-max));
   --note-block-rail: clamp(84px, 7vw, 92px);
-  --note-window-padding: var(--notes-page-padding-x);
+  --note-window-padding: var(--note-page-gutter);
   --block-action-size: 32px;
   --block-action-gap: 8px;
 }
 
+.notes-app:not(.sidebar-collapsed) {
+  --note-page-max: 1040px;
+  --note-page-gutter: clamp(18px, 3.4vw, 64px);
+  --note-readable-max: 980px;
+  --note-content-width: min(var(--note-readable-max), var(--note-page-max));
+}
+
+.notes-app.sidebar-collapsed:not(.is-compact-window) {
+  --note-page-max: 1120px;
+  --note-page-gutter: clamp(24px, 5vw, 96px);
+  --note-readable-max: 1040px;
+  --note-content-width: min(var(--note-readable-max), var(--note-page-max));
+}
+
 .notes-app.is-compact-window {
-  --note-block-rail: clamp(78px, 12cqw, 84px);
-  --note-window-padding: clamp(12px, 4cqw, 28px);
+  --note-page-max: 900px;
+  --note-page-gutter: clamp(12px, 4cqw, 28px);
+  --note-readable-max: 860px;
+  --note-content-width: min(var(--note-readable-max), var(--note-page-max));
+  --note-block-rail: clamp(76px, 12cqw, 84px);
+  --note-window-padding: var(--note-page-gutter);
   --block-action-size: 29px;
   --block-action-gap: 6px;
 }
@@ -6553,7 +6574,7 @@ body,
 .notes-app.is-compact-window .note-page,
 .notes-app.is-compact-window.sidebar-collapsed:not(.is-mobile-sidebar-drawer) .note-page {
   width: min(
-    calc(var(--note-content-width) + var(--note-block-rail)),
+    calc(var(--note-page-max) + var(--note-block-rail)),
     calc(100% - (var(--note-window-padding) * 2))
   );
   padding-inline-start: var(--note-block-rail);
@@ -6572,6 +6593,205 @@ body,
   max-width: 100%;
 }
 
+.note-page-header {
+  gap: clamp(10px, 1.2vw, 16px);
+  margin-bottom: clamp(18px, 2.2vw, 28px);
+}
+
+.note-page-tools {
+  justify-content: flex-start;
+  gap: 8px;
+  min-height: 32px;
+}
+
+#note-icon-button,
+#note-cover-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border-color: rgba(36, 40, 45, 0.12);
+  background: transparent;
+  color: var(--muted-strong);
+  box-shadow: none;
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+#note-icon-button {
+  width: 34px;
+  min-width: 34px;
+  padding: 0 8px;
+}
+
+#note-icon-button.is-empty {
+  width: auto;
+  min-width: 104px;
+  max-width: 148px;
+  padding-inline: 10px;
+}
+
+#note-cover-button {
+  padding: 0 10px;
+}
+
+#note-icon-button:hover,
+#note-icon-button:focus-visible,
+#note-cover-button:hover,
+#note-cover-button:focus-visible {
+  border-color: var(--border-strong);
+  background: var(--hover);
+  color: var(--text);
+}
+
+#note-icon-button[aria-expanded="true"],
+#note-cover-button[aria-expanded="true"] {
+  border-color: rgba(82, 103, 216, 0.28);
+  background: var(--accent-soft);
+  color: var(--text);
+  box-shadow: var(--notes-focus-ring);
+}
+
+.title-row {
+  gap: 10px;
+  margin-top: clamp(2px, 0.4vw, 8px);
+}
+
+.note-title {
+  min-height: clamp(50px, 5vw, 68px);
+  font-size: clamp(40px, 4.2vw, 56px) !important;
+  line-height: 1.08;
+}
+
+.tags-shell {
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.note-tags {
+  gap: 6px;
+  min-width: 0;
+}
+
+.tag-chip {
+  min-height: 26px;
+  gap: 6px;
+  border-color: rgba(36, 40, 45, 0.1);
+  background: #f7f8fb;
+  color: var(--muted-strong);
+  padding: 4px 9px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.tag-chip button {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  color: var(--muted);
+}
+
+.tag-chip button:hover,
+.tag-chip button:focus-visible {
+  background: rgba(36, 40, 45, 0.08);
+  color: var(--text);
+}
+
+.tag-input {
+  flex: 0 1 152px;
+  width: auto;
+  min-width: 128px;
+  max-width: 184px;
+  min-height: 26px;
+  height: 26px;
+  border: 1px dashed rgba(36, 40, 45, 0.18);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted-strong);
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 600;
+  box-shadow: none;
+}
+
+.tag-input:hover {
+  border-color: rgba(36, 40, 45, 0.28);
+  background: #fafafa;
+}
+
+.tag-input:focus {
+  flex-basis: 196px;
+  max-width: min(220px, 100%);
+  border-style: solid;
+  border-color: rgba(82, 103, 216, 0.42);
+  background: #ffffff;
+  box-shadow: var(--notes-focus-ring);
+}
+
+.editor-meta-row {
+  min-height: 18px;
+  margin-top: -2px;
+  color: var(--muted);
+}
+
+.note-meta {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+@media (min-width: 1440px) {
+  .notes-app:not(.sidebar-collapsed):not(.is-compact-window) {
+    --note-page-max: 1120px;
+    --note-readable-max: 1040px;
+  }
+
+  .notes-app.sidebar-collapsed:not(.is-compact-window) {
+    --note-page-max: 1180px;
+    --note-readable-max: 1080px;
+  }
+}
+
+@media (min-width: 1720px) {
+  .notes-app:not(.is-compact-window) {
+    --note-page-max: 1240px;
+    --note-readable-max: 1120px;
+  }
+}
+
+@media (max-width: 640px) {
+  .notes-app,
+  .notes-app.sidebar-collapsed:not(.is-compact-window) {
+    --note-page-max: 860px;
+    --note-page-gutter: 10px;
+    --note-readable-max: 100%;
+  }
+
+  #note-icon-button.is-empty {
+    min-width: 96px;
+  }
+
+  .note-title,
+  .notes-app.is-compact-window .note-title {
+    min-height: 42px;
+    font-size: clamp(30px, 9vw, 38px) !important;
+  }
+
+  .tag-input {
+    flex-basis: 132px;
+    min-width: 118px;
+    max-width: min(180px, 100%);
+  }
+}
+
 .editor-content-grid,
 .notes-app.is-compact-window .editor-content-grid,
 .notes-app.sidebar-collapsed:not(.is-compact-window) .editor-content-grid,
@@ -6579,6 +6799,19 @@ body,
   --editor-toolbar-offset: var(--note-block-rail);
   padding-left: 0;
   margin-left: 0;
+}
+
+.editorjs-host,
+.notes-app.is-compact-window .editorjs-host,
+.notes-app.sidebar-collapsed:not(.is-compact-window) .editorjs-host {
+  width: min(var(--note-content-width), 100%);
+}
+
+.editorjs-host .ce-block__content,
+.editorjs-host .ce-toolbar__content,
+.notes-app.is-compact-window .editorjs-host .ce-block__content,
+.notes-app.is-compact-window .editorjs-host .ce-toolbar__content {
+  max-width: 100% !important;
 }
 
 .editorjs-host .ce-toolbar__actions,
