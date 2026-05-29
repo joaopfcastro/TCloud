@@ -1,4 +1,4 @@
-import { EditorAdapter, buildBlock, normalizeEditorData } from "./editor-adapter.js?v=notes-editorjs-menus-20260528-1";
+import { EditorAdapter, buildBlock, normalizeEditorData } from "./editor-adapter.js?v=notes-editor-context-menu-20260528-2";
 import { NotesApi } from "./notes-api.js";
 import { NotesFilePicker } from "./file-picker.js";
 import { IMPORT_ACCEPT, isSupportedImportFile, readFileAsText } from "./export-import.js";
@@ -246,6 +246,7 @@ const state = {
   lastClickedNoteId: null,
   contextMenuTargetNoteId: "",
   contextMenuTargetFolderId: "",
+  contextMenuTargetBlock: null,
   currentListRequestId: 0,
   currentOpenNoteRequestId: 0,
 };
@@ -399,6 +400,11 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
+}
+
+function menuShortcut(key) {
+  const isMac = /Mac|iPhone|iPad|iPod/i.test(navigator.platform || navigator.userAgent || "");
+  return `${isMac ? "⌘" : "Ctrl+"}${key}`;
 }
 
 function defaultAppearance() {
@@ -3742,6 +3748,7 @@ function openNoteContextMenu(event, note) {
   if (!note) return;
   state.contextMenuTargetNoteId = note.id;
   state.contextMenuTargetFolderId = "";
+  state.contextMenuTargetBlock = null;
   const actions = buildNoteMenuActions(note, currentMenuContext(note, { compactWindow: false }));
   if (!actions.length) return;
   renderContextMenuActions(els.sidebarContextMenu, actions);
@@ -3754,6 +3761,7 @@ function openFolderContextMenu(event, folder) {
   if (!folder) return;
   state.contextMenuTargetNoteId = "";
   state.contextMenuTargetFolderId = folder.id;
+  state.contextMenuTargetBlock = null;
   const actions = getAvailableCommands([
     "folder.createNote",
     "folder.createChild",
@@ -3770,6 +3778,7 @@ function openSidebarEmptyContextMenu(event) {
   event.stopPropagation();
   state.contextMenuTargetNoteId = "";
   state.contextMenuTargetFolderId = "";
+  state.contextMenuTargetBlock = null;
   const actions = getAvailableCommands([
     "note.create",
     "folder.create",
@@ -3825,9 +3834,109 @@ function openNoteMoreMenu(event) {
   renderContextMenuActions(els.sidebarContextMenu, actions);
   state.contextMenuTargetNoteId = state.currentNote?.id || "";
   state.contextMenuTargetFolderId = "";
+  state.contextMenuTargetBlock = null;
   const rect = els.noteMoreButton?.getBoundingClientRect();
   showContextMenuAt(els.sidebarContextMenu, rect?.left || event.pageX, (rect?.bottom || event.pageY) + 6);
   els.noteMoreButton?.setAttribute("aria-expanded", "true");
+}
+
+function buildEditorContextActions({ hasSelection = false, readOnly = false, hasBlock = false } = {}) {
+  const hasNote = Boolean(state.currentNote?.id);
+  const trashed = Boolean(state.currentNote?.deleted_at);
+  const actions = [
+    {
+      id: "editor.copy",
+      label: "Copiar",
+      icon: "ph-copy",
+      shortcut: menuShortcut("C"),
+      disabled: !hasSelection,
+    },
+    {
+      id: "editor.cut",
+      label: "Recortar",
+      icon: "ph-scissors",
+      shortcut: menuShortcut("X"),
+      disabled: readOnly || !hasSelection,
+    },
+    {
+      id: "editor.paste",
+      label: "Colar",
+      icon: "ph-clipboard-text",
+      shortcut: menuShortcut("V"),
+      disabled: readOnly,
+    },
+    {
+      id: "editor.duplicateBlock",
+      label: "Duplicar bloco",
+      icon: "ph-copy-simple",
+      separatorBefore: true,
+      disabled: readOnly || !hasBlock,
+    },
+    {
+      id: "editor.deleteBlock",
+      label: "Excluir bloco",
+      icon: "ph-trash",
+      variant: "danger",
+      disabled: readOnly || !hasBlock,
+    },
+    {
+      id: "editor.search",
+      label: "Buscar nesta nota",
+      icon: "ph-magnifying-glass",
+      shortcut: menuShortcut("F"),
+      separatorBefore: true,
+      disabled: !hasNote,
+    },
+  ];
+
+  if (trashed) {
+    actions.push(
+      {
+        id: "note.restore",
+        label: "Restaurar",
+        icon: "ph-arrow-counter-clockwise",
+        separatorBefore: true,
+        disabled: !hasNote,
+      },
+      {
+        id: "note.deletePermanent",
+        label: "Excluir definitivamente",
+        icon: "ph-trash",
+        variant: "danger",
+        disabled: !hasNote,
+      },
+      {
+        id: "note.info",
+        label: "Informações da nota",
+        icon: "ph-info",
+        disabled: !hasNote,
+      },
+    );
+    return actions;
+  }
+
+  actions.push(
+    {
+      id: "note.copyLink",
+      label: "Copiar link da nota",
+      icon: "ph-link-simple",
+      separatorBefore: true,
+      disabled: !hasNote,
+    },
+    {
+      id: "note.revisions",
+      label: "Histórico da nota",
+      icon: "ph-clock-counter-clockwise",
+      disabled: !hasNote,
+    },
+    {
+      id: "note.info",
+      label: "Informações da nota",
+      icon: "ph-info",
+      disabled: !hasNote,
+    },
+  );
+  return actions;
 }
 
 function hideAllContextMenus() {
@@ -3874,9 +3983,81 @@ function renderContextMenuActions(menu, actions) {
       item.classList.add("is-disabled");
       item.setAttribute("aria-disabled", "true");
     }
-    item.innerHTML = `${renderActionIcon(action)}<span>${escapeHtml(action.label)}</span>`;
+    item.innerHTML = [
+      renderActionIcon(action),
+      `<span class="context-menu-label">${escapeHtml(action.label)}</span>`,
+      action.shortcut ? `<kbd class="context-menu-shortcut">${escapeHtml(action.shortcut)}</kbd>` : "",
+    ].join("");
     list.appendChild(item);
   });
+}
+
+async function executeEditorContextAction(action) {
+  const readOnly = Boolean(state.currentNote?.deleted_at);
+  const selectedText = window.getSelection()?.toString() || "";
+
+  if (action === "editor.copy") {
+    if (!selectedText.trim()) return;
+    await copyToClipboard(selectedText);
+    showToast("Texto copiado.", "success");
+    return;
+  }
+
+  if (action === "editor.cut") {
+    if (readOnly || !selectedText.trim()) return;
+    await copyToClipboard(selectedText);
+    document.execCommand("delete");
+    markDirty("content");
+    showToast("Texto recortado.", "success");
+    return;
+  }
+
+  if (action === "editor.paste") {
+    if (readOnly) return;
+    const text = await navigator.clipboard?.readText?.();
+    if (text && state.editor) {
+      await state.editor.insertSlashBlock("paragraph", { text }, { replaceCurrent: false });
+      markDirty("content");
+      showToast("Texto colado.", "success");
+    }
+    return;
+  }
+
+  if (action === "editor.duplicateBlock") {
+    if (readOnly || !state.editor) return;
+    if (state.contextMenuTargetBlock && typeof state.editor.duplicateBlockByElement === "function") {
+      await state.editor.duplicateBlockByElement(state.contextMenuTargetBlock);
+    } else {
+      await state.editor.duplicateBlock();
+    }
+    markDirty("content");
+    return;
+  }
+
+  if (action === "editor.deleteBlock") {
+    if (readOnly || !state.editor) return;
+    if (state.contextMenuTargetBlock && typeof state.editor.deleteBlockByElement === "function") {
+      await state.editor.deleteBlockByElement(state.contextMenuTargetBlock);
+    } else {
+      await state.editor.deleteBlock();
+    }
+    markDirty("content");
+    return;
+  }
+
+  if (action === "editor.search") {
+    showFloatingSearch();
+    return;
+  }
+
+  if (action === "note.info") {
+    openNoteInfo();
+    return;
+  }
+
+  if (action?.startsWith("note.")) {
+    await runNotesCommand(action, { note: state.currentNote });
+  }
 }
 
 function executeNoteMenuAction(action, noteId) {
@@ -3910,12 +4091,24 @@ function wireContextMenus() {
 
     if (noteCard) {
       state.contextMenuTargetNoteId = noteCard.dataset.id;
+      state.contextMenuTargetFolderId = "";
+      state.contextMenuTargetBlock = null;
       const targetNote = findNoteById(state.contextMenuTargetNoteId);
       const actions = buildNoteMenuActions(targetNote, currentMenuContext(targetNote, { compactWindow: false }));
       if (!actions.length) return;
       renderContextMenuActions(els.sidebarContextMenu, actions);
       targetMenu = els.sidebarContextMenu;
     } else if (isEditorClick) {
+      const selectionText = window.getSelection()?.toString() || "";
+      const targetBlock = target.closest(".ce-block, .editor-todo, .editor-quote, .editor-code, .tcloud-block-card");
+      state.contextMenuTargetNoteId = "";
+      state.contextMenuTargetFolderId = "";
+      state.contextMenuTargetBlock = targetBlock;
+      renderContextMenuActions(els.editorContextMenu, buildEditorContextActions({
+        hasSelection: Boolean(selectionText.trim()),
+        readOnly: Boolean(state.currentNote?.deleted_at),
+        hasBlock: Boolean(targetBlock),
+      }));
       targetMenu = els.editorContextMenu;
     }
 
@@ -3969,38 +4162,7 @@ function wireContextMenus() {
     const action = item.dataset.action;
     if (window.TCLOUD_NOTES_DEBUG_LAYOUT === true) console.debug(`[Editor Context Menu] Ação disparada: ${action}`);
 
-    if (action === "copy") {
-      const selectedText = window.getSelection().toString();
-      navigator.clipboard.writeText(selectedText)
-        .then(() => {
-          if (window.TCLOUD_NOTES_DEBUG_LAYOUT === true) console.debug(`[Editor Context Menu] Copiado para a área de transferência: "${selectedText}"`);
-        })
-        .catch(err => console.error("Erro ao copiar:", err));
-    } else if (action === "cut") {
-      const selectedText = window.getSelection().toString();
-      navigator.clipboard.writeText(selectedText)
-        .then(() => {
-          if (window.TCLOUD_NOTES_DEBUG_LAYOUT === true) console.debug(`[Editor Context Menu] Recortado para a área de transferência: "${selectedText}"`);
-          document.execCommand("delete");
-        })
-        .catch(err => console.error("Erro ao recortar:", err));
-    } else if (action === "paste") {
-      navigator.clipboard.readText()
-        .then(text => {
-          if (text && state.editor) {
-            state.editor.insertSlashBlock("paragraph", { text }, { replaceCurrent: false }).catch(() => {});
-          }
-        })
-        .catch(err => console.error("Erro ao colar:", err));
-    } else if (action === "duplicate-block") {
-      if (state.editor) {
-        state.editor.duplicateBlock().catch(handleUnexpectedError);
-      }
-    } else if (action === "delete-block") {
-      if (state.editor) {
-        state.editor.deleteBlock().catch(handleUnexpectedError);
-      }
-    }
+    executeEditorContextAction(action).catch(handleUnexpectedError);
 
     hideAllContextMenus();
   });

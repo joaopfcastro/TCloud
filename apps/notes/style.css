@@ -4969,10 +4969,10 @@ body,
 
 .context-menu-item {
   display: grid;
-  grid-template-columns: 20px minmax(0, 1fr);
+  grid-template-columns: 22px minmax(0, 1fr) auto;
   gap: 10px;
   align-items: center;
-  min-height: 36px;
+  min-height: 38px;
 }
 
 .context-menu-icon {
@@ -4986,6 +4986,25 @@ body,
 
 .context-menu-icon.is-empty {
   opacity: 0;
+}
+
+.context-menu-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.context-menu-shortcut {
+  justify-self: end;
+  min-width: max-content;
+  border: 0;
+  background: transparent;
+  color: var(--notes-menu-muted, var(--muted));
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0;
 }
 
 .context-menu-item:focus-visible {

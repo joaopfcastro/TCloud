@@ -1676,6 +1676,37 @@ export class EditorAdapter {
     }
   }
 
+  async duplicateBlockByElement(element) {
+    await this.init();
+    const blockElement = element?.closest?.(".ce-block");
+    if (!blockElement) {
+      await this.duplicateBlock();
+      return;
+    }
+    const holderElement = typeof this.holder === "string" ? document.getElementById(this.holder) : this.holder;
+    const blocks = Array.from(holderElement?.querySelectorAll(".ce-block") || []);
+    const index = blocks.indexOf(blockElement);
+    if (index === -1) return;
+    const content = normalizeEditorData(await this.save());
+    const targetBlock = content.blocks[index];
+    if (!targetBlock) return;
+    const duplicatedBlock = buildBlock(targetBlock.type, JSON.parse(JSON.stringify(targetBlock.data)));
+    content.blocks.splice(index + 1, 0, duplicatedBlock);
+    content.time = Date.now();
+    await this.render(content);
+    if (typeof this.editor.caret?.setToBlock === "function") {
+      try {
+        this.editor.caret.setToBlock(index + 1, "end");
+      } catch (error) {
+        await this.focus();
+      }
+    } else {
+      await this.focus();
+    }
+    await this.onChange();
+    this.triggerHistorySave();
+  }
+
   async deleteBlockAtIndex(index) {
     await this.init();
     if (index === -1) return;
