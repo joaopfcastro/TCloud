@@ -64,12 +64,12 @@ const COVER_GRADIENTS = [
 
 const NOTE_ICON_CATALOG = [
   // Recentes (kept for legacy support, but updated or mapped nicely)
-  { value: "▰", label: "Bloco", group: "Recentes", aliases: ["bloco", "quadrado", "padrao", "padrão", "default", "note"] },
-  { value: "⭐", label: "Estrela", group: "Recentes", aliases: ["estrela", "favorito", "favorite", "star"] },
-  { value: "✅", label: "Check", group: "Recentes", aliases: ["check", "feito", "ok", "done", "concluido", "concluído", "tarefa"] },
-  { value: "📌", label: "Pin", group: "Recentes", aliases: ["pin", "fixar", "fixado", "importante"] },
-  { value: "🧠", label: "Cérebro", group: "Recentes", aliases: ["cerebro", "cérebro", "mente", "neurologia", "psico"] },
-  { value: "📚", label: "Livros", group: "Recentes", aliases: ["livro", "livros", "book", "books", "estudo", "academico", "acadêmico"] },
+  { value: "▰", label: "Bloco", group: "Sugestões", aliases: ["bloco", "quadrado", "padrao", "padrão", "default", "note"] },
+  { value: "⭐", label: "Estrela", group: "Sugestões", aliases: ["estrela", "favorito", "favorite", "star"] },
+  { value: "✅", label: "Check", group: "Sugestões", aliases: ["check", "feito", "ok", "done", "concluido", "concluído", "tarefa"] },
+  { value: "📌", label: "Pin", group: "Sugestões", aliases: ["pin", "fixar", "fixado", "importante"] },
+  { value: "🧠", label: "Cérebro", group: "Sugestões", aliases: ["cerebro", "cérebro", "mente", "neurologia", "psico"] },
+  { value: "📚", label: "Livros", group: "Sugestões", aliases: ["livro", "livros", "book", "books", "estudo", "academico", "acadêmico"] },
 
   // Saúde
   { value: "🧬", label: "Genética", group: "Saúde", aliases: ["genetica", "genética", "dna", "science", "ciencia"] },
@@ -588,6 +588,52 @@ function filteredIconCatalog() {
   return NOTE_ICON_CATALOG.filter((item) => iconMatchesQuery(item, query));
 }
 
+const RECENT_ICONS_STORAGE_KEY = "tcloud-notes-recent-icons-v1";
+const RECENT_ICONS_LIMIT = 12;
+
+function readRecentIcons() {
+  try {
+    const stored = localStorage.getItem(RECENT_ICONS_STORAGE_KEY);
+    if (!stored) return [];
+    const parsed = JSON.parse(stored);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    console.error("Error reading recent icons from localStorage:", e);
+    return [];
+  }
+}
+
+function writeRecentIcons(values) {
+  try {
+    localStorage.setItem(RECENT_ICONS_STORAGE_KEY, JSON.stringify(values));
+  } catch (e) {
+    console.error("Error writing recent icons to localStorage:", e);
+  }
+}
+
+function pushRecentIcon(value) {
+  if (!value || value === "none") return;
+  const recent = readRecentIcons();
+  const index = recent.indexOf(value);
+  if (index !== -1) {
+    recent.splice(index, 1);
+  }
+  recent.unshift(value);
+  if (recent.length > RECENT_ICONS_LIMIT) {
+    recent.length = RECENT_ICONS_LIMIT;
+  }
+  writeRecentIcons(recent);
+}
+
+function getRecentIconItems() {
+  const recentValues = readRecentIcons();
+  if (!recentValues.length) return [];
+  return recentValues.map(val => {
+    const found = NOTE_ICON_CATALOG.find(item => item.value === val);
+    return found ? { ...found, group: "Recentes" } : { value: val, label: val, group: "Recentes", aliases: [] };
+  });
+}
+
 function renderIconSection(label, items, selectedValue) {
   const buttons = items
     .map((item) => `
@@ -610,16 +656,28 @@ function renderIconMenu() {
   const appearance = currentAppearance();
   const selectedValue = appearance.icon.type === "none" ? "" : appearance.icon.value;
   const query = state.ui.iconQuery.trim();
+
+  // Load real recents and filter them
+  let recentItems = getRecentIconItems();
+  if (query) {
+    recentItems = recentItems.filter(item => iconMatchesQuery(item, query));
+  }
+  const recentSectionHtml = recentItems.length > 0 ? renderIconSection("Recentes", recentItems, selectedValue) : "";
+
   const grouped = filteredIconCatalog().reduce((map, item) => {
     const group = item.group || "Ícones";
     if (!map.has(group)) map.set(group, []);
     map.get(group).push(item);
     return map;
   }, new Map());
-  const sections = Array.from(grouped.entries())
+
+  const catalogSectionsHtml = Array.from(grouped.entries())
     .map(([label, items]) => renderIconSection(label, items, selectedValue))
     .filter(Boolean)
     .join("");
+
+  const scrollContentHtml = `${recentSectionHtml}${catalogSectionsHtml}`;
+
   els.noteIconMenu.innerHTML = `
     <div class="appearance-popover-header">
       <strong>Ícone da nota</strong>
@@ -633,14 +691,22 @@ function renderIconMenu() {
         <i class="ph ph-x" aria-hidden="true"></i>
       </button>
     </div>
-    ${sections || `<div class="appearance-empty icon-empty-state" role="status">
-      <span>Nenhum ícone encontrado${query ? ` para “${escapeHtml(query)}”` : ""}.</span>
-      <small>Tente estrela, médico, livro, check, pasta ou tag.</small>
-    </div>`}
-    <button class="appearance-danger-action" type="button" role="menuitem" data-icon-value="none">
-      <i class="ph ph-trash" aria-hidden="true"></i>
-      <span>Remover ícone</span>
-    </button>
+    <div class="note-icon-quick-actions">
+      <button class="note-icon-remove-button${!selectedValue ? " is-selected" : ""}" type="button" data-icon-value="none" aria-label="Sem ícone" title="Sem ícone">
+        <i class="ph ph-trash" aria-hidden="true"></i>
+        <span>Sem ícone</span>
+      </button>
+    </div>
+    <div class="note-icon-scroll">
+      ${scrollContentHtml || `<div class="appearance-empty icon-empty-state" role="status">
+        <span>Nenhum ícone encontrado${query ? ` para “${escapeHtml(query)}”` : ""}.</span>
+        <small>Tente estrela, médico, livro, check, pasta ou tag.</small>
+      </div>`}
+      <button class="appearance-danger-action" type="button" role="menuitem" data-icon-value="none">
+        <i class="ph ph-trash" aria-hidden="true"></i>
+        <span>Remover ícone</span>
+      </button>
+    </div>
   `;
 }
 
@@ -2905,6 +2971,7 @@ async function applyIconValue(value) {
     return;
   }
   const type = normalized.length <= 2 ? "emoji" : "symbol";
+  pushRecentIcon(normalized);
   await setAppearancePatch({ icon: { type, value: normalized } }, "Ícone atualizado.");
 }
 

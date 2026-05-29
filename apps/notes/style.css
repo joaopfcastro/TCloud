@@ -4350,12 +4350,13 @@ body,
 
 /* Regras específicas para .note-icon-popover para não alterar outros popovers */
 .note-icon-popover.appearance-popover {
+  display: flex;
+  flex-direction: column;
   width: 340px;
-  max-height: min(440px, calc(100vh - 96px));
-  overflow-y: auto;
+  max-height: min(560px, calc(100vh - 96px));
+  overflow: hidden;
   gap: 8px;
   padding: 10px;
-  scrollbar-width: thin;
 }
 
 .note-icon-popover .appearance-popover-header {
@@ -4364,11 +4365,54 @@ body,
 }
 
 .note-icon-popover .appearance-search {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  margin-bottom: 4px;
+  position: relative;
+  margin-bottom: 2px;
   background: var(--bg-surface-strong);
+}
+
+.note-icon-popover .note-icon-quick-actions {
+  display: flex;
+  align-items: center;
+  padding-bottom: 4px;
+}
+
+.note-icon-popover .note-icon-remove-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 32px;
+  padding: 6px 8px;
+  font-size: 12px;
+  color: var(--muted-strong);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-item);
+  background: var(--bg-surface-strong);
+  cursor: pointer;
+  transition: all 0.1s ease;
+}
+
+.note-icon-popover .note-icon-remove-button:hover {
+  background: var(--hover);
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+
+.note-icon-popover .note-icon-remove-button.is-selected {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: var(--accent);
+  cursor: default;
+}
+
+.note-icon-popover .note-icon-scroll {
+  flex: 1;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-right: 2px;
 }
 
 .note-icon-popover .appearance-section {
