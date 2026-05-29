@@ -209,11 +209,27 @@ function clampNumber(value, min, max) {
   return Math.max(min, Math.min(Number(value) || min, max));
 }
 
+function isBlockedInlineToolbarTarget(element) {
+  return Boolean(element?.closest?.(
+    ".tcloud-inline-toolbar, " +
+    ".ce-inline-toolbar, " +
+    ".tcloud-inline-toolbar__menu, " +
+    ".ce-popover, " +
+    ".ce-settings, " +
+    ".ce-toolbar, " +
+    ".ce-conversion-toolbar, " +
+    ".tcloud-context-menu, " +
+    ".modal, " +
+    ".sidebar, " +
+    ".appearance-popover, " +
+    "#slash-menu, " +
+    ".tcloud-block-card.is-image",
+  ));
+}
+
 function editorEditableForNode(node, root) {
   const element = nodeToElement(node);
-  if (element?.closest?.(".tcloud-inline-toolbar, .ce-inline-toolbar, .tcloud-inline-toolbar__menu, .ce-popover, .ce-settings, .ce-toolbar, .tcloud-context-menu, .modal, .sidebar, .tcloud-block-card.is-image")) {
-    return null;
-  }
+  if (isBlockedInlineToolbarTarget(element)) return null;
   const editable = element?.closest?.("[contenteditable='true']");
   return editable && root?.contains(editable) ? editable : null;
 }
@@ -221,9 +237,34 @@ function editorEditableForNode(node, root) {
 function rangeInsideEditor(range, root) {
   if (!range || !root) return false;
   try {
+    const startElement = nodeToElement(range.startContainer);
+    const endElement = nodeToElement(range.endContainer);
+    const commonElement = nodeToElement(range.commonAncestorContainer);
+
+    if (!commonElement || !root.contains(commonElement)) return false;
+    if (
+      isBlockedInlineToolbarTarget(startElement) ||
+      isBlockedInlineToolbarTarget(endElement) ||
+      isBlockedInlineToolbarTarget(commonElement)
+    ) {
+      return false;
+    }
+
+    const text = range.toString().replace(/\u200B/g, "").trim();
+    if (!text) return false;
+
+    const editable =
+      editorEditableForNode(range.startContainer, root) ||
+      editorEditableForNode(range.endContainer, root) ||
+      commonElement.closest?.("[contenteditable='true']") ||
+      commonElement.closest?.(
+        ".ce-block, .ce-block__content, .codex-editor__redactor, .editorjs-host, .codex-editor",
+      );
+
     return Boolean(
-      editorEditableForNode(range.startContainer, root) &&
-      editorEditableForNode(range.endContainer, root),
+      editable &&
+      root.contains(editable) &&
+      !isBlockedInlineToolbarTarget(editable),
     );
   } catch (error) {
     return false;
@@ -277,6 +318,15 @@ function rangeSelectionRect(range) {
     const rect = range.getBoundingClientRect();
     if (rect?.width || rect?.height) rects = [rect];
   }
+  if (!rects.length) {
+    const commonElement = nodeToElement(range.commonAncestorContainer);
+    const fallbackElement = commonElement?.closest?.(
+      "[contenteditable='true'], .ce-block, .ce-block__content, .codex-editor__redactor",
+    );
+    if (fallbackElement && !isBlockedInlineToolbarTarget(fallbackElement)) {
+      rects = Array.from(fallbackElement.getClientRects()).filter((rect) => rect.width > 0 || rect.height > 0);
+    }
+  }
   if (!rects.length) return null;
   const left = Math.min(...rects.map((rect) => rect.left));
   const top = Math.min(...rects.map((rect) => rect.top));
@@ -296,7 +346,7 @@ function visibleElement(element) {
     const style = window.getComputedStyle(node);
     if (style.display === "none" || style.visibility === "hidden" || Number(style.opacity) === 0) return false;
   }
-  const rects = Array.from(element.getClientRects()).filter((rect) => rect.width > 0 && rect.height > 0);
+  const rects = Array.from(element.getClientRects()).filter((rect) => rect.width >= 4 && rect.height >= 4);
   if (!rects.length) return false;
   const viewport = window.visualViewport;
   const left = viewport?.offsetLeft || 0;
@@ -418,9 +468,9 @@ class TCloudInlineToolbarController {
     this.toolbar = this.buildToolbar();
     this.onSelectionChange = () => this.scheduleSelectionSync("selectionchange");
     this.onPointerDown = (event) => this.handlePointerDown(event);
-    this.onPointerUp = () => this.scheduleSelectionSync("pointerup");
-    this.onMouseUp = () => this.scheduleSelectionSync("mouseup");
-    this.onTouchEnd = () => this.scheduleSelectionSync("touchend");
+    this.onPointerUp = () => this.scheduleSelectionSyncCascade("pointerup");
+    this.onMouseUp = () => this.scheduleSelectionSyncCascade("mouseup");
+    this.onTouchEnd = () => this.scheduleSelectionSyncCascade("touchend");
     this.onKeyUp = () => this.scheduleSelectionSync("keyup");
     this.onInput = (event) => {
       if (this.isEditorTarget(event.target)) this.scheduleSelectionSync("input");
@@ -622,6 +672,17 @@ class TCloudInlineToolbarController {
     this.selectionFrame = requestAnimationFrame(() => {
       this.selectionFrame = null;
       this.syncFromSelection(this.pendingSelectionReason || reason);
+    });
+  }
+
+  scheduleSelectionSyncCascade(reason = "selectionchange") {
+    this.scheduleSelectionSync(reason);
+    [40, 120].forEach((delay) => {
+      const timeoutId = setTimeout(() => {
+        this.externalMenuTimeouts = this.externalMenuTimeouts.filter((id) => id !== timeoutId);
+        this.scheduleSelectionSync(`${reason}-delayed-${delay}`);
+      }, delay);
+      this.externalMenuTimeouts.push(timeoutId);
     });
   }
 
