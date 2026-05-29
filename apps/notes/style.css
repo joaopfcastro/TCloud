@@ -7207,3 +7207,78 @@ body,
   border-radius: var(--tcloud-editor-menu-radius) !important;
   box-shadow: var(--tcloud-editor-menu-shadow) !important;
 }
+
+/* Note Cover Popover Specific Rules */
+.note-cover-popover {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 12px !important;
+  padding: 12px !important;
+  width: 340px !important;
+}
+
+.note-cover-popover .appearance-section {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+}
+
+.note-cover-popover .appearance-section-label {
+  color: var(--muted) !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0 !important;
+  text-transform: uppercase !important;
+  margin-bottom: 2px !important;
+  display: block !important;
+}
+
+.note-cover-popover .cover-gradient-grid {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+}
+
+.note-cover-popover .cover-gradient-choice {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  height: auto !important;
+  min-height: unset !important;
+  padding: 6px !important;
+  gap: 6px !important;
+  border: 1px solid transparent !important;
+  border-radius: var(--radius-item) !important;
+  background: transparent !important;
+  cursor: pointer !important;
+  transition: background 140ms ease, border-color 140ms ease !important;
+}
+
+.note-cover-popover .cover-gradient-choice:hover {
+  background: var(--hover) !important;
+}
+
+.note-cover-popover .cover-gradient-choice.is-selected {
+  border-color: rgba(52, 120, 246, 0.35) !important;
+  background: var(--accent-soft) !important;
+}
+
+.note-cover-popover .cover-gradient-swatch {
+  display: block !important;
+  width: 100% !important;
+  height: 44px !important;
+  min-height: 44px !important;
+  border-radius: 6px !important;
+  border: 1px solid rgba(20, 27, 37, 0.08) !important;
+}
+
+.note-cover-popover .cover-gradient-choice span:last-child {
+  color: var(--muted-strong) !important;
+  font-size: 11px !important;
+  line-height: normal !important;
+  white-space: nowrap !important;
+  text-overflow: ellipsis !important;
+  overflow: visible !important;
+  text-align: center !important;
+  display: block !important;
+}
