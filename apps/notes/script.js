@@ -3983,102 +3983,201 @@ function openNoteMoreMenu(event) {
   els.noteMoreButton?.setAttribute("aria-expanded", "true");
 }
 
+function normalizeVisibleContextActions(actions, { hideDisabled = false } = {}) {
+  if (!Array.isArray(actions)) return [];
+  // 1. Remove null/undefined and hidden actions
+  let filtered = actions.filter(action => action && action.hidden !== true);
+
+  // 2. Remove disabled actions if hideDisabled is true
+  if (hideDisabled) {
+    filtered = filtered.filter(action => !action.disabled);
+  }
+
+  // 3. Process separatorBefore to ensure no consecutive, leading, or trailing separators
+  const result = [];
+  filtered.forEach((action) => {
+    // Clone action to avoid mutating original
+    const cloned = { ...action };
+    if (result.length === 0) {
+      cloned.separatorBefore = false;
+    } else {
+      // If separatorBefore is true, check if the previous item also had/caused a divider or if we just set it
+      // Actually we will handle separators during rendering or keep a boolean separatorBefore.
+      // Let's normalize the separatorBefore boolean directly.
+    }
+    result.push(cloned);
+  });
+  return result;
+}
+
 function buildEditorContextActions({ hasSelection = false, readOnly = false, hasBlock = false } = {}) {
   const hasNote = Boolean(state.currentNote?.id);
+  if (!hasNote) return []; // No current note, don't return actions (or return global actions if any, none exist)
+
   const trashed = Boolean(state.currentNote?.deleted_at);
-  const actions = [
-    {
-      id: "editor.copy",
-      label: "Copiar",
-      icon: "ph-copy",
-      shortcut: menuShortcut("C"),
-      disabled: !hasSelection,
-    },
-    {
-      id: "editor.cut",
-      label: "Recortar",
-      icon: "ph-scissors",
-      shortcut: menuShortcut("X"),
-      disabled: readOnly || !hasSelection,
-    },
-    {
-      id: "editor.paste",
-      label: "Colar",
-      icon: "ph-clipboard-text",
-      shortcut: menuShortcut("V"),
-      disabled: readOnly,
-    },
-    {
-      id: "editor.duplicateBlock",
-      label: "Duplicar bloco",
-      icon: "ph-copy-simple",
-      separatorBefore: true,
-      disabled: readOnly || !hasBlock,
-    },
-    {
-      id: "editor.deleteBlock",
-      label: "Excluir bloco",
-      icon: "ph-trash",
-      variant: "danger",
-      disabled: readOnly || !hasBlock,
-    },
-    {
-      id: "editor.search",
-      label: "Buscar nesta nota",
-      icon: "ph-magnifying-glass",
-      shortcut: menuShortcut("F"),
-      separatorBefore: true,
-      disabled: !hasNote,
-    },
-  ];
+  const actions = [];
 
   if (trashed) {
+    // 4. Trash Mode (No editing actions)
     actions.push(
       {
         id: "note.restore",
         label: "Restaurar",
         icon: "ph-arrow-counter-clockwise",
-        separatorBefore: true,
-        disabled: !hasNote,
       },
       {
         id: "note.deletePermanent",
         label: "Excluir definitivamente",
         icon: "ph-trash",
         variant: "danger",
-        disabled: !hasNote,
       },
       {
         id: "note.info",
         label: "Informações da nota",
         icon: "ph-info",
-        disabled: !hasNote,
-      },
+        separatorBefore: true,
+      }
     );
     return actions;
   }
 
-  actions.push(
-    {
-      id: "note.copyLink",
-      label: "Copiar link da nota",
-      icon: "ph-link-simple",
-      separatorBefore: true,
-      disabled: !hasNote,
-    },
-    {
-      id: "note.revisions",
-      label: "Histórico da nota",
-      icon: "ph-clock-counter-clockwise",
-      disabled: !hasNote,
-    },
-    {
-      id: "note.info",
-      label: "Informações da nota",
-      icon: "ph-info",
-      disabled: !hasNote,
-    },
-  );
+  // Edit/Normal Mode
+  if (hasSelection) {
+    // 1. Selection Mode
+    actions.push(
+      {
+        id: "editor.copy",
+        label: "Copiar",
+        icon: "ph-copy",
+        shortcut: menuShortcut("C"),
+      }
+    );
+    if (!readOnly) {
+      actions.push(
+        {
+          id: "editor.cut",
+          label: "Recortar",
+          icon: "ph-scissors",
+          shortcut: menuShortcut("X"),
+        }
+      );
+    }
+    if (!readOnly) {
+      actions.push(
+        {
+          id: "editor.paste",
+          label: "Colar",
+          icon: "ph-clipboard-text",
+          shortcut: menuShortcut("V"),
+        }
+      );
+    }
+    // Search & Meta
+    actions.push(
+      {
+        id: "editor.search",
+        label: "Buscar nesta nota",
+        icon: "ph-magnifying-glass",
+        shortcut: menuShortcut("F"),
+        separatorBefore: true,
+      },
+      {
+        id: "note.copyLink",
+        label: "Copiar link da nota",
+        icon: "ph-link-simple",
+      },
+      {
+        id: "note.info",
+        label: "Informações da nota",
+        icon: "ph-info",
+      }
+    );
+  } else if (hasBlock) {
+    // 2. Click on block without selection
+    if (!readOnly) {
+      actions.push(
+        {
+          id: "editor.paste",
+          label: "Colar",
+          icon: "ph-clipboard-text",
+          shortcut: menuShortcut("V"),
+        },
+        {
+          id: "editor.duplicateBlock",
+          label: "Duplicar bloco",
+          icon: "ph-copy-simple",
+          separatorBefore: true,
+        },
+        {
+          id: "editor.deleteBlock",
+          label: "Excluir bloco",
+          icon: "ph-trash",
+          variant: "danger",
+        }
+      );
+    }
+    actions.push(
+      {
+        id: "editor.search",
+        label: "Buscar nesta nota",
+        icon: "ph-magnifying-glass",
+        shortcut: menuShortcut("F"),
+        separatorBefore: true,
+      },
+      {
+        id: "note.copyLink",
+        label: "Copiar link da nota",
+        icon: "ph-link-simple",
+      },
+      {
+        id: "note.revisions",
+        label: "Histórico da nota",
+        icon: "ph-clock-counter-clockwise",
+      },
+      {
+        id: "note.info",
+        label: "Informações da nota",
+        icon: "ph-info",
+      }
+    );
+  } else {
+    // 3. Click on empty space
+    if (!readOnly) {
+      actions.push(
+        {
+          id: "editor.paste",
+          label: "Colar",
+          icon: "ph-clipboard-text",
+          shortcut: menuShortcut("V"),
+        }
+      );
+    }
+    actions.push(
+      {
+        id: "editor.search",
+        label: "Buscar nesta nota",
+        icon: "ph-magnifying-glass",
+        shortcut: menuShortcut("F"),
+        separatorBefore: !readOnly, // Only add separator if paste was added
+      },
+      {
+        id: "note.copyLink",
+        label: "Copiar link da nota",
+        icon: "ph-link-simple",
+      },
+      {
+        id: "note.revisions",
+        label: "Histórico da nota",
+        icon: "ph-clock-counter-clockwise",
+      },
+      {
+        id: "note.info",
+        label: "Informações da nota",
+        icon: "ph-info",
+      }
+    );
+  }
+
   return actions;
 }
 
@@ -4111,8 +4210,11 @@ function renderContextMenuActions(menu, actions) {
   const list = menu?.querySelector(".context-menu-list");
   if (!list) return;
   list.innerHTML = "";
+  
+  // Apply separatorBefore correctly without duplicates, leading, or trailing dividers.
+  let renderedFirst = false;
   actions.forEach((action) => {
-    if (action.separatorBefore && list.children.length) {
+    if (action.separatorBefore && renderedFirst) {
       const divider = document.createElement("li");
       divider.className = "context-menu-divider";
       list.appendChild(divider);
@@ -4132,6 +4234,7 @@ function renderContextMenuActions(menu, actions) {
       action.shortcut ? `<kbd class="context-menu-shortcut">${escapeHtml(action.shortcut)}</kbd>` : "",
     ].join("");
     list.appendChild(item);
+    renderedFirst = true;
   });
 }
 
@@ -4212,7 +4315,6 @@ function executeNoteMenuAction(action, noteId) {
   const note = findNoteById(noteId);
   runNotesCommand(action, { note }).catch(handleUnexpectedError);
 }
-
 function wireContextMenus() {
   document.addEventListener("contextmenu", (event) => {
     hideAllContextMenus();
@@ -4238,8 +4340,9 @@ function wireContextMenus() {
       state.contextMenuTargetBlock = null;
       const targetNote = findNoteById(state.contextMenuTargetNoteId);
       const actions = buildNoteMenuActions(targetNote, currentMenuContext(targetNote, { compactWindow: false }));
-      if (!actions.length) return;
-      renderContextMenuActions(els.sidebarContextMenu, actions);
+      const normalized = normalizeVisibleContextActions(actions, { hideDisabled: false });
+      if (!normalized.length) return;
+      renderContextMenuActions(els.sidebarContextMenu, normalized);
       targetMenu = els.sidebarContextMenu;
     } else if (isEditorClick) {
       const selectionText = window.getSelection()?.toString() || "";
@@ -4247,11 +4350,14 @@ function wireContextMenus() {
       state.contextMenuTargetNoteId = "";
       state.contextMenuTargetFolderId = "";
       state.contextMenuTargetBlock = targetBlock;
-      renderContextMenuActions(els.editorContextMenu, buildEditorContextActions({
+      const actions = buildEditorContextActions({
         hasSelection: Boolean(selectionText.trim()),
         readOnly: Boolean(state.currentNote?.deleted_at),
         hasBlock: Boolean(targetBlock),
-      }));
+      });
+      const normalized = normalizeVisibleContextActions(actions, { hideDisabled: true });
+      if (!normalized.length) return;
+      renderContextMenuActions(els.editorContextMenu, normalized);
       targetMenu = els.editorContextMenu;
     }
 
