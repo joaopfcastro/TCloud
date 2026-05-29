@@ -4348,6 +4348,89 @@ body,
   margin: 0;
 }
 
+/* Regras específicas para .note-icon-popover para não alterar outros popovers */
+.note-icon-popover.appearance-popover {
+  width: 340px;
+  max-height: min(440px, calc(100vh - 96px));
+  overflow-y: auto;
+  gap: 8px;
+  padding: 10px;
+  scrollbar-width: thin;
+}
+
+.note-icon-popover .appearance-popover-header {
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+
+.note-icon-popover .appearance-search {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  margin-bottom: 4px;
+  background: var(--bg-surface-strong);
+}
+
+.note-icon-popover .appearance-section {
+  display: grid;
+  gap: 4px;
+}
+
+.note-icon-popover .appearance-section-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-top: 6px;
+  letter-spacing: 0.5px;
+}
+
+.note-icon-popover .appearance-icon-grid {
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.note-icon-popover .appearance-icon-choice {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.1s ease;
+}
+
+.note-icon-popover .appearance-icon-choice:hover {
+  background: var(--hover);
+}
+
+.note-icon-popover .appearance-icon-choice.is-selected {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.note-icon-popover .appearance-icon-symbol {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.note-icon-popover .appearance-danger-action {
+  margin-top: 8px;
+  border-top: 1px solid var(--border);
+  padding: 8px 6px;
+  font-size: 12px;
+}
+
+.note-icon-popover .appearance-empty {
+  padding: 16px 8px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 12px;
+}
+
 .modal-card {
   border-radius: var(--radius-window);
   background: #ffffff;

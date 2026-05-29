@@ -63,32 +63,108 @@ const COVER_GRADIENTS = [
 ];
 
 const NOTE_ICON_CATALOG = [
+  // Recentes (kept for legacy support, but updated or mapped nicely)
   { value: "▰", label: "Bloco", group: "Recentes", aliases: ["bloco", "quadrado", "padrao", "padrão", "default", "note"] },
   { value: "⭐", label: "Estrela", group: "Recentes", aliases: ["estrela", "favorito", "favorite", "star"] },
   { value: "✅", label: "Check", group: "Recentes", aliases: ["check", "feito", "ok", "done", "concluido", "concluído", "tarefa"] },
   { value: "📌", label: "Pin", group: "Recentes", aliases: ["pin", "fixar", "fixado", "importante"] },
   { value: "🧠", label: "Cérebro", group: "Recentes", aliases: ["cerebro", "cérebro", "mente", "neurologia", "psico"] },
   { value: "📚", label: "Livros", group: "Recentes", aliases: ["livro", "livros", "book", "books", "estudo", "academico", "acadêmico"] },
-  { value: "⚕️", label: "Saúde", group: "Saúde", aliases: ["saude", "saúde", "medico", "médico", "medical", "hospital", "medicina"] },
+
+  // Saúde
+  { value: "🧬", label: "Genética", group: "Saúde", aliases: ["genetica", "genética", "dna", "science", "ciencia"] },
+  { value: "🦠", label: "Vírus", group: "Saúde", aliases: ["virus", "vírus", "bacteria", "microbio", "doenca"] },
+  { value: "💊", label: "Remédio", group: "Saúde", aliases: ["remedio", "remédio", "pilula", "medicine", "pill", "medicamento"] },
+  { value: "💉", label: "Vacina", group: "Saúde", aliases: ["vacina", "seringa", "syringe", "vaccine", "sangue"] },
+  { value: "🏥", label: "Hospital", group: "Saúde", aliases: ["hospital", "clinica", "clínica", "medical", "saude"] },
+  { value: "🫀", label: "Coração anatômico", group: "Saúde", aliases: ["coracao", "coração", "heart", "anatomico", "cardiologia"] },
+  { value: "🫁", label: "Pulmão", group: "Saúde", aliases: ["pulmao", "pulmão", "lungs", "respirar", "pneumo"] },
+  { value: "🦷", label: "Dente", group: "Saúde", aliases: ["dente", "tooth", "odonto", "dentista"] },
+  { value: "👁️", label: "Olho", group: "Saúde", aliases: ["olho", "eye", "visao", "visão", "oftalmo"] },
+  { value: "🩸", label: "Sangue", group: "Saúde", aliases: ["sangue", "blood", "doacao", "hemo"] },
+  { value: "⚕️", label: "Símbolo de Saúde", group: "Saúde", aliases: ["saude", "saúde", "medico", "médico", "medical", "hospital", "medicina", "caduceu"] },
   { value: "🩺", label: "Medicina", group: "Saúde", aliases: ["medicina", "medical", "medico", "médico", "saude", "saúde", "estetoscopio", "estetoscópio"] },
   { value: "🤰", label: "Obstetrícia", group: "Saúde", aliases: ["obstetricia", "obstetrícia", "gestante", "gestacao", "gestação", "gravidez", "pregnancy"] },
-  { value: "❤️", label: "Coração", group: "Comuns", aliases: ["coracao", "coração", "heart", "amor", "saude", "saúde"] },
-  { value: "👍", label: "Joia", group: "Comuns", aliases: ["joia", "curtir", "like", "thumbs up", "ok", "positivo"] },
+
+  // Trabalho
+  { value: "💼", label: "Trabalho", group: "Trabalho", aliases: ["trabalho", "work", "pasta", "maleta", "negocios", "job"] },
+  { value: "📊", label: "Gráfico", group: "Trabalho", aliases: ["grafico", "gráfico", "chart", "analytics", "dashboard"] },
+  { value: "📈", label: "Crescimento", group: "Trabalho", aliases: ["crescimento", "alta", "chart", "upward", "subindo", "sucesso", "investimento"] },
+  { value: "📉", label: "Queda", group: "Trabalho", aliases: ["queda", "perda", "downward", "descendo", "despesa"] },
+  { value: "📅", label: "Calendário", group: "Trabalho", aliases: ["calendario", "calendário", "calendar", "agenda", "data", "compromisso"] },
+  { value: "🧾", label: "Recibo", group: "Trabalho", aliases: ["recibo", "nota fiscal", "invoice", "pagamento", "financas"] },
+  { value: "📎", label: "Anexo", group: "Trabalho", aliases: ["anexo", "clip", "paperclip", "documento"] },
+  { value: "🗂️", label: "Arquivo", group: "Trabalho", aliases: ["arquivo", "card", "organizar", "index"] },
+  { value: "🖥️", label: "Computador", group: "Trabalho", aliases: ["computador", "desktop", "tela", "screen", "tecnologia"] },
+
+  // Estudo
+  { value: "📖", label: "Leitura", group: "Estudo", aliases: ["leitura", "ler", "livro", "book", "read"] },
+  { value: "🧪", label: "Laboratório", group: "Estudo", aliases: ["laboratorio", "laboratório", "quimica", "química", "chemistry", "ciencia"] },
+  { value: "🔬", label: "Microscópio", group: "Estudo", aliases: ["microscopio", "microscópio", "biologia", "pesquisa", "science"] },
+  { value: "✏️", label: "Lápis", group: "Estudo", aliases: ["lapis", "lápis", "pencil", "escrever", "write", "draft"] },
+  { value: "🎓", label: "Graduação", group: "Estudo", aliases: ["graduacao", "graduação", "formatura", "college", "universidade", "diploma"] },
+  { value: "📝", label: "Anotação", group: "Estudo", aliases: ["anotacao", "anotação", "nota", "note", "rascunho"] },
+
+  // Organização
   { value: "📁", label: "Pasta", group: "Organização", aliases: ["pasta", "folder", "arquivo", "organizar", "categoria"] },
-  { value: "📝", label: "Nota", group: "Organização", aliases: ["nota", "note", "anotacao", "anotação", "texto", "documento"] },
-  { value: "🏷️", label: "Tag", group: "Organização", aliases: ["tag", "etiqueta", "hashtag", "categoria"] },
-  { value: "💡", label: "Ideia", group: "Comuns", aliases: ["ideia", "lampada", "lâmpada", "insight"] },
-  { value: "🔥", label: "Fogo", group: "Comuns", aliases: ["fogo", "urgente", "hot", "importante"] },
-  { value: "⚠️", label: "Alerta", group: "Comuns", aliases: ["alerta", "aviso", "perigo", "warning"] },
-  { value: "✦", label: "Brilho", group: "Símbolos", aliases: ["brilho", "sparkle", "estrela"] },
-  { value: "✓", label: "Marcado", group: "Símbolos", aliases: ["check", "marcado", "feito"] },
-  { value: "◆", label: "Losango", group: "Símbolos", aliases: ["losango", "diamante", "diamond"] },
-  { value: "●", label: "Círculo", group: "Símbolos", aliases: ["circulo", "círculo", "circle", "bolinha"] },
-  { value: "■", label: "Quadrado", group: "Símbolos", aliases: ["quadrado", "square"] },
-  { value: "▲", label: "Triângulo", group: "Símbolos", aliases: ["triangulo", "triângulo", "triangle"] },
+  { value: "🗃️", label: "Caixa de Arquivos", group: "Organização", aliases: ["caixa", "box", "arquivo", "archive"] },
+  { value: "🏷️", label: "Etiqueta", group: "Organização", aliases: ["tag", "etiqueta", "hashtag", "categoria", "label"] },
+  { value: "📋", label: "Checklist", group: "Organização", aliases: ["checklist", "clipboard", "lista", "list", "tarefas"] },
+  { value: "🗓️", label: "Agenda", group: "Organização", aliases: ["agenda", "calendario", "compromisso"] },
+  { value: "🔍", label: "Busca", group: "Organização", aliases: ["busca", "procura", "search", "lupa"] },
+
+  // Finanças
+  { value: "💰", label: "Dinheiro", group: "Finanças", aliases: ["dinheiro", "money", "saco", "ouro", "gold", "riqueza"] },
+  { value: "💳", label: "Cartão", group: "Finanças", aliases: ["cartao", "cartão", "credit", "card", "banco", "pagamento"] },
+  { value: "🏦", label: "Banco", group: "Finanças", aliases: ["banco", "bank", "instituicao", "financas"] },
+  { value: "🧮", label: "Cálculo", group: "Finanças", aliases: ["calculo", "cálculo", "calculadora", "math", "contas"] },
+
+  // Casa
+  { value: "🏠", label: "Casa", group: "Casa", aliases: ["casa", "home", "lar", "house", "moradia"] },
+  { value: "🛒", label: "Compras", group: "Casa", aliases: ["compras", "carrinho", "cart", "supermercado", "shop"] },
+  { value: "🍽️", label: "Comida", group: "Casa", aliases: ["comida", "prato", "restaurante", "food", "jantar", "almoco"] },
+  { value: "🚗", label: "Carro", group: "Casa", aliases: ["carro", "car", "veiculo", "viagem", "transporte"] },
+  { value: "✈️", label: "Viagem", group: "Casa", aliases: ["viagem", "aviao", "avião", "flight", "travel", "turismo"] },
+
+  // Pessoas
+  { value: "👤", label: "Usuário", group: "Pessoas", aliases: ["usuario", "usuário", "user", "perfil", "pessoa", "profile"] },
+  { value: "👥", label: "Grupo", group: "Pessoas", aliases: ["grupo", "team", "equipe", "pessoas", "people"] },
+  { value: "❤️", label: "Coração", group: "Pessoas", aliases: ["coracao", "coração", "heart", "amor", "saude", "saúde"] },
+  { value: "👍", label: "Joia", group: "Pessoas", aliases: ["joia", "curtir", "like", "thumbs up", "ok", "positivo"] },
+
+  // Ideias
+  { value: "💡", label: "Ideia", group: "Ideias", aliases: ["ideia", "lampada", "lâmpada", "insight", "lightbulb", "criatividade"] },
+  { value: "💭", label: "Pensamento", group: "Ideias", aliases: ["pensamento", "bubble", "nuvem", "thought", "ideias"] },
+  { value: "💬", label: "Balão", group: "Ideias", aliases: ["balao", "balão", "chat", "conversa", "feedback", "comentario"] },
+  { value: "📣", label: "Megafone", group: "Ideias", aliases: ["megafone", "anuncio", "aviso", "novidade", "alerta"] },
+
+  // Status
+  { value: "🔥", label: "Fogo", group: "Status", aliases: ["fogo", "urgente", "hot", "importante", "fire"] },
+  { value: "⚠️", label: "Alerta", group: "Status", aliases: ["alerta", "aviso", "perigo", "warning", "atencao", "atenção"] },
+  { value: "💡", label: "Insight", group: "Status", aliases: ["insight", "ideia", "lampada"] },
+  { value: "❗", label: "Importante", group: "Status", aliases: ["importante", "atencao", "exclamacao", "perigo"] },
+  { value: "❓", label: "Dúvida", group: "Status", aliases: ["duvida", "dúvida", "pergunta", "question"] },
+  { value: "⏳", label: "Pendente", group: "Status", aliases: ["pendente", "ampulheta", "espera", "waiting", "time"] },
+  { value: "🚧", label: "Em andamento", group: "Status", aliases: ["construcao", "andamento", "progresso", "work"] },
+  { value: "🟢", label: "Ok", group: "Status", aliases: ["ok", "verde", "green", "sucesso", "ativo"] },
+  { value: "🔴", label: "Crítico", group: "Status", aliases: ["critico", "crítico", "erro", "danger", "cancelado", "parado"] },
+
+  // Símbolos
+  { value: "●", label: "Círculo Cheio", group: "Símbolos", aliases: ["circulo", "círculo", "circle", "bolinha", "dot"] },
+  { value: "○", label: "Círculo Vazio", group: "Símbolos", aliases: ["circulo", "círculo", "circle", "bolinha", "vazio"] },
+  { value: "■", label: "Quadrado Cheio", group: "Símbolos", aliases: ["quadrado", "square", "cheio"] },
+  { value: "□", label: "Quadrado Vazio", group: "Símbolos", aliases: ["quadrado", "square", "vazio"] },
+  { value: "▲", label: "Triângulo Cheio", group: "Símbolos", aliases: ["triangulo", "triângulo", "triangle"] },
+  { value: "△", label: "Triângulo Vazio", group: "Símbolos", aliases: ["triangulo", "triângulo", "triangle", "vazio"] },
+  { value: "◆", label: "Losango Cheio", group: "Símbolos", aliases: ["losango", "diamante", "diamond"] },
+  { value: "◇", label: "Losango Vazio", group: "Símbolos", aliases: ["losango", "diamante", "diamond", "vazio"] },
+  { value: "✦", label: "Brilho Quatro Pontas", group: "Símbolos", aliases: ["brilho", "sparkle", "estrela"] },
+  { value: "✧", label: "Brilho Vazio", group: "Símbolos", aliases: ["brilho", "sparkle", "estrela", "vazio"] },
   { value: "#", label: "Hashtag", group: "Símbolos", aliases: ["tag", "hashtag", "numero", "número"] },
-  { value: "!", label: "Importante", group: "Símbolos", aliases: ["importante", "alerta", "exclamacao", "exclamação"] },
-  { value: "?", label: "Pergunta", group: "Símbolos", aliases: ["pergunta", "duvida", "dúvida", "question"] },
+  { value: "!", label: "Exclamação", group: "Símbolos", aliases: ["exclamacao", "exclamação", "perigo", "alerta"] },
+  { value: "?", label: "Interrogação", group: "Símbolos", aliases: ["pergunta", "duvida", "dúvida", "question", "interrogacao"] },
+  { value: "+", label: "Mais", group: "Símbolos", aliases: ["mais", "plus", "adicionar", "soma"] },
+  { value: "−", label: "Menos", group: "Símbolos", aliases: ["menos", "minus", "subtracao", "remover"] },
 ];
 
 function templateContent(blocks) {
