@@ -7027,6 +7027,43 @@ body,
   outline-offset: 2px !important;
 }
 
+/* Correção específica para os botões nativos do Editor.js no TCloud Notes */
+.editorjs-host .ce-toolbar__plus,
+.editorjs-host .ce-toolbar__settings-btn,
+.ce-toolbar__plus,
+.ce-toolbar__settings-btn {
+  background: var(--bg-surface) !important;
+  border: 1px solid var(--border) !important;
+  color: var(--text) !important;
+  box-shadow: 0 4px 12px rgba(26, 33, 43, 0.08) !important;
+}
+
+.editorjs-host .ce-toolbar__plus:hover,
+.editorjs-host .ce-toolbar__settings-btn:hover,
+.ce-toolbar__plus:hover,
+.ce-toolbar__settings-btn:hover {
+  background: var(--bg-control) !important;
+  border-color: var(--border-strong) !important;
+  color: var(--text) !important;
+}
+
+.editorjs-host .ce-toolbar__plus:focus-visible,
+.editorjs-host .ce-toolbar__settings-btn:focus-visible,
+.ce-toolbar__plus:focus-visible,
+.ce-toolbar__settings-btn:focus-visible {
+  background: var(--bg-surface) !important;
+  color: var(--text) !important;
+}
+
+.editorjs-host .ce-toolbar__plus:active,
+.editorjs-host .ce-toolbar__settings-btn:active,
+.ce-toolbar__plus:active,
+.ce-toolbar__settings-btn:active {
+  background: var(--hover) !important;
+  color: var(--text) !important;
+}
+
+
 .editorjs-host .ce-popover:not(.ce-popover--inline),
 .editorjs-host .ce-popover:not(.ce-popover--inline) .ce-popover__container,
 .editorjs-host .ce-settings,
