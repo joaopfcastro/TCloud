@@ -7752,3 +7752,43 @@ body,
   text-align: center !important;
   display: block !important;
 }
+
+/* --- TCloud Editor Popover Portal System --- */
+#tcloud-notes-editor-popover-portal {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 999999;
+  overflow: visible;
+  contain: none;
+}
+
+#tcloud-notes-editor-popover-portal .tcloud-editor-popover-ported {
+  position: fixed !important;
+  pointer-events: auto;
+  z-index: 999999 !important;
+  max-width: calc(100vw - 20px);
+  box-sizing: border-box;
+  transform: none !important;
+  right: auto !important;
+  bottom: auto !important;
+}
+
+#tcloud-notes-editor-popover-portal .ce-popover__items,
+#tcloud-notes-editor-popover-portal .ce-settings,
+#tcloud-notes-editor-popover-portal .ce-conversion-toolbar {
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
+}
+
+/* Base variables override for Editor.js popovers inside the portal */
+#tcloud-notes-editor-popover-portal .ce-popover,
+#tcloud-notes-editor-popover-portal .ce-settings,
+#tcloud-notes-editor-popover-portal .ce-conversion-toolbar {
+  --color-background: rgba(38, 38, 40, 0.94) !important;
+  --color-text-primary: var(--text) !important;
+  --color-text-secondary: var(--muted) !important;
+  --color-border: rgba(255, 255, 255, 0.1) !important;
+  --color-background-hover: rgba(255, 255, 255, 0.08) !important;
+  --color-background-selected: rgba(10, 132, 255, 0.16) !important;
+}

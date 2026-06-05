@@ -144,7 +144,7 @@ test.describe("TCloud Notes EditorJS popovers", () => {
     const searchField = page.locator(".tcloud-editor-popover-positioned .cdx-search-field").first();
     await expect(searchField).toBeVisible();
     await searchField.click();
-    await page.keyboard.type("tit");
+    await page.keyboard.type("tit", { delay: 150 });
     const filterText = await page.evaluate(() => {
       const active = document.activeElement as HTMLInputElement | HTMLElement | null;
       return "value" in (active || {}) ? (active as HTMLInputElement).value : active?.textContent || "";

@@ -55,6 +55,7 @@ export class EditorJsPopoverController {
     this.verifyFrame = null;
     this.viewportListenersAttached = false;
     this.connected = false;
+    this.portedInfo = null;
 
     this.handlePointerDown = this.handlePointerDown.bind(this);
     this.handleClick = this.handleClick.bind(this);
@@ -68,6 +69,16 @@ export class EditorJsPopoverController {
     this.ownerDocument.addEventListener("pointerdown", this.handlePointerDown, true);
     this.ownerDocument.addEventListener("click", this.handleClick, true);
     this.ownerDocument.addEventListener("keydown", this.handleKeyDown, true);
+
+    if (this.root && typeof this.root.contains === "function") {
+      const originalContains = this.root.contains;
+      const portal = this.getPortal();
+      this.root.contains = function(other) {
+        if (portal && portal.contains(other)) return true;
+        return originalContains.call(this, other);
+      };
+      this.originalContains = originalContains;
+    }
   }
 
   disconnect() {
@@ -76,6 +87,10 @@ export class EditorJsPopoverController {
     this.ownerDocument.removeEventListener("pointerdown", this.handlePointerDown, true);
     this.ownerDocument.removeEventListener("click", this.handleClick, true);
     this.ownerDocument.removeEventListener("keydown", this.handleKeyDown, true);
+    if (this.root && this.originalContains) {
+      this.root.contains = this.originalContains;
+      this.originalContains = null;
+    }
     this.clear("disconnect");
   }
 
@@ -106,6 +121,8 @@ export class EditorJsPopoverController {
   }
 
   handleKeyDown(event) {
+    const el = document.activeElement;
+    this.prevEl = el;
     if (event.key === "Escape") {
       this.clear("escape");
       return;
@@ -175,11 +192,77 @@ export class EditorJsPopoverController {
       .sort((a, b) => b.area - a.area)[0] || null;
   }
 
+  getPortal() {
+    let portal = this.ownerDocument.getElementById("tcloud-notes-editor-popover-portal");
+    if (!portal) {
+      portal = this.ownerDocument.createElement("div");
+      portal.id = "tcloud-notes-editor-popover-portal";
+      portal.className = "codex-editor";
+      this.ownerDocument.body.appendChild(portal);
+    }
+    return portal;
+  }
+
+  portElement(element) {
+    const portal = this.getPortal();
+    if (!element || element.parentNode === portal) return;
+
+    this.restorePortedElement();
+
+    const parent = element.parentNode;
+    if (!parent) return;
+
+    const placeholder = this.ownerDocument.createComment("tcloud-notes-popover-placeholder");
+    parent.insertBefore(placeholder, element);
+
+    portal.appendChild(element);
+    element.classList.add("tcloud-editor-popover-ported");
+
+    this.portedInfo = {
+      element,
+      parent,
+      placeholder
+    };
+  }
+
+  restorePortedElement() {
+    if (!this.portedInfo) return;
+    const { element, parent, placeholder } = this.portedInfo;
+    const portal = this.getPortal();
+
+    if (element && element.parentNode === portal) {
+      if (placeholder && placeholder.parentNode === parent) {
+        parent.insertBefore(element, placeholder);
+      } else if (parent) {
+        parent.appendChild(element);
+      }
+    }
+
+    if (placeholder && placeholder.parentNode) {
+      placeholder.parentNode.removeChild(placeholder);
+    }
+
+    if (element) {
+      element.classList.remove("tcloud-editor-popover-ported");
+    }
+
+    this.portedInfo = null;
+  }
+
   attachMenu(menu, surface) {
-    if (this.menu && this.menu !== menu) this.resetElement(this.menu);
-    if (this.surface && this.surface !== surface) this.resetElement(this.surface);
+    if (this.menu && this.menu !== menu) {
+      this.resetElement(this.menu);
+      this.restorePortedElement();
+    }
+    if (this.surface && this.surface !== surface) {
+      this.resetElement(this.surface);
+    }
+
     this.menu = menu;
     this.surface = surface;
+
+    this.portElement(this.menu);
+
     this.menu.classList.add(POSITIONED_CLASS);
     this.surface.classList.add(POSITIONED_CLASS);
     this.attachViewportListeners();
@@ -194,50 +277,38 @@ export class EditorJsPopoverController {
 
     const bounds = visualBounds(this.viewportRoot);
     const anchorRect = this.anchor.getBoundingClientRect();
-    const maxViewportWidth = Math.max(180, bounds.right - bounds.left - VIEWPORT_MARGIN * 2);
+    const gap = POPOVER_GAP;
+    const margin = VIEWPORT_MARGIN;
 
-    this.surface.style.setProperty("position", "fixed", "important");
-    this.surface.style.setProperty("right", "auto", "important");
-    this.surface.style.setProperty("bottom", "auto", "important");
-    this.surface.style.setProperty("transform", "none", "important");
-    this.surface.style.setProperty("max-width", `${maxViewportWidth}px`, "important");
-
+    // READ phase
     const rect = measuredRect || this.surface.getBoundingClientRect();
-    const width = Math.min(Math.max(rect.width || DEFAULT_POPOVER_WIDTH, 180), maxViewportWidth);
+    const width = Math.min(Math.max(rect.width || DEFAULT_POPOVER_WIDTH, 180), bounds.right - bounds.left - margin * 2);
     const height = Math.max(rect.height || DEFAULT_POPOVER_HEIGHT, MIN_POPOVER_HEIGHT);
-    const availableBelow = bounds.bottom - anchorRect.bottom - POPOVER_GAP - VIEWPORT_MARGIN;
-    const availableAbove = anchorRect.top - bounds.top - POPOVER_GAP - VIEWPORT_MARGIN;
-    const openBelow = availableBelow >= Math.min(height, 260) || availableBelow >= availableAbove;
-    const availableHeight = openBelow ? availableBelow : availableAbove;
-    const viewportHeight = Math.max(72, bounds.bottom - bounds.top - VIEWPORT_MARGIN * 2);
-    const maxHeight = clamp(Math.max(72, availableHeight), Math.min(72, viewportHeight), viewportHeight);
-    const visibleHeight = Math.min(height, maxHeight);
-    const rawTop = openBelow ? anchorRect.bottom + POPOVER_GAP : anchorRect.top - POPOVER_GAP - visibleHeight;
+
+    const availableBelow = bounds.bottom - anchorRect.bottom - gap - margin;
+    const availableAbove = anchorRect.top - bounds.top - gap - margin;
+    const shouldOpenAbove = availableBelow < Math.min(height, 220) && availableAbove > availableBelow;
+
+    const maxHeight = Math.max(160, Math.min(420, shouldOpenAbove ? availableAbove : availableBelow));
+    const top = shouldOpenAbove
+      ? Math.max(bounds.top + margin, anchorRect.top - Math.min(height, maxHeight) - gap)
+      : Math.min(bounds.bottom - margin - Math.min(height, maxHeight), anchorRect.bottom + gap);
+
     const rawLeft = this.anchor.matches(".ce-toolbar__settings-btn") ? anchorRect.right - width : anchorRect.left;
-    const left = clamp(rawLeft, bounds.left + VIEWPORT_MARGIN, bounds.right - width - VIEWPORT_MARGIN);
-    const top = clamp(rawTop, bounds.top + VIEWPORT_MARGIN, bounds.bottom - visibleHeight - VIEWPORT_MARGIN);
+    const left = clamp(
+      rawLeft,
+      bounds.left + margin,
+      bounds.right - margin - width
+    );
 
+    // WRITE phase
     this.applyPosition(left, top, maxHeight, width);
-    const placedRect = this.surface.getBoundingClientRect();
-    if (Math.abs(placedRect.left - left) > 1 || Math.abs(placedRect.top - top) > 1) {
-      let adjustedLeft = left + (left - placedRect.left);
-      let adjustedTop = top + (top - placedRect.top);
-      this.applyPosition(adjustedLeft, adjustedTop, maxHeight, width);
 
-      const finalRect = this.surface.getBoundingClientRect();
-      if (finalRect.left < bounds.left + VIEWPORT_MARGIN) {
-        adjustedLeft += bounds.left + VIEWPORT_MARGIN - finalRect.left;
-      } else if (finalRect.right > bounds.right - VIEWPORT_MARGIN) {
-        adjustedLeft -= finalRect.right - (bounds.right - VIEWPORT_MARGIN);
-      }
-      if (finalRect.top < bounds.top + VIEWPORT_MARGIN) {
-        adjustedTop += bounds.top + VIEWPORT_MARGIN - finalRect.top;
-      } else if (finalRect.bottom > bounds.bottom - VIEWPORT_MARGIN) {
-        adjustedTop -= finalRect.bottom - (bounds.bottom - VIEWPORT_MARGIN);
-      }
-      if (Math.abs(finalRect.left - left) > 1 || Math.abs(finalRect.top - top) > 1 || finalRect.bottom > bounds.bottom - VIEWPORT_MARGIN) {
-        this.applyPosition(adjustedLeft, adjustedTop, maxHeight, width);
-      }
+    // Apply max-height to internal list for scrolling if needed
+    const list = this.menu?.querySelector?.(".ce-popover__items, .ce-settings__items, .ce-settings, .ce-conversion-toolbar");
+    if (list && list !== this.menu) {
+      list.style.setProperty("max-height", `calc(${Math.round(maxHeight)}px - 16px)`, "important");
+      list.style.setProperty("overflow-y", "auto", "important");
     }
   }
 
@@ -261,6 +332,9 @@ export class EditorJsPopoverController {
     if (this.verifyFrame) cancelAnimationFrame(this.verifyFrame);
     this.positionFrame = null;
     this.verifyFrame = null;
+
+    this.restorePortedElement();
+
     this.resetElement(this.surface);
     if (this.menu !== this.surface) this.resetElement(this.menu);
     this.surface = null;
@@ -311,6 +385,12 @@ export class EditorJsPopoverController {
       "max-width",
       "--tcloud-editor-popover-max-height",
     ].forEach((property) => element.style.removeProperty(property));
+
+    const list = element.querySelector?.(".ce-popover__items, .ce-settings__items, .ce-settings, .ce-conversion-toolbar");
+    if (list && list !== element) {
+      list.style.removeProperty("max-height");
+      list.style.removeProperty("overflow-y");
+    }
   }
 
   surfaceFor(menu) {
