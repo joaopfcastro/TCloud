@@ -7121,8 +7121,8 @@ body,
 .notes-app,
 .editorjs-host,
 .codex-editor {
-  --notes-editor-menu-bg: rgba(21, 25, 31, 0.96);
-  --notes-editor-menu-bg-strong: rgba(23, 27, 34, 0.98);
+  --notes-editor-menu-bg: #15191f;
+  --notes-editor-menu-bg-strong: #171b22;
   --notes-editor-menu-border: rgba(255, 255, 255, 0.1);
   --notes-editor-menu-text: #e8eaed;
   --notes-editor-menu-muted: #a8b0bd;
@@ -7474,19 +7474,38 @@ body,
   border-color: var(--notes-editor-menu-border) !important;
 }
 
+.editorjs-host .ce-inline-toolbar,
+.ce-inline-toolbar {
+  box-shadow: var(--notes-editor-menu-shadow) !important;
+  backdrop-filter: blur(18px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(160%) !important;
+}
+
 .editorjs-host .ce-popover,
 .editorjs-host .ce-popover__container,
-.editorjs-host .ce-inline-toolbar,
 .editorjs-host .ce-conversion-toolbar,
 .editorjs-host .ce-settings,
 .ce-popover,
 .ce-popover__container,
-.ce-inline-toolbar,
 .ce-conversion-toolbar,
 .ce-settings {
   box-shadow: var(--notes-editor-menu-shadow) !important;
-  backdrop-filter: blur(18px) saturate(160%) !important;
-  -webkit-backdrop-filter: blur(18px) saturate(160%) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.ce-popover.tcloud-editor-popover-positioned,
+.ce-settings.tcloud-editor-popover-positioned,
+.ce-conversion-toolbar.tcloud-editor-popover-positioned {
+  position: fixed !important;
+  z-index: 99999 !important;
+  overflow: hidden !important;
+  contain: layout paint style;
+}
+
+.ce-popover.tcloud-editor-popover-positioned .ce-popover__items {
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
 }
 
 .editorjs-host .ce-popover__items,
