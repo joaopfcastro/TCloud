@@ -467,10 +467,6 @@ class TCloudInlineToolbarController {
     this.toolbar = this.buildToolbar();
     this.onSelectionChange = () => this.scheduleSelectionSync("selectionchange");
     this.onPointerDown = (event) => this.handlePointerDown(event);
-    this.onPointerUp = () => this.scheduleSelectionSync("pointerup");
-    this.onMouseUp = () => this.scheduleSelectionSync("mouseup");
-    this.onTouchEnd = () => this.scheduleSelectionSync("touchend");
-    this.onKeyUp = () => this.scheduleSelectionSync("keyup");
     this.onEditorPopoverOpen = () => this.setExternalEditorMenuOpen(true, "editor-popover");
     this.onEditorPopoverClose = () => this.setExternalEditorMenuOpen(false, "editor-popover");
     this.onInput = (event) => {
@@ -496,10 +492,6 @@ class TCloudInlineToolbarController {
     document.body.appendChild(this.toolbar);
     document.addEventListener("selectionchange", this.onSelectionChange);
     document.addEventListener("pointerdown", this.onPointerDown, true);
-    document.addEventListener("pointerup", this.onPointerUp, true);
-    document.addEventListener("mouseup", this.onMouseUp, true);
-    document.addEventListener("touchend", this.onTouchEnd, true);
-    document.addEventListener("keyup", this.onKeyUp, true);
     document.addEventListener("input", this.onInput, true);
     document.addEventListener("focusin", this.onFocusIn, true);
     document.addEventListener("keydown", this.onKeyDown, true);
@@ -515,10 +507,6 @@ class TCloudInlineToolbarController {
   destroy() {
     document.removeEventListener("selectionchange", this.onSelectionChange);
     document.removeEventListener("pointerdown", this.onPointerDown, true);
-    document.removeEventListener("pointerup", this.onPointerUp, true);
-    document.removeEventListener("mouseup", this.onMouseUp, true);
-    document.removeEventListener("touchend", this.onTouchEnd, true);
-    document.removeEventListener("keyup", this.onKeyUp, true);
     document.removeEventListener("input", this.onInput, true);
     document.removeEventListener("focusin", this.onFocusIn, true);
     document.removeEventListener("keydown", this.onKeyDown, true);
@@ -1146,16 +1134,7 @@ class TCloudInlineToolbarController {
   }
 
   externalEditorMenuOpen() {
-    const selectors = [
-      "#slash-menu:not(.hidden)",
-      ".tcloud-context-menu:not(.hidden)",
-      ".modal:not(.hidden)",
-      ".appearance-popover:not(.hidden)",
-      ".ce-popover:not(.ce-popover--inline)",
-      ".ce-settings",
-      ".ce-conversion-toolbar",
-    ];
-    return selectors.some((selector) => Array.from(document.querySelectorAll(selector)).some(visibleElement));
+    return this.isExternalEditorMenuActive;
   }
 
   hideNativeInlineToolbar() {
