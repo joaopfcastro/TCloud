@@ -7632,6 +7632,49 @@ body,
   opacity: 0.82 !important;
 }
 
+.tcloud-editorjs-floating-menu,
+.tcloud-editorjs-floating-surface {
+  position: fixed !important;
+  right: auto !important;
+  bottom: auto !important;
+  z-index: calc(var(--z-menu) + 30) !important;
+  box-sizing: border-box !important;
+  max-width: calc(100vw - 20px) !important;
+  max-height: var(--tcloud-editor-menu-max-height, calc(100vh - 20px)) !important;
+  overflow: visible !important;
+}
+
+.tcloud-editorjs-floating-menu.ce-popover:not(.ce-popover--inline) .ce-popover__container {
+  position: relative !important;
+  inset: auto !important;
+  left: 0 !important;
+  top: 0 !important;
+  transform: none !important;
+  display: flex !important;
+  flex-direction: column !important;
+  max-height: var(--tcloud-editor-menu-max-height, calc(100vh - 20px)) !important;
+  overflow: hidden !important;
+}
+
+.tcloud-editorjs-floating-surface.ce-popover__container {
+  display: flex !important;
+  flex-direction: column !important;
+  max-height: var(--tcloud-editor-menu-max-height, calc(100vh - 20px)) !important;
+  overflow: hidden !important;
+}
+
+.tcloud-editorjs-floating-menu.ce-popover:not(.ce-popover--inline) .ce-popover__items,
+.tcloud-editorjs-floating-surface.ce-popover__container .ce-popover__items,
+.tcloud-editorjs-floating-menu.ce-settings,
+.tcloud-editorjs-floating-surface.ce-settings,
+.tcloud-editorjs-floating-menu.ce-conversion-toolbar,
+.tcloud-editorjs-floating-surface.ce-conversion-toolbar {
+  max-height: var(--tcloud-editor-menu-max-height, calc(100vh - 20px)) !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
+}
+
 /* Note Cover Popover Specific Rules */
 .note-cover-popover {
   display: flex !important;

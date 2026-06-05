@@ -1,4 +1,4 @@
-import { EditorAdapter, buildBlock, normalizeEditorData } from "./editor-adapter.js?v=notes-inline-selection-20260529-1";
+import { EditorAdapter, buildBlock, normalizeEditorData } from "./editor-adapter.js?v=notes-editorjs-popover-flip-20260605-4";
 import { NotesApi } from "./notes-api.js";
 import { NotesFilePicker } from "./file-picker.js";
 import { IMPORT_ACCEPT, isSupportedImportFile, readFileAsText } from "./export-import.js";

@@ -451,6 +451,176 @@ function toggleInlineElement(range, selector, tagName, attributes = {}) {
   return wrapRangeWithElement(range, tagName, attributes);
 }
 
+class TCloudEditorJsMenuPositioner {
+  constructor(adapter) {
+    this.adapter = adapter;
+    this.root = holderElement(adapter.holder);
+    this.app = this.root?.closest?.(".notes-app") || document.body;
+    this.lastTrigger = null;
+    this.frame = null;
+    this.menuSelector = ".ce-popover:not(.ce-popover--inline), .ce-settings, .ce-conversion-toolbar";
+    this.triggerSelector = ".ce-toolbar__plus, .ce-toolbar__settings-btn";
+    this.onPointerDown = (event) => this.rememberTrigger(event.target);
+    this.onClick = (event) => {
+      this.rememberTrigger(event.target);
+      this.schedule();
+    };
+    this.onKeyDown = (event) => {
+      if (event.key === "Escape") this.clearPositionedMenus();
+      else this.schedule();
+    };
+    this.onViewportChange = () => this.schedule();
+    this.observer = new MutationObserver(() => this.schedule());
+
+    document.addEventListener("pointerdown", this.onPointerDown, true);
+    document.addEventListener("click", this.onClick, true);
+    document.addEventListener("keydown", this.onKeyDown, true);
+    window.addEventListener("resize", this.onViewportChange, { passive: true });
+    window.addEventListener("scroll", this.onViewportChange, true);
+    window.visualViewport?.addEventListener("resize", this.onViewportChange, { passive: true });
+    window.visualViewport?.addEventListener("scroll", this.onViewportChange, { passive: true });
+    this.observer.observe(document.body, { childList: true, subtree: true });
+  }
+
+  destroy() {
+    document.removeEventListener("pointerdown", this.onPointerDown, true);
+    document.removeEventListener("click", this.onClick, true);
+    document.removeEventListener("keydown", this.onKeyDown, true);
+    window.removeEventListener("resize", this.onViewportChange);
+    window.removeEventListener("scroll", this.onViewportChange, true);
+    window.visualViewport?.removeEventListener("resize", this.onViewportChange);
+    window.visualViewport?.removeEventListener("scroll", this.onViewportChange);
+    if (this.frame) cancelAnimationFrame(this.frame);
+    this.observer?.disconnect();
+    this.clearPositionedMenus();
+  }
+
+  rememberTrigger(target) {
+    const trigger = target?.closest?.(this.triggerSelector);
+    if (!trigger || !this.root?.contains(trigger)) return;
+    this.lastTrigger = trigger;
+  }
+
+  schedule() {
+    if (this.frame) cancelAnimationFrame(this.frame);
+    this.frame = requestAnimationFrame(() => {
+      this.frame = null;
+      this.positionOpenMenus();
+    });
+  }
+
+  positionOpenMenus() {
+    const menus = Array.from(document.querySelectorAll(this.menuSelector));
+    const openMenus = menus.filter((menu) => this.root?.contains(menu) && this.isMenuOpen(menu));
+    menus.forEach((menu) => {
+      if (!openMenus.includes(menu)) this.resetMenu(menu);
+    });
+    openMenus.forEach((menu) => this.positionMenu(menu));
+  }
+
+  isMenuOpen(menu) {
+    const box = this.menuBox(menu);
+    if (box !== menu) return visibleElement(box);
+    return visibleElement(menu);
+  }
+
+  clearPositionedMenus() {
+    document.querySelectorAll(".tcloud-editorjs-floating-menu").forEach((menu) => this.resetMenu(menu));
+    document.querySelectorAll(".tcloud-editorjs-floating-surface").forEach((surface) => this.resetSurface(surface));
+  }
+
+  resetMenu(menu) {
+    menu.classList.remove("tcloud-editorjs-floating-menu");
+    this.resetSurface(this.menuBox(menu));
+  }
+
+  resetSurface(surface) {
+    if (!surface) return;
+    surface.classList.remove("tcloud-editorjs-floating-surface");
+    surface.style.removeProperty("position");
+    surface.style.removeProperty("left");
+    surface.style.removeProperty("top");
+    surface.style.removeProperty("right");
+    surface.style.removeProperty("bottom");
+    surface.style.removeProperty("max-height");
+    surface.style.removeProperty("max-width");
+    surface.style.removeProperty("--tcloud-editor-menu-max-height");
+  }
+
+  menuBox(menu) {
+    return menu.matches(".ce-popover") ? (menu.querySelector(":scope > .ce-popover__container") || menu) : menu;
+  }
+
+  bounds() {
+    const viewport = window.visualViewport;
+    const viewportRect = {
+      left: viewport?.offsetLeft || 0,
+      top: viewport?.offsetTop || 0,
+      right: (viewport?.offsetLeft || 0) + (viewport?.width || window.innerWidth),
+      bottom: (viewport?.offsetTop || 0) + (viewport?.height || window.innerHeight),
+    };
+    const appRect = this.app?.getBoundingClientRect?.() || viewportRect;
+    return {
+      left: Math.max(viewportRect.left, appRect.left),
+      top: Math.max(viewportRect.top, appRect.top),
+      right: Math.min(viewportRect.right, appRect.right),
+      bottom: Math.min(viewportRect.bottom, appRect.bottom),
+    };
+  }
+
+  anchorFor(menu) {
+    if (this.lastTrigger?.isConnected && this.root?.contains(this.lastTrigger)) return this.lastTrigger;
+    const selector = menu.matches(".ce-settings") ? ".ce-toolbar__settings-btn" : ".ce-toolbar__plus";
+    return this.root?.querySelector?.(`${selector}.ce-toolbar__plus--active, ${selector}.ce-toolbar__settings-btn--active`) ||
+      this.root?.querySelector?.(selector) ||
+      menu.closest?.(".ce-toolbar")?.querySelector?.(this.triggerSelector);
+  }
+
+  positionMenu(menu) {
+    const anchor = this.anchorFor(menu);
+    if (!anchor) return;
+    const bounds = this.bounds();
+    const margin = 10;
+    const gap = 8;
+    const anchorRect = anchor.getBoundingClientRect();
+    const surface = this.menuBox(menu);
+
+    menu.classList.add("tcloud-editorjs-floating-menu");
+    surface.classList.add("tcloud-editorjs-floating-surface");
+    surface.style.setProperty("position", "fixed", "important");
+    surface.style.setProperty("right", "auto", "important");
+    surface.style.setProperty("bottom", "auto", "important");
+    surface.style.setProperty("max-width", `${Math.max(180, bounds.right - bounds.left - (margin * 2))}px`, "important");
+
+    const rect = surface.getBoundingClientRect();
+    const width = Math.max(rect.width || 260, 180);
+    const height = Math.max(rect.height || 240, 80);
+    const availableBelow = bounds.bottom - anchorRect.bottom - gap - margin;
+    const availableAbove = anchorRect.top - bounds.top - gap - margin;
+    const openBelow = availableBelow >= Math.min(height, 260) || availableBelow >= availableAbove;
+    const maxHeight = Math.max(132, openBelow ? availableBelow : availableAbove);
+    const rawTop = openBelow ? anchorRect.bottom + gap : anchorRect.top - gap - Math.min(height, maxHeight);
+    const rawLeft = menu.matches(".ce-settings") ? anchorRect.right - width : anchorRect.left;
+    const left = clampNumber(rawLeft, bounds.left + margin, Math.max(bounds.left + margin, bounds.right - width - margin));
+    const top = clampNumber(rawTop, bounds.top + margin, Math.max(bounds.top + margin, bounds.bottom - Math.min(height, maxHeight) - margin));
+
+    surface.style.setProperty("left", `${left}px`, "important");
+    surface.style.setProperty("top", `${top}px`, "important");
+    surface.style.setProperty("max-height", `${maxHeight}px`, "important");
+    surface.style.setProperty("--tcloud-editor-menu-max-height", `${maxHeight}px`);
+
+    const placedRect = surface.getBoundingClientRect();
+    const adjustedLeft = left + (left - placedRect.left);
+    const adjustedTop = top + (top - placedRect.top);
+    if (Math.abs(placedRect.left - left) > 1) {
+      surface.style.setProperty("left", `${adjustedLeft}px`, "important");
+    }
+    if (Math.abs(placedRect.top - top) > 1) {
+      surface.style.setProperty("top", `${adjustedTop}px`, "important");
+    }
+  }
+}
+
 class TCloudInlineToolbarController {
   constructor(adapter) {
     this.adapter = adapter;
@@ -1292,6 +1462,7 @@ export class EditorAdapter {
     this.historyDebounceTimeout = null;
     this.isUndoingOrRedoing = false;
     this.toolbarController = null;
+    this.menuPositioner = null;
     this.lastSavedContent = normalizeEditorData(null);
   }
 
@@ -1489,6 +1660,9 @@ export class EditorAdapter {
 
     this.readyPromise = this.editor.isReady;
     await this.readyPromise;
+    if (!this.menuPositioner) {
+      this.menuPositioner = new TCloudEditorJsMenuPositioner(this);
+    }
     if (!this.toolbarController) {
       this.toolbarController = new TCloudInlineToolbarController(this);
     }
