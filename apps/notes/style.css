@@ -7121,17 +7121,35 @@ body,
 .notes-app,
 .editorjs-host,
 .codex-editor {
-  --tcloud-editor-menu-bg: rgba(18, 21, 26, 0.94);
-  --tcloud-editor-menu-bg-strong: rgba(24, 28, 35, 0.98);
-  --tcloud-editor-menu-border: rgba(255, 255, 255, 0.13);
-  --tcloud-editor-menu-text: #f8fafc;
-  --tcloud-editor-menu-muted: #c3cad5;
-  --tcloud-editor-menu-hover: rgba(255, 255, 255, 0.09);
-  --tcloud-editor-menu-active: rgba(52, 120, 246, 0.28);
-  --tcloud-editor-menu-danger: #ff8a8a;
-  --tcloud-editor-menu-danger-bg: rgba(255, 107, 107, 0.14);
-  --tcloud-editor-menu-shadow: 0 18px 44px rgba(0, 0, 0, 0.24), 0 2px 8px rgba(0, 0, 0, 0.18);
-  --tcloud-editor-menu-radius: 13px;
+  --notes-editor-menu-bg: rgba(21, 25, 31, 0.96);
+  --notes-editor-menu-bg-strong: rgba(23, 27, 34, 0.98);
+  --notes-editor-menu-border: rgba(255, 255, 255, 0.1);
+  --notes-editor-menu-text: #e8eaed;
+  --notes-editor-menu-muted: #a8b0bd;
+  --notes-editor-menu-disabled: rgba(168, 176, 189, 0.42);
+  --notes-editor-menu-hover: rgba(255, 255, 255, 0.08);
+  --notes-editor-menu-active: rgba(52, 120, 246, 0.24);
+  --notes-editor-menu-danger: #ff8a8a;
+  --notes-editor-menu-danger-bg: rgba(255, 107, 107, 0.14);
+  --notes-editor-menu-shadow: 0 22px 54px rgba(0, 0, 0, 0.34), 0 2px 8px rgba(0, 0, 0, 0.22);
+  --notes-editor-menu-radius: 13px;
+  --notes-editor-toolbar-button-bg: rgba(255, 255, 255, 0.98);
+  --notes-editor-toolbar-button-border: rgba(36, 40, 45, 0.13);
+  --notes-editor-toolbar-button-text: #1f242b;
+  --notes-editor-toolbar-button-hover: #f4f6f8;
+  --notes-editor-toolbar-button-active: #eef2f6;
+  --notes-editor-toolbar-button-shadow: 0 4px 12px rgba(26, 33, 43, 0.1);
+  --tcloud-editor-menu-bg: var(--notes-editor-menu-bg);
+  --tcloud-editor-menu-bg-strong: var(--notes-editor-menu-bg-strong);
+  --tcloud-editor-menu-border: var(--notes-editor-menu-border);
+  --tcloud-editor-menu-text: var(--notes-editor-menu-text);
+  --tcloud-editor-menu-muted: var(--notes-editor-menu-muted);
+  --tcloud-editor-menu-hover: var(--notes-editor-menu-hover);
+  --tcloud-editor-menu-active: var(--notes-editor-menu-active);
+  --tcloud-editor-menu-danger: var(--notes-editor-menu-danger);
+  --tcloud-editor-menu-danger-bg: var(--notes-editor-menu-danger-bg);
+  --tcloud-editor-menu-shadow: var(--notes-editor-menu-shadow);
+  --tcloud-editor-menu-radius: var(--notes-editor-menu-radius);
 }
 
 .editorjs-host .ce-toolbar,
@@ -7183,11 +7201,11 @@ body,
   max-height: var(--block-action-size, 34px) !important;
   margin: 0 !important;
   padding: 0 !important;
-  border: 1px solid var(--tcloud-editor-menu-border) !important;
+  border: 1px solid var(--notes-editor-toolbar-button-border) !important;
   border-radius: 9px !important;
-  background: var(--tcloud-editor-menu-bg) !important;
-  color: var(--tcloud-editor-menu-muted) !important;
-  box-shadow: var(--tcloud-editor-menu-shadow) !important;
+  background: var(--notes-editor-toolbar-button-bg) !important;
+  color: var(--notes-editor-toolbar-button-text) !important;
+  box-shadow: var(--notes-editor-toolbar-button-shadow) !important;
   cursor: pointer !important;
   pointer-events: auto !important;
 }
@@ -7196,8 +7214,9 @@ body,
 .editorjs-host .ce-toolbar__plus:focus-visible,
 .editorjs-host .ce-toolbar__settings-btn:hover,
 .editorjs-host .ce-toolbar__settings-btn:focus-visible {
-  background: var(--tcloud-editor-menu-hover) !important;
-  color: var(--tcloud-editor-menu-text) !important;
+  background: var(--notes-editor-toolbar-button-hover) !important;
+  border-color: rgba(36, 40, 45, 0.22) !important;
+  color: var(--notes-editor-toolbar-button-text) !important;
 }
 
 .editorjs-host .ce-toolbar__plus:focus-visible,
@@ -7211,35 +7230,35 @@ body,
 .editorjs-host .ce-toolbar__settings-btn,
 .ce-toolbar__plus,
 .ce-toolbar__settings-btn {
-  background: var(--bg-surface) !important;
-  border: 1px solid var(--border) !important;
-  color: var(--text) !important;
-  box-shadow: 0 4px 12px rgba(26, 33, 43, 0.08) !important;
+  background: var(--notes-editor-toolbar-button-bg) !important;
+  border: 1px solid var(--notes-editor-toolbar-button-border) !important;
+  color: var(--notes-editor-toolbar-button-text) !important;
+  box-shadow: var(--notes-editor-toolbar-button-shadow) !important;
 }
 
 .editorjs-host .ce-toolbar__plus:hover,
 .editorjs-host .ce-toolbar__settings-btn:hover,
 .ce-toolbar__plus:hover,
 .ce-toolbar__settings-btn:hover {
-  background: var(--bg-control) !important;
-  border-color: var(--border-strong) !important;
-  color: var(--text) !important;
+  background: var(--notes-editor-toolbar-button-hover) !important;
+  border-color: rgba(36, 40, 45, 0.22) !important;
+  color: var(--notes-editor-toolbar-button-text) !important;
 }
 
 .editorjs-host .ce-toolbar__plus:focus-visible,
 .editorjs-host .ce-toolbar__settings-btn:focus-visible,
 .ce-toolbar__plus:focus-visible,
 .ce-toolbar__settings-btn:focus-visible {
-  background: var(--bg-surface) !important;
-  color: var(--text) !important;
+  background: var(--notes-editor-toolbar-button-bg) !important;
+  color: var(--notes-editor-toolbar-button-text) !important;
 }
 
 .editorjs-host .ce-toolbar__plus:active,
 .editorjs-host .ce-toolbar__settings-btn:active,
 .ce-toolbar__plus:active,
 .ce-toolbar__settings-btn:active {
-  background: var(--hover) !important;
-  color: var(--text) !important;
+  background: var(--notes-editor-toolbar-button-active) !important;
+  color: var(--notes-editor-toolbar-button-text) !important;
 }
 
 
@@ -7385,6 +7404,232 @@ body,
 .appearance-popover {
   border-radius: var(--tcloud-editor-menu-radius) !important;
   box-shadow: var(--tcloud-editor-menu-shadow) !important;
+}
+
+/* Editor.js floating controls: keep block buttons light and native menus dark. */
+.editorjs-host .ce-toolbar__plus,
+.editorjs-host .ce-toolbar__settings-btn,
+.notes-app.is-compact-window .editorjs-host .ce-toolbar__plus,
+.notes-app.is-compact-window .editorjs-host .ce-toolbar__settings-btn,
+.notes-app.is-mobile-sidebar-drawer .editorjs-host .ce-toolbar__plus,
+.notes-app.is-mobile-sidebar-drawer .editorjs-host .ce-toolbar__settings-btn,
+.ce-toolbar__plus,
+.ce-toolbar__settings-btn {
+  background: var(--notes-editor-toolbar-button-bg) !important;
+  border: 1px solid var(--notes-editor-toolbar-button-border) !important;
+  color: var(--notes-editor-toolbar-button-text) !important;
+  box-shadow: var(--notes-editor-toolbar-button-shadow) !important;
+}
+
+.editorjs-host .ce-toolbar__plus:hover,
+.editorjs-host .ce-toolbar__plus:focus-visible,
+.editorjs-host .ce-toolbar__plus--active,
+.editorjs-host .ce-toolbar__settings-btn:hover,
+.editorjs-host .ce-toolbar__settings-btn:focus-visible,
+.editorjs-host .ce-toolbar__settings-btn--active,
+.notes-app.is-compact-window .editorjs-host .ce-toolbar__plus:hover,
+.notes-app.is-compact-window .editorjs-host .ce-toolbar__settings-btn:hover,
+.notes-app.is-mobile-sidebar-drawer .editorjs-host .ce-toolbar__plus:hover,
+.notes-app.is-mobile-sidebar-drawer .editorjs-host .ce-toolbar__settings-btn:hover,
+.ce-toolbar__plus:hover,
+.ce-toolbar__plus:focus-visible,
+.ce-toolbar__plus--active,
+.ce-toolbar__settings-btn:hover,
+.ce-toolbar__settings-btn:focus-visible,
+.ce-toolbar__settings-btn--active {
+  background: var(--notes-editor-toolbar-button-hover) !important;
+  border-color: rgba(36, 40, 45, 0.22) !important;
+  color: var(--notes-editor-toolbar-button-text) !important;
+}
+
+.editorjs-host .ce-toolbar__plus svg,
+.editorjs-host .ce-toolbar__settings-btn svg,
+.ce-toolbar__plus svg,
+.ce-toolbar__settings-btn svg {
+  color: currentColor !important;
+  fill: currentColor !important;
+}
+
+.editorjs-host .ce-popover,
+.editorjs-host .ce-popover__container,
+.editorjs-host .ce-popover__items,
+.editorjs-host .ce-popover-item-html,
+.editorjs-host .ce-inline-toolbar,
+.editorjs-host .ce-inline-toolbar__buttons,
+.editorjs-host .ce-inline-toolbar__dropdown,
+.editorjs-host .ce-conversion-toolbar,
+.editorjs-host .ce-settings,
+.ce-popover,
+.ce-popover__container,
+.ce-popover__items,
+.ce-popover-item-html,
+.ce-inline-toolbar,
+.ce-inline-toolbar__buttons,
+.ce-inline-toolbar__dropdown,
+.ce-conversion-toolbar,
+.ce-settings {
+  background: var(--notes-editor-menu-bg) !important;
+  color: var(--notes-editor-menu-text) !important;
+  border-color: var(--notes-editor-menu-border) !important;
+}
+
+.editorjs-host .ce-popover,
+.editorjs-host .ce-popover__container,
+.editorjs-host .ce-inline-toolbar,
+.editorjs-host .ce-conversion-toolbar,
+.editorjs-host .ce-settings,
+.ce-popover,
+.ce-popover__container,
+.ce-inline-toolbar,
+.ce-conversion-toolbar,
+.ce-settings {
+  box-shadow: var(--notes-editor-menu-shadow) !important;
+  backdrop-filter: blur(18px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(160%) !important;
+}
+
+.editorjs-host .ce-popover__items,
+.ce-popover__items {
+  padding: 0 !important;
+  scrollbar-color: rgba(255, 255, 255, 0.22) transparent !important;
+}
+
+.editorjs-host .ce-popover-item,
+.editorjs-host .ce-popover-item__content,
+.editorjs-host .ce-settings__button,
+.editorjs-host .ce-inline-tool,
+.editorjs-host .ce-conversion-tool,
+.ce-popover-item,
+.ce-popover-item__content,
+.ce-settings__button,
+.ce-inline-tool,
+.ce-conversion-tool {
+  background: transparent !important;
+  color: var(--notes-editor-menu-muted) !important;
+}
+
+.editorjs-host .ce-popover-item:hover,
+.editorjs-host .ce-popover-item--focused,
+.editorjs-host .ce-popover-item--active,
+.editorjs-host .ce-settings__button:hover,
+.editorjs-host .ce-settings__button:focus-visible,
+.editorjs-host .ce-inline-tool:hover,
+.editorjs-host .ce-inline-tool:focus-visible,
+.editorjs-host .ce-inline-tool--active,
+.editorjs-host .ce-conversion-tool:hover,
+.editorjs-host .ce-conversion-tool:focus-visible,
+.editorjs-host .ce-conversion-tool--focused,
+.ce-popover-item:hover,
+.ce-popover-item--focused,
+.ce-popover-item--active,
+.ce-settings__button:hover,
+.ce-settings__button:focus-visible,
+.ce-inline-tool:hover,
+.ce-inline-tool:focus-visible,
+.ce-inline-tool--active,
+.ce-conversion-tool:hover,
+.ce-conversion-tool:focus-visible,
+.ce-conversion-tool--focused {
+  background: var(--notes-editor-menu-hover) !important;
+  color: var(--notes-editor-menu-text) !important;
+}
+
+.editorjs-host .ce-popover-item__title,
+.editorjs-host .ce-popover-item__secondary-title,
+.editorjs-host .ce-popover-item__shortcut,
+.editorjs-host .ce-conversion-tool__label,
+.editorjs-host .ce-inline-toolbar__dropdown-content,
+.ce-popover-item__title,
+.ce-popover-item__secondary-title,
+.ce-popover-item__shortcut,
+.ce-conversion-tool__label,
+.ce-inline-toolbar__dropdown-content {
+  color: inherit !important;
+}
+
+.editorjs-host .ce-popover-item__secondary-title,
+.editorjs-host .ce-popover-item__shortcut,
+.ce-popover-item__secondary-title,
+.ce-popover-item__shortcut {
+  opacity: 0.82 !important;
+}
+
+.editorjs-host .ce-popover-item__icon,
+.editorjs-host .ce-conversion-tool__icon,
+.editorjs-host .ce-inline-tool,
+.editorjs-host .ce-settings__button,
+.ce-popover-item__icon,
+.ce-conversion-tool__icon,
+.ce-inline-tool,
+.ce-settings__button {
+  background: var(--notes-editor-menu-bg-strong) !important;
+  border-color: var(--notes-editor-menu-border) !important;
+  color: inherit !important;
+}
+
+.editorjs-host .ce-popover-item--disabled,
+.editorjs-host .ce-popover-item[aria-disabled="true"],
+.editorjs-host .ce-settings__button[disabled],
+.editorjs-host .ce-inline-tool[disabled],
+.editorjs-host .ce-inline-tool--disabled,
+.editorjs-host .ce-conversion-tool[disabled],
+.ce-popover-item--disabled,
+.ce-popover-item[aria-disabled="true"],
+.ce-settings__button[disabled],
+.ce-inline-tool[disabled],
+.ce-inline-tool--disabled,
+.ce-conversion-tool[disabled] {
+  color: var(--notes-editor-menu-disabled) !important;
+  opacity: 1 !important;
+}
+
+.editorjs-host .ce-popover-item[data-item-name="delete"],
+.editorjs-host .ce-settings__button[data-item-name="delete"],
+.editorjs-host .ce-settings__button[title="Excluir"],
+.ce-popover-item[data-item-name="delete"],
+.ce-settings__button[data-item-name="delete"],
+.ce-settings__button[title="Excluir"] {
+  color: var(--notes-editor-menu-danger) !important;
+}
+
+.editorjs-host .ce-popover-item[data-item-name="delete"]:hover,
+.editorjs-host .ce-settings__button[data-item-name="delete"]:hover,
+.editorjs-host .ce-settings__button[title="Excluir"]:hover,
+.ce-popover-item[data-item-name="delete"]:hover,
+.ce-settings__button[data-item-name="delete"]:hover,
+.ce-settings__button[title="Excluir"]:hover {
+  background: var(--notes-editor-menu-danger-bg) !important;
+  color: var(--notes-editor-menu-danger) !important;
+}
+
+.editorjs-host .cdx-search-field,
+.editorjs-host .cdx-search-field__input,
+.editorjs-host .ce-inline-toolbar__input,
+.editorjs-host .ce-inline-tool-input,
+.cdx-search-field,
+.cdx-search-field__input,
+.ce-inline-toolbar__input,
+.ce-inline-tool-input {
+  background: var(--notes-editor-menu-bg-strong) !important;
+  color: var(--notes-editor-menu-text) !important;
+  border-color: var(--notes-editor-menu-border) !important;
+}
+
+.editorjs-host .cdx-search-field svg,
+.cdx-search-field svg {
+  color: var(--notes-editor-menu-muted) !important;
+}
+
+.editorjs-host .cdx-search-field__input::placeholder,
+.editorjs-host .cdx-search-field input::placeholder,
+.editorjs-host .ce-inline-toolbar__input::placeholder,
+.editorjs-host .ce-inline-tool-input::placeholder,
+.cdx-search-field__input::placeholder,
+.cdx-search-field input::placeholder,
+.ce-inline-toolbar__input::placeholder,
+.ce-inline-tool-input::placeholder {
+  color: var(--notes-editor-menu-muted) !important;
+  opacity: 0.82 !important;
 }
 
 /* Note Cover Popover Specific Rules */

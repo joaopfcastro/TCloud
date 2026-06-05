@@ -323,6 +323,7 @@ const state = {
   contextMenuTargetNoteId: "",
   contextMenuTargetFolderId: "",
   contextMenuTargetBlock: null,
+  contextMenuTargetRange: null,
   currentListRequestId: 0,
   currentOpenNoteRequestId: 0,
 };
@@ -469,6 +470,58 @@ async function copyToClipboard(value) {
   if (!copied) throw new Error("Nao foi possivel copiar o link da nota.");
 }
 
+async function copyEditorTextToClipboard(value, restoreRange = null) {
+  const text = String(value || "");
+  if (!text.trim()) throw new Error("Nada para copiar.");
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return;
+    } catch (error) {
+      console.warn("Clipboard API indisponivel, usando fallback.", error);
+    }
+  }
+  const area = document.createElement("textarea");
+  area.value = text;
+  area.setAttribute("readonly", "true");
+  area.style.position = "fixed";
+  area.style.opacity = "0";
+  document.body.appendChild(area);
+  area.focus();
+  area.select();
+  const copied = document.execCommand("copy");
+  area.remove();
+  if (restoreRange) restoreEditorContextRange(restoreRange);
+  if (!copied) throw new Error("Nao foi possivel copiar o texto selecionado.");
+}
+
+function runEditorClipboardCommand(command, range) {
+  if (!range || !restoreEditorContextRange(range)) return false;
+  try {
+    const executed = document.execCommand(command);
+    if (executed && command === "copy") restoreEditorContextRange(range);
+    return Boolean(executed);
+  } catch (error) {
+    return false;
+  }
+}
+
+async function copyEditorRangeToClipboard(range, fallbackText = "") {
+  const text = String(fallbackText || range?.toString?.() || "");
+  if (!text.trim()) throw new Error("Nada para copiar.");
+  if (runEditorClipboardCommand("copy", range)) return;
+  await copyEditorTextToClipboard(text, range);
+}
+
+async function cutEditorRangeToClipboard(range, fallbackText = "") {
+  const text = String(fallbackText || range?.toString?.() || "");
+  if (!text.trim()) throw new Error("Nada para recortar.");
+  if (runEditorClipboardCommand("cut", range)) return;
+  await copyEditorRangeToClipboard(range, text);
+  if (range) restoreEditorContextRange(range);
+  document.execCommand("delete");
+}
+
 function escapeHtml(value) {
   return String(value || "")
     .replaceAll("&", "&amp;")
@@ -481,6 +534,14 @@ function escapeHtml(value) {
 function menuShortcut(key) {
   const isMac = /Mac|iPhone|iPad|iPod/i.test(navigator.platform || navigator.userAgent || "");
   return `${isMac ? "⌘" : "Ctrl+"}${key}`;
+}
+
+function isSafariBrowser() {
+  return /^((?!chrome|android|crios|fxios|edgios).)*safari/i.test(navigator.userAgent || "");
+}
+
+function pasteShortcutMessage() {
+  return isSafariBrowser() ? `Pressione ${menuShortcut("V")} para colar no Safari.` : `Pressione ${menuShortcut("V")} para colar.`;
 }
 
 function defaultAppearance() {
@@ -3030,6 +3091,69 @@ function shouldOpenEditorContextMenu(target) {
   return Boolean(target.closest(".ce-block, .codex-editor__redactor, .editor-todo, .editor-quote, .editor-code, .tcloud-block-card"));
 }
 
+function editorRangeIsValid(range) {
+  if (!range || !els.editorHolder) return false;
+  const startNode = range.startContainer;
+  const endNode = range.endContainer;
+  return Boolean(
+    startNode &&
+    endNode &&
+    els.editorHolder.contains(startNode.nodeType === Node.ELEMENT_NODE ? startNode : startNode.parentElement) &&
+    els.editorHolder.contains(endNode.nodeType === Node.ELEMENT_NODE ? endNode : endNode.parentElement),
+  );
+}
+
+function caretRangeFromPoint(x, y) {
+  if (typeof document.caretRangeFromPoint === "function") {
+    return document.caretRangeFromPoint(x, y);
+  }
+  if (typeof document.caretPositionFromPoint === "function") {
+    const position = document.caretPositionFromPoint(x, y);
+    if (!position?.offsetNode) return null;
+    const range = document.createRange();
+    range.setStart(position.offsetNode, position.offset);
+    range.collapse(true);
+    return range;
+  }
+  return null;
+}
+
+function fallbackRangeForEditorTarget(target) {
+  const editable = target?.closest?.("[contenteditable='true']")
+    || target?.closest?.(".ce-block")?.querySelector?.("[contenteditable='true']")
+    || els.editorHolder?.querySelector?.("[contenteditable='true']");
+  if (!editable) return null;
+  const range = document.createRange();
+  range.selectNodeContents(editable);
+  range.collapse(false);
+  return range;
+}
+
+function captureEditorContextRange(event, target) {
+  const selection = window.getSelection();
+  if (selection?.rangeCount && !selection.isCollapsed) {
+    const selectedRange = selection.getRangeAt(0);
+    if (editorRangeIsValid(selectedRange)) return selectedRange.cloneRange();
+  }
+
+  const pointerRange = caretRangeFromPoint(event.clientX, event.clientY);
+  if (editorRangeIsValid(pointerRange)) return pointerRange.cloneRange();
+
+  const fallbackRange = fallbackRangeForEditorTarget(target);
+  return editorRangeIsValid(fallbackRange) ? fallbackRange.cloneRange() : null;
+}
+
+function restoreEditorContextRange(range = state.contextMenuTargetRange) {
+  if (!editorRangeIsValid(range)) return false;
+  const editable = (range.startContainer.nodeType === Node.ELEMENT_NODE ? range.startContainer : range.startContainer.parentElement)
+    ?.closest?.("[contenteditable='true']");
+  editable?.focus?.({ preventScroll: true });
+  const selection = window.getSelection();
+  selection?.removeAllRanges();
+  selection?.addRange(range);
+  return true;
+}
+
 async function toggleFavorite() {
   if (!state.currentNote || state.currentNote.deleted_at || state.favoriteSaving) return;
   state.favoriteSaving = true;
@@ -3565,7 +3689,14 @@ function wireEvents() {
       }
     }
 
-    // Tratar atalhos do Editor: C, X, V, Z
+    if (isCmdOrCtrl && event.key.toLowerCase() === "v" && !els.editorContextMenu?.classList.contains("hidden")) {
+      if (restoreEditorContextRange()) {
+        hideAllContextMenus();
+      }
+      return;
+    }
+
+    // Tratar atalhos de copiar/recortar sem interferir no paste nativo do navegador.
     if (isCmdOrCtrl && ["c", "x", "v", "z"].includes(event.key.toLowerCase())) {
       if (isInputTarget) {
         return;
@@ -3586,12 +3717,6 @@ function wireEvents() {
               document.execCommand("delete");
             }).catch(() => {});
           }
-        } else if (key === "v") {
-          navigator.clipboard.readText().then(text => {
-            if (text && state.editor) {
-              state.editor.insertSlashBlock("paragraph", { text }, { replaceCurrent: false }).catch(() => {});
-            }
-          }).catch(() => {});
         }
         return;
       }
@@ -3608,14 +3733,6 @@ function wireEvents() {
           navigator.clipboard.writeText(noteText).then(() => {
             showToast("Conteúdo da nota recortado.", "info");
             deleteCurrentNote().catch(handleUnexpectedError);
-          }).catch(() => {});
-        } else if (key === "v") {
-          event.preventDefault();
-          navigator.clipboard.readText().then(text => {
-            if (text && state.editor) {
-              state.editor.insertSlashBlock("paragraph", { text }, { replaceCurrent: false }).catch(() => {});
-              showToast("Conteúdo colado no editor.", "success");
-            }
           }).catch(() => {});
         }
         return;
@@ -3990,7 +4107,7 @@ function normalizeVisibleContextActions(actions, { hideDisabled = false } = {}) 
 
   // 2. Remove disabled actions if hideDisabled is true
   if (hideDisabled) {
-    filtered = filtered.filter(action => !action.disabled);
+    filtered = filtered.filter(action => !action.disabled || action.keepVisible);
   }
 
   // 3. Process separatorBefore to ensure no consecutive, leading, or trailing separators
@@ -4008,6 +4125,24 @@ function normalizeVisibleContextActions(actions, { hideDisabled = false } = {}) 
     result.push(cloned);
   });
   return result;
+}
+
+function editorPasteContextAction() {
+  if (isSafariBrowser()) {
+    return {
+      id: "editor.pasteHint",
+      label: `Use ${menuShortcut("V")} para colar`,
+      icon: "ph-clipboard-text",
+      disabled: true,
+      keepVisible: true,
+    };
+  }
+  return {
+    id: "editor.paste",
+    label: "Colar",
+    icon: "ph-clipboard-text",
+    shortcut: menuShortcut("V"),
+  };
 }
 
 function buildEditorContextActions({ hasSelection = false, readOnly = false, hasBlock = false } = {}) {
@@ -4064,12 +4199,7 @@ function buildEditorContextActions({ hasSelection = false, readOnly = false, has
     }
     if (!readOnly) {
       actions.push(
-        {
-          id: "editor.paste",
-          label: "Colar",
-          icon: "ph-clipboard-text",
-          shortcut: menuShortcut("V"),
-        }
+        editorPasteContextAction()
       );
     }
     // Search & Meta
@@ -4096,12 +4226,7 @@ function buildEditorContextActions({ hasSelection = false, readOnly = false, has
     // 2. Click on block without selection
     if (!readOnly) {
       actions.push(
-        {
-          id: "editor.paste",
-          label: "Colar",
-          icon: "ph-clipboard-text",
-          shortcut: menuShortcut("V"),
-        },
+        editorPasteContextAction(),
         {
           id: "editor.duplicateBlock",
           label: "Duplicar bloco",
@@ -4144,12 +4269,7 @@ function buildEditorContextActions({ hasSelection = false, readOnly = false, has
     // 3. Click on empty space
     if (!readOnly) {
       actions.push(
-        {
-          id: "editor.paste",
-          label: "Colar",
-          icon: "ph-clipboard-text",
-          shortcut: menuShortcut("V"),
-        }
+        editorPasteContextAction()
       );
     }
     actions.push(
@@ -4240,32 +4360,39 @@ function renderContextMenuActions(menu, actions) {
 
 async function executeEditorContextAction(action) {
   const readOnly = Boolean(state.currentNote?.deleted_at);
-  const selectedText = window.getSelection()?.toString() || "";
 
   if (action === "editor.copy") {
+    const range = state.contextMenuTargetRange?.cloneRange?.() || null;
+    if (range) restoreEditorContextRange(range);
+    const selectedText = range?.toString() || window.getSelection()?.toString() || "";
     if (!selectedText.trim()) return;
-    await copyToClipboard(selectedText);
+    await copyEditorRangeToClipboard(range, selectedText);
     showToast("Texto copiado.", "success");
     return;
   }
 
   if (action === "editor.cut") {
+    const range = state.contextMenuTargetRange?.cloneRange?.() || null;
+    if (range) restoreEditorContextRange(range);
+    const selectedText = range?.toString() || window.getSelection()?.toString() || "";
     if (readOnly || !selectedText.trim()) return;
-    await copyToClipboard(selectedText);
-    document.execCommand("delete");
+    await cutEditorRangeToClipboard(range, selectedText);
     markDirty("content");
     showToast("Texto recortado.", "success");
     return;
   }
 
+  if (action === "editor.pasteHint") {
+    showToast(pasteShortcutMessage(), "info");
+    return;
+  }
+
   if (action === "editor.paste") {
     if (readOnly) return;
-    const text = await navigator.clipboard?.readText?.();
-    if (text && state.editor) {
-      await state.editor.insertSlashBlock("paragraph", { text }, { replaceCurrent: false });
-      markDirty("content");
-      showToast("Texto colado.", "success");
+    if (!restoreEditorContextRange() && state.editor) {
+      await state.editor.focus();
     }
+    showToast(pasteShortcutMessage(), "info");
     return;
   }
 
@@ -4338,6 +4465,7 @@ function wireContextMenus() {
       state.contextMenuTargetNoteId = noteCard.dataset.id;
       state.contextMenuTargetFolderId = "";
       state.contextMenuTargetBlock = null;
+      state.contextMenuTargetRange = null;
       const targetNote = findNoteById(state.contextMenuTargetNoteId);
       const actions = buildNoteMenuActions(targetNote, currentMenuContext(targetNote, { compactWindow: false }));
       const normalized = normalizeVisibleContextActions(actions, { hideDisabled: false });
@@ -4350,6 +4478,7 @@ function wireContextMenus() {
       state.contextMenuTargetNoteId = "";
       state.contextMenuTargetFolderId = "";
       state.contextMenuTargetBlock = targetBlock;
+      state.contextMenuTargetRange = captureEditorContextRange(event, target);
       const actions = buildEditorContextActions({
         hasSelection: Boolean(selectionText.trim()),
         readOnly: Boolean(state.currentNote?.deleted_at),
@@ -4407,8 +4536,8 @@ function wireContextMenus() {
   els.editorContextMenu?.addEventListener("click", (event) => {
     const item = event.target.closest(".context-menu-item");
     if (!item) return;
-    if (item.classList.contains("is-disabled") || item.getAttribute("aria-disabled") === "true") return;
     const action = item.dataset.action;
+    if (item.classList.contains("is-disabled") || item.getAttribute("aria-disabled") === "true") return;
     if (window.TCLOUD_NOTES_DEBUG_LAYOUT === true) console.debug(`[Editor Context Menu] Ação disparada: ${action}`);
 
     executeEditorContextAction(action).catch(handleUnexpectedError);
