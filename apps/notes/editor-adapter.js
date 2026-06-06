@@ -1203,6 +1203,155 @@ class TCloudInlineToolbarController {
   }
 }
 
+function rangeIntersectsElement(range, element) {
+  if (!range || !element) return false;
+  const elementRange = document.createRange();
+  try {
+    elementRange.selectNodeContents(element);
+    return !(
+      range.compareBoundaryPoints(Range.END_TO_START, elementRange) >= 0 ||
+      range.compareBoundaryPoints(Range.START_TO_END, elementRange) <= 0
+    );
+  } catch (error) {
+    return false;
+  } finally {
+    elementRange.detach?.();
+  }
+}
+
+class TCloudBlockSelectionController {
+  constructor(adapter) {
+    this.adapter = adapter;
+    this.root = holderElement(adapter.holder);
+    this.frame = null;
+
+    this.onSelectionChange = () => this.scheduleSync();
+    this.onPointerUp = () => this.scheduleSync();
+    this.onKeyUp = () => this.scheduleSync();
+    this.onFocusIn = () => this.scheduleSync();
+
+    document.addEventListener("selectionchange", this.onSelectionChange);
+    document.addEventListener("pointerup", this.onPointerUp, true);
+    document.addEventListener("keyup", this.onKeyUp, true);
+    document.addEventListener("focusin", this.onFocusIn, true);
+
+    this.scheduleSync();
+  }
+
+  destroy() {
+    document.removeEventListener("selectionchange", this.onSelectionChange);
+    document.removeEventListener("pointerup", this.onPointerUp, true);
+    document.removeEventListener("keyup", this.onKeyUp, true);
+    document.removeEventListener("focusin", this.onFocusIn, true);
+    if (this.frame) cancelAnimationFrame(this.frame);
+    this.clear();
+  }
+
+  scheduleSync() {
+    if (this.frame) cancelAnimationFrame(this.frame);
+    this.frame = requestAnimationFrame(() => {
+      this.frame = null;
+      this.sync();
+    });
+  }
+
+  clear() {
+    this.root?.classList.remove(
+      "has-tcloud-active-block",
+      "has-tcloud-single-block-selection",
+      "has-tcloud-multiblock-selection"
+    );
+
+    this.root?.querySelectorAll(
+      ".ce-block.is-tcloud-active-block, " +
+      ".ce-block.is-tcloud-range-selected, " +
+      ".ce-block.is-tcloud-selection-start, " +
+      ".ce-block.is-tcloud-selection-end"
+    ).forEach((block) => {
+      block.classList.remove(
+        "is-tcloud-active-block",
+        "is-tcloud-range-selected",
+        "is-tcloud-selection-start",
+        "is-tcloud-selection-end"
+      );
+      block.removeAttribute("data-tcloud-selected-index");
+    });
+  }
+
+  sync() {
+    if (!this.root || !document.contains(this.root)) return;
+
+    const selection = window.getSelection();
+    const blocks = Array.from(this.root.querySelectorAll(".ce-block"));
+
+    this.clear();
+
+    // 1. Gather blocks selected by Editor.js native mechanisms
+    const editorSelectedBlocks = blocks.filter((block) =>
+      block.classList.contains("ce-block--selected")
+    );
+
+    // 2. Gather blocks intersected by native DOM text selection range
+    let nativeSelectedBlocks = [];
+    let startElement = null;
+    let endElement = null;
+    let range = null;
+
+    if (selection && selection.rangeCount > 0) {
+      range = selection.getRangeAt(0);
+      startElement = nodeToElement(range.startContainer);
+      endElement = nodeToElement(range.endContainer);
+
+      if (this.root.contains(startElement) && this.root.contains(endElement)) {
+        if (
+          !isBlockedInlineToolbarTarget(startElement) &&
+          !isBlockedInlineToolbarTarget(endElement)
+        ) {
+          nativeSelectedBlocks = blocks.filter((block) =>
+            rangeIntersectsElement(range, block)
+          );
+        }
+      }
+    }
+
+    const selectedSet = new Set([...nativeSelectedBlocks, ...editorSelectedBlocks]);
+    const selectedBlocks = blocks.filter((block) => selectedSet.has(block));
+
+    if (selectedBlocks.length > 1) {
+      this.root.classList.add("has-tcloud-multiblock-selection");
+      selectedBlocks.forEach((block, index) => {
+        block.classList.add("is-tcloud-range-selected");
+        block.dataset.tcloudSelectedIndex = String(index);
+      });
+      selectedBlocks[0].classList.add("is-tcloud-selection-start");
+      selectedBlocks[selectedBlocks.length - 1].classList.add("is-tcloud-selection-end");
+      return;
+    }
+
+    // 3. Fallback: single active block focused by cursor (collapsed range or focused element)
+    let activeBlock = null;
+    if (selectedBlocks.length === 1) {
+      activeBlock = selectedBlocks[0];
+    } else if (range && startElement) {
+      activeBlock = startElement.closest(".ce-block");
+    } else if (document.activeElement) {
+      activeBlock = document.activeElement.closest(".ce-block");
+    }
+
+    if (activeBlock && this.root.contains(activeBlock)) {
+      this.root.classList.add("has-tcloud-active-block");
+      activeBlock.classList.add("is-tcloud-active-block");
+
+      // If there was a non-collapsed selection inside this single block, mark it as single-block selection too
+      if (range && !range.collapsed) {
+        this.root.classList.add("has-tcloud-single-block-selection");
+        activeBlock.classList.add("is-tcloud-range-selected");
+        activeBlock.dataset.tcloudSelectedIndex = "0";
+      }
+    }
+  }
+}
+
 export class EditorAdapter {
   constructor({ holder, onChange, blockConfig = {} }) {
     this.holder = holder;
@@ -1218,6 +1367,7 @@ export class EditorAdapter {
     this.isUndoingOrRedoing = false;
     this.toolbarController = null;
     this.popoverController = null;
+    this.blockSelectionController = null;
     this.lastSavedContent = normalizeEditorData(null);
   }
 
@@ -1417,6 +1567,9 @@ export class EditorAdapter {
     await this.readyPromise;
     if (!this.toolbarController) {
       this.toolbarController = new TCloudInlineToolbarController(this);
+    }
+    if (!this.blockSelectionController) {
+      this.blockSelectionController = new TCloudBlockSelectionController(this);
     }
     if (!this.popoverController) {
       const root = holderElement(this.holder);
@@ -1872,25 +2025,4 @@ export function normalizeEditorData(data) {
   };
 }
 
-// TCloud Notes — Active Block Tracking Helper for CSS classes
-function updateTCloudActiveBlock() {
-  document
-    .querySelectorAll(".editorjs-host .ce-block.tcloud-active-block")
-    .forEach((block) => block.classList.remove("tcloud-active-block"));
-
-  const selection = window.getSelection();
-  if (!selection || selection.rangeCount === 0) return;
-
-  const node = selection.anchorNode;
-  const element = node?.nodeType === Node.ELEMENT_NODE ? node : node?.parentElement;
-  const block = element?.closest?.(".editorjs-host .ce-block");
-
-  if (block) {
-    block.classList.add("tcloud-active-block");
-  }
-}
-
-document.addEventListener("selectionchange", updateTCloudActiveBlock);
-document.addEventListener("keyup", updateTCloudActiveBlock);
-document.addEventListener("pointerup", updateTCloudActiveBlock);
-document.addEventListener("focusin", updateTCloudActiveBlock);
+// TCloud Notes — Active Block Tracking removed, managed by TCloudBlockSelectionController instead

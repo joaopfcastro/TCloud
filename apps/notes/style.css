@@ -7817,34 +7817,134 @@ body,
 
 /* TCloud Notes — final block focus and side toolbar alignment */
 :root {
-  --block-active-bg: rgba(82, 103, 216, 0.02);
-  --block-active-border: rgba(82, 103, 216, 0.05);
-  --block-selected-bg: rgba(82, 103, 216, 0.045);
-  --block-rail-color: rgba(82, 103, 216, 0.3);
-  --block-rail-width: 2px;
-  --block-rail-height: 18px;
+  --tcloud-block-active-bg: rgba(82, 103, 216, 0.095);
+  --tcloud-block-active-border: rgba(82, 103, 216, 0.24);
+  --tcloud-block-active-rail: rgba(82, 103, 216, 0.80);
+
+  --tcloud-block-selected-bg: rgba(82, 103, 216, 0.13);
+  --tcloud-block-selected-border: rgba(82, 103, 216, 0.30);
+
+  --tcloud-block-multi-bg: rgba(82, 103, 216, 0.18);
+  --tcloud-block-multi-border: rgba(82, 103, 216, 0.38);
+  --tcloud-block-multi-rail: rgba(82, 103, 216, 0.95);
+
+  --tcloud-block-focus-radius: 10px;
+  --tcloud-block-rail-width: 3px;
 }
 
 .editorjs-host .ce-block__content {
   position: relative;
-  border-radius: var(--notes-control-radius);
+  border-radius: var(--tcloud-block-focus-radius);
   transition:
     background-color 120ms ease,
     outline-color 120ms ease,
     box-shadow 120ms ease;
 }
 
-.editorjs-host .ce-block:focus-within .ce-block__content {
-  background: var(--block-active-bg) !important;
-  box-shadow: none !important;
-  outline: 1px solid transparent;
-}
-
-.editorjs-host .ce-block.tcloud-active-block .ce-block__content {
-  background: var(--block-active-bg) !important;
+/* Bloco único com cursor/foco */
+.editorjs-host.has-tcloud-active-block
+  .ce-block.is-tcloud-active-block
+  .ce-block__content {
+  background: var(--tcloud-block-active-bg) !important;
+  outline: 1px solid var(--tcloud-block-active-border) !important;
   box-shadow: none !important;
 }
 
+.editorjs-host.has-tcloud-active-block
+  .ce-block.is-tcloud-active-block
+  .ce-block__content::before {
+  content: "";
+  position: absolute;
+  left: -13px;
+  top: 50%;
+  width: var(--tcloud-block-rail-width);
+  height: 22px;
+  border-radius: 999px;
+  background: var(--tcloud-block-active-rail);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+/* Bloco selecionado nativamente pelo Editor.js */
+.editorjs-host .ce-block--selected .ce-block__content {
+  background: var(--tcloud-block-selected-bg) !important;
+  outline: 1px solid var(--tcloud-block-selected-border) !important;
+  box-shadow: none !important;
+}
+
+/* Seleção de bloco único */
+.editorjs-host.has-tcloud-single-block-selection
+  .ce-block.is-tcloud-range-selected
+  .ce-block__content {
+  background: var(--tcloud-block-selected-bg) !important;
+  outline: 1px solid var(--tcloud-block-selected-border) !important;
+  border-radius: var(--tcloud-block-focus-radius) !important;
+  box-shadow: none !important;
+}
+
+/* Seleção múltipla: fundo forte e outline */
+.editorjs-host.has-tcloud-multiblock-selection
+  .ce-block.is-tcloud-range-selected
+  .ce-block__content {
+  background: var(--tcloud-block-multi-bg) !important;
+  outline: 1px solid var(--tcloud-block-multi-border) !important;
+  box-shadow: none !important;
+}
+
+/* Trilho lateral para seleção múltipla */
+.editorjs-host.has-tcloud-multiblock-selection
+  .ce-block.is-tcloud-range-selected
+  .ce-block__content::before {
+  content: "";
+  position: absolute;
+  left: -13px;
+  top: 8px;
+  bottom: 8px;
+  width: var(--tcloud-block-rail-width);
+  border-radius: 999px;
+  background: var(--tcloud-block-multi-rail);
+  pointer-events: none;
+}
+
+/* Sensação de bloco contínuo na seleção múltipla */
+.editorjs-host.has-tcloud-multiblock-selection
+  .ce-block.is-tcloud-range-selected:not(.is-tcloud-selection-start):not(.is-tcloud-selection-end)
+  .ce-block__content {
+  border-radius: 0px !important;
+}
+
+.editorjs-host.has-tcloud-multiblock-selection
+  .ce-block.is-tcloud-selection-start
+  .ce-block__content {
+  border-top-left-radius: var(--tcloud-block-focus-radius) !important;
+  border-top-right-radius: var(--tcloud-block-focus-radius) !important;
+  border-bottom-left-radius: 0px !important;
+  border-bottom-right-radius: 0px !important;
+}
+
+.editorjs-host.has-tcloud-multiblock-selection
+  .ce-block.is-tcloud-selection-end
+  .ce-block__content {
+  border-top-left-radius: 0px !important;
+  border-top-right-radius: 0px !important;
+  border-bottom-left-radius: var(--tcloud-block-focus-radius) !important;
+  border-bottom-right-radius: var(--tcloud-block-focus-radius) !important;
+}
+
+/* Blocos vazios ocupando altura na seleção múltipla */
+.editorjs-host.has-tcloud-multiblock-selection
+  .ce-block.is-tcloud-range-selected
+  .ce-block__content {
+  min-height: 34px;
+}
+
+/* Manter a seleção nativa de texto do navegador visível */
+.editorjs-host ::selection {
+  background: rgba(10, 132, 255, 0.36) !important;
+  color: inherit !important;
+}
+
+/* Alinhamento do manipulador lateral (dois pontos e botão +) */
 .editorjs-host .ce-toolbar__actions,
 .notes-app.is-compact-window .editorjs-host .ce-toolbar__actions {
   left: calc(var(--editor-toolbar-offset) * -1) !important;
