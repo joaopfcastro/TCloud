@@ -1467,7 +1467,9 @@ button:disabled,
 }
 
 .editorjs-host .ce-block--selected .ce-block__content {
-  background: var(--selection);
+  background: var(--block-selected-bg) !important;
+  box-shadow: none !important;
+  outline: none !important;
 }
 
 .slash-menu,
@@ -5715,9 +5717,10 @@ body,
 }
 
 .editorjs-host .ce-block--selected .ce-block__content {
-  background: transparent !important;
+  background: var(--block-selected-bg) !important;
   border-radius: var(--notes-control-radius);
-  box-shadow: inset 3px 0 0 var(--accent) !important;
+  box-shadow: none !important;
+  outline: none !important;
 }
 
 .editorjs-host .ce-toolbar__actions {
@@ -7810,4 +7813,77 @@ body,
   --color-border: rgba(255, 255, 255, 0.1) !important;
   --color-background-hover: rgba(255, 255, 255, 0.08) !important;
   --color-background-selected: rgba(10, 132, 255, 0.16) !important;
+}
+
+/* TCloud Notes — final block focus and side toolbar alignment */
+:root {
+  --block-active-bg: rgba(82, 103, 216, 0.02);
+  --block-active-border: rgba(82, 103, 216, 0.05);
+  --block-selected-bg: rgba(82, 103, 216, 0.045);
+  --block-rail-color: rgba(82, 103, 216, 0.3);
+  --block-rail-width: 2px;
+  --block-rail-height: 18px;
+}
+
+.editorjs-host .ce-block__content {
+  position: relative;
+  border-radius: var(--notes-control-radius);
+  transition:
+    background-color 120ms ease,
+    outline-color 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.editorjs-host .ce-block:focus-within .ce-block__content {
+  background: var(--block-active-bg) !important;
+  box-shadow: none !important;
+  outline: 1px solid transparent;
+}
+
+.editorjs-host .ce-block.tcloud-active-block .ce-block__content {
+  background: var(--block-active-bg) !important;
+  box-shadow: none !important;
+}
+
+.editorjs-host .ce-toolbar__actions,
+.notes-app.is-compact-window .editorjs-host .ce-toolbar__actions {
+  left: calc(var(--editor-toolbar-offset) * -1) !important;
+  right: auto !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: var(--block-action-gap) !important;
+  width: max-content !important;
+  max-width: none !important;
+  padding: 0 !important;
+  transform: translateY(3px) !important;
+  pointer-events: auto !important;
+}
+
+.editorjs-host .ce-toolbar__plus,
+.editorjs-host .ce-toolbar__settings-btn {
+  width: var(--block-action-size) !important;
+  min-width: var(--block-action-size) !important;
+  max-width: var(--block-action-size) !important;
+  height: var(--block-action-size) !important;
+  min-height: var(--block-action-size) !important;
+  max-height: var(--block-action-size) !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  line-height: 1 !important;
+  vertical-align: middle !important;
+}
+
+.editorjs-host .ce-toolbar__plus svg,
+.editorjs-host .ce-toolbar__settings-btn svg,
+.editorjs-host .ce-toolbar__plus i,
+.editorjs-host .ce-toolbar__settings-btn i {
+  display: block !important;
+  width: 16px !important;
+  height: 16px !important;
+  line-height: 1 !important;
+  margin: 0 !important;
 }

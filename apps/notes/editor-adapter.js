@@ -1871,3 +1871,26 @@ export function normalizeEditorData(data) {
     version: String(data.version || "2.31.6"),
   };
 }
+
+// TCloud Notes — Active Block Tracking Helper for CSS classes
+function updateTCloudActiveBlock() {
+  document
+    .querySelectorAll(".editorjs-host .ce-block.tcloud-active-block")
+    .forEach((block) => block.classList.remove("tcloud-active-block"));
+
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0) return;
+
+  const node = selection.anchorNode;
+  const element = node?.nodeType === Node.ELEMENT_NODE ? node : node?.parentElement;
+  const block = element?.closest?.(".editorjs-host .ce-block");
+
+  if (block) {
+    block.classList.add("tcloud-active-block");
+  }
+}
+
+document.addEventListener("selectionchange", updateTCloudActiveBlock);
+document.addEventListener("keyup", updateTCloudActiveBlock);
+document.addEventListener("pointerup", updateTCloudActiveBlock);
+document.addEventListener("focusin", updateTCloudActiveBlock);
