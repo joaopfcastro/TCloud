@@ -7743,6 +7743,75 @@ body,
   border-color: var(--notes-editor-menu-border) !important;
 }
 
+/* TCloud Notes: stable Editor.js block controls after icon/emoji layout changes. */
+.editor-content-grid,
+.notes-app.is-compact-window .editor-content-grid,
+.notes-app.sidebar-collapsed:not(.is-compact-window) .editor-content-grid,
+.notes-app.is-mobile-sidebar-drawer .editor-content-grid {
+  --editor-block-control-size: 36px;
+  --editor-block-control-gap: 8px;
+  --editor-block-control-gutter: max(88px, calc((var(--editor-block-control-size) * 2) + var(--editor-block-control-gap) + 8px));
+  --block-action-size: var(--editor-block-control-size);
+  --block-action-gap: var(--editor-block-control-gap);
+  --editor-toolbar-offset: var(--editor-block-control-gutter);
+  position: relative;
+  overflow: visible;
+}
+
+.editorjs-host {
+  --editor-block-control-size: 36px;
+  --editor-block-control-gap: 8px;
+  --editor-block-control-gutter: max(88px, calc((var(--editor-block-control-size) * 2) + var(--editor-block-control-gap) + 8px));
+  --block-action-size: var(--editor-block-control-size);
+  --block-action-gap: var(--editor-block-control-gap);
+  --editor-toolbar-offset: var(--editor-block-control-gutter);
+  overflow: visible;
+}
+
+.editorjs-host .codex-editor,
+.editorjs-host .codex-editor__redactor,
+.editorjs-host .ce-toolbar,
+.editorjs-host .ce-toolbar__content {
+  overflow: visible !important;
+}
+
+.editorjs-host .ce-toolbar__actions,
+.notes-app.is-compact-window .editorjs-host .ce-toolbar__actions,
+.notes-app.sidebar-collapsed:not(.is-compact-window) .editorjs-host .ce-toolbar__actions,
+.notes-app.is-mobile-sidebar-drawer .editorjs-host .ce-toolbar__actions {
+  left: calc(var(--editor-toolbar-offset) * -1) !important;
+  right: auto !important;
+  top: auto !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: var(--editor-block-control-gap) !important;
+  width: max-content !important;
+  max-width: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  transform: none !important;
+  pointer-events: auto !important;
+}
+
+.editorjs-host .ce-toolbar__plus,
+.editorjs-host .ce-toolbar__settings-btn,
+.notes-app.is-compact-window .editorjs-host .ce-toolbar__plus,
+.notes-app.is-compact-window .editorjs-host .ce-toolbar__settings-btn,
+.notes-app.is-mobile-sidebar-drawer .editorjs-host .ce-toolbar__plus,
+.notes-app.is-mobile-sidebar-drawer .editorjs-host .ce-toolbar__settings-btn {
+  flex: 0 0 var(--editor-block-control-size) !important;
+  width: var(--editor-block-control-size) !important;
+  min-width: var(--editor-block-control-size) !important;
+  max-width: var(--editor-block-control-size) !important;
+  height: var(--editor-block-control-size) !important;
+  min-height: var(--editor-block-control-size) !important;
+  max-height: var(--editor-block-control-size) !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  transform: none !important;
+}
+
 .editorjs-host .cdx-search-field svg,
 .cdx-search-field svg {
   color: var(--notes-editor-menu-muted) !important;

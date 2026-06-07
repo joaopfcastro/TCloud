@@ -308,10 +308,13 @@ const state = {
     index: 0,
     query: "",
     triggerRange: null,
+    triggerEditable: null,
+    triggerBlockIndex: -1,
     triggerText: "",
     filteredOptions: [],
     composing: false,
     raf: 0,
+    openRaf: 0,
   },
   ui: {
     sidebarCollapsed: false,
@@ -868,6 +871,7 @@ async function setAppearancePatch(patch, toastMessage = "Aparência atualizada."
   state.currentNote.cover = nextAppearance.cover;
   state.currentNote.icon = nextAppearance.icon;
   renderAppearance();
+  state.editor?.refreshLayout?.("appearance-patch");
   upsertNoteSummary(state.currentNote);
   renderNotesList();
   markDirty("meta");
@@ -950,9 +954,11 @@ function closeCoverMenu() {
 }
 
 function closeIconMenu() {
+  const wasOpen = Boolean(els.noteIconMenu && !els.noteIconMenu.classList.contains("hidden"));
   els.noteIconMenu?.classList.add("hidden");
   els.noteIconButton?.setAttribute("aria-expanded", "false");
   els.noteIconButton?.classList.remove("is-active");
+  if (wasOpen) state.editor?.refreshLayout?.("note-icon-menu-close");
 }
 
 function closeTransientOverlays() {
@@ -2908,9 +2914,10 @@ function updateSlashMenuFilter() {
 
 function closeEditorJsMenusForSlashOnly() {
   document.querySelectorAll(".ce-popover:not(.ce-popover--inline), .ce-settings, .ce-conversion-toolbar").forEach((element) => {
-    element.setAttribute("aria-hidden", "true");
-    element.hidden = true;
-    element.style.display = "none";
+    element.removeAttribute("aria-hidden");
+    element.hidden = false;
+    element.style.removeProperty("display");
+    element.classList.remove("ce-popover--opened", "ce-settings--opened", "ce-conversion-toolbar--showed");
     element.classList.add("hidden");
   });
 }
@@ -2963,28 +2970,55 @@ function closeSlashMenu() {
 }
 
 function closeColonIconMenu({ restoreFocus = false } = {}) {
+  const focusState = restoreFocus
+    ? {
+      range: state.colonIconMenu.triggerRange?.cloneRange?.() || null,
+      editable: state.colonIconMenu.triggerEditable,
+    }
+    : null;
   state.colonIconMenu.open = false;
   state.colonIconMenu.index = 0;
   state.colonIconMenu.query = "";
   state.colonIconMenu.triggerRange = null;
+  state.colonIconMenu.triggerEditable = null;
+  state.colonIconMenu.triggerBlockIndex = -1;
   state.colonIconMenu.triggerText = "";
   state.colonIconMenu.filteredOptions = [];
   if (state.colonIconMenu.raf) {
     window.cancelAnimationFrame(state.colonIconMenu.raf);
     state.colonIconMenu.raf = 0;
   }
+  if (state.colonIconMenu.openRaf) {
+    window.cancelAnimationFrame(state.colonIconMenu.openRaf);
+    state.colonIconMenu.openRaf = 0;
+  }
   els.colonIconMenu?.classList.add("hidden");
   els.colonIconMenu?.classList.remove("is-open");
   if (els.colonIconMenu) {
     els.colonIconMenu.innerHTML = "";
   }
-  if (restoreFocus) state.editor?.focus?.();
+  if (focusState?.editable && document.contains(focusState.editable) && focusState.range) {
+    focusState.editable.focus({ preventScroll: true });
+    const restored = focusState.range.cloneRange();
+    restored.collapse(false);
+    const selection = window.getSelection();
+    selection?.removeAllRanges();
+    selection?.addRange(restored);
+  } else if (restoreFocus) {
+    state.editor?.focus?.();
+  }
 }
 
 function editorEditableFromNode(node) {
   const element = node?.nodeType === Node.ELEMENT_NODE ? node : node?.parentElement;
   const editable = element?.closest?.("[contenteditable='true']");
   return editable && els.editorHolder?.contains(editable) ? editable : null;
+}
+
+function editorBlockIndexForElement(element) {
+  const block = element?.closest?.(".ce-block");
+  if (!block) return -1;
+  return Array.from(els.editorHolder?.querySelectorAll(".ce-block") || []).indexOf(block);
 }
 
 function isEditorTextTarget(target) {
@@ -3104,6 +3138,8 @@ function getColonIconQuery() {
   triggerRange.selectNodeContents(editable);
   setRangeByTextOffsets(triggerRange, editable, colonIndex, textBefore.length);
   state.colonIconMenu.triggerRange = triggerRange;
+  state.colonIconMenu.triggerEditable = editable;
+  state.colonIconMenu.triggerBlockIndex = editorBlockIndexForElement(editable);
   state.colonIconMenu.triggerText = `:${query}`;
   return query;
 }
@@ -3159,8 +3195,6 @@ function openColonIconMenu(position) {
   closeIconMenu();
   closeCoverMenu();
   hideAllContextMenus();
-  closeEditorJsMenusForSlashOnly();
-  requestAnimationFrame(closeEditorJsMenusForSlashOnly);
 
   state.colonIconMenu.open = true;
   state.colonIconMenu.index = 0;
@@ -3217,11 +3251,88 @@ function renderColonIconMenu() {
   });
 }
 
+function setColonIconMenuIndex(index) {
+  const options = state.colonIconMenu.filteredOptions || [];
+  if (!options.length) {
+    state.colonIconMenu.index = -1;
+  } else {
+    state.colonIconMenu.index = clamp(index, 0, options.length - 1);
+  }
+  renderColonIconMenu();
+  const active = els.colonIconMenu?.querySelector(".colon-icon-option.is-active");
+  active?.scrollIntoView?.({ block: "nearest" });
+}
+
+function moveColonIconMenuSelection(delta) {
+  const options = state.colonIconMenu.filteredOptions || [];
+  if (!options.length) {
+    setColonIconMenuIndex(-1);
+    return;
+  }
+  const current = Number.isInteger(state.colonIconMenu.index) && state.colonIconMenu.index >= 0
+    ? state.colonIconMenu.index
+    : 0;
+  setColonIconMenuIndex((current + delta + options.length) % options.length);
+}
+
+function restoreColonIconCaret({ collapseToEnd = true } = {}) {
+  const editable = state.colonIconMenu.triggerEditable;
+  const range = state.colonIconMenu.triggerRange;
+  if (!editable || !document.contains(editable) || !range || !editorRangeIsValid(range)) {
+    state.editor?.focus?.();
+    return false;
+  }
+  editable.focus({ preventScroll: true });
+  const restored = range.cloneRange();
+  if (collapseToEnd) restored.collapse(false);
+  const selection = window.getSelection();
+  selection?.removeAllRanges();
+  selection?.addRange(restored);
+  return true;
+}
+
+function stopColonIconMenuKeyEvent(event) {
+  event.preventDefault();
+  event.stopPropagation();
+  event.stopImmediatePropagation?.();
+}
+
+function handleColonIconMenuKeydown(event) {
+  if (!state.colonIconMenu.open) return false;
+  if (!["ArrowDown", "ArrowUp", "Enter", "Escape", "Tab", "Home", "End"].includes(event.key)) return false;
+  stopColonIconMenuKeyEvent(event);
+  const options = state.colonIconMenu.filteredOptions || [];
+
+  if (event.key === "ArrowDown") {
+    moveColonIconMenuSelection(1);
+    return true;
+  }
+  if (event.key === "ArrowUp") {
+    moveColonIconMenuSelection(-1);
+    return true;
+  }
+  if (event.key === "Home") {
+    setColonIconMenuIndex(0);
+    return true;
+  }
+  if (event.key === "End") {
+    setColonIconMenuIndex(options.length - 1);
+    return true;
+  }
+  if (event.key === "Enter") {
+    if (options.length && state.colonIconMenu.index >= 0) {
+      applyColonIconOption(options[state.colonIconMenu.index]).catch(handleUnexpectedError);
+    }
+    return true;
+  }
+  closeColonIconMenu({ restoreFocus: true });
+  return true;
+}
+
 function updateColonIconMenuFilter() {
   if (!state.colonIconMenu.open) return;
   const query = getColonIconQuery();
   if (query === null) {
-    closeColonIconMenu();
     return;
   }
   state.colonIconMenu.query = query;
@@ -3240,12 +3351,40 @@ function scheduleColonIconMenuFilterUpdate() {
   });
 }
 
+function scheduleColonIconMenuOpenFromInput() {
+  if (state.colonIconMenu.open || state.colonIconMenu.openRaf) return;
+  state.colonIconMenu.openRaf = window.requestAnimationFrame(() => {
+    state.colonIconMenu.openRaf = 0;
+    if (
+      state.colonIconMenu.open ||
+      state.colonIconMenu.composing ||
+      !state.currentNote ||
+      state.currentNote.deleted_at ||
+      !isEditorTextTarget(document.activeElement)
+    ) {
+      return;
+    }
+    if (getColonIconQuery() === null) return;
+    openColonIconMenu(selectionPosition());
+    updateColonIconMenuFilter();
+  });
+}
+
+function hasActiveColonIconQuery() {
+  if (getColonIconQuery() !== null) return true;
+  const active = document.activeElement;
+  if (!isEditorTextTarget(active)) return false;
+  const text = active.textContent || "";
+  return /(^|[\s([{'"“‘]):[^\s:]{0,32}$/u.test(text);
+}
+
 async function applyColonIconOption(item) {
   const value = String(item?.value || "").trim();
   if (!value || !editorRangeIsValid(state.colonIconMenu.triggerRange)) return;
   const range = state.colonIconMenu.triggerRange.cloneRange();
-  closeColonIconMenu();
+  const editable = state.colonIconMenu.triggerEditable;
 
+  editable?.focus?.({ preventScroll: true });
   const selection = window.getSelection();
   selection?.removeAllRanges();
   selection?.addRange(range);
@@ -3260,6 +3399,10 @@ async function applyColonIconOption(item) {
 
   pushRecentIcon(value);
   await state.editor?.notifyManualChange?.();
+  state.editor?.refreshLayout?.("colon-icon-insert");
+  closeColonIconMenu();
+  state.editor?.toolbarController?.clearExternalMenuState?.();
+  state.editor?.openNativeBlockToolbar?.("colon-icon-insert");
   markDirty("content");
 }
 
@@ -3957,18 +4100,11 @@ function wireEvents() {
     state.colonIconMenu.composing = false;
   });
 
-  document.addEventListener("selectionchange", () => {
-    scheduleColonIconMenuFilterUpdate();
-  });
-
   // Intercepta as teclas ":" e "/" na fase de captura para controlar os popovers do editor.
   document.addEventListener("keydown", (event) => {
+    if (handleColonIconMenuKeydown(event)) return;
     if (eventShouldOpenColonIconMenu(event)) {
       event.stopPropagation();
-      window.requestAnimationFrame(() => {
-        openColonIconMenu(selectionPosition());
-        updateColonIconMenuFilter();
-      });
       return;
     }
     if (eventShouldOpenSlashMenu(event)) {
@@ -3984,14 +4120,15 @@ function wireEvents() {
       updateColonIconMenuFilter();
       return;
     }
+    if (!state.colonIconMenu.open && isEditorTextTarget(event.target)) {
+      scheduleColonIconMenuOpenFromInput();
+      return;
+    }
     if (state.colonIconMenu.open) updateColonIconMenuFilter();
     if (state.slashMenu.open) updateSlashMenuFilter();
   });
 
   document.addEventListener("keyup", (event) => {
-    if (state.colonIconMenu.open && !["ArrowDown", "ArrowUp", "Enter", "Tab", "Escape"].includes(event.key)) {
-      updateColonIconMenuFilter();
-    }
     if (state.slashMenu.open && event.key !== "ArrowDown" && event.key !== "ArrowUp" && event.key !== "Enter") {
       updateSlashMenuFilter();
     }
@@ -4113,36 +4250,6 @@ function wireEvents() {
             deleteCurrentNote().catch(handleUnexpectedError);
           }).catch(() => {});
         }
-        return;
-      }
-    }
-
-    if (state.colonIconMenu.open) {
-      const options = state.colonIconMenu.filteredOptions || [];
-      if (event.key === "ArrowDown") {
-        event.preventDefault();
-        state.colonIconMenu.index = options.length ? (state.colonIconMenu.index + 1) % options.length : -1;
-        renderColonIconMenu();
-        return;
-      }
-      if (event.key === "ArrowUp") {
-        event.preventDefault();
-        state.colonIconMenu.index = options.length ? (state.colonIconMenu.index - 1 + options.length) % options.length : -1;
-        renderColonIconMenu();
-        return;
-      }
-      if ((event.key === "Enter" || event.key === "Tab") && options.length && state.colonIconMenu.index >= 0) {
-        event.preventDefault();
-        applyColonIconOption(options[state.colonIconMenu.index]).catch(handleUnexpectedError);
-        return;
-      }
-      if (event.key === "Escape") {
-        event.preventDefault();
-        closeColonIconMenu();
-        return;
-      }
-      if (event.key === " ") {
-        closeColonIconMenu();
         return;
       }
     }
@@ -4921,7 +5028,7 @@ function wireContextMenus() {
   });
 
   document.addEventListener("scroll", () => {
-    closeColonIconMenu();
+    if (!state.colonIconMenu.open || !hasActiveColonIconQuery()) closeColonIconMenu();
     hideAllContextMenus();
   }, { capture: true, passive: true });
 

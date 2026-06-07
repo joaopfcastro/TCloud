@@ -1605,6 +1605,40 @@ export class EditorAdapter {
     } finally {
       this.rendering = false;
     }
+    this.refreshLayout("note-rendered");
+  }
+
+  refreshLayout(reason = "manual") {
+    const root = holderElement(this.holder);
+    if (!root || !this.editor) return;
+
+    const run = () => {
+      this.blockSelectionController?.scheduleSync?.();
+      this.toolbarController?.scheduleSelectionSync?.(`layout:${reason}`);
+      this.toolbarController?.updateToolbarState?.();
+      this.popoverController?.handleViewportChange?.();
+    };
+
+    requestAnimationFrame(() => {
+      run();
+      requestAnimationFrame(run);
+    });
+  }
+
+  openNativeBlockToolbar(reason = "manual") {
+    const root = holderElement(this.holder);
+    if (!root || !this.editor?.toolbar?.open) return;
+
+    requestAnimationFrame(() => {
+      if (!document.contains(root) || !this.editor?.toolbar?.open) return;
+      this.blockSelectionController?.scheduleSync?.();
+      try {
+        this.editor.toolbar.open();
+      } catch (error) {
+        console.warn("[Notes] Falha ao reabrir toolbar do Editor.js", { reason, error });
+      }
+      this.popoverController?.handleViewportChange?.();
+    });
   }
 
   async saveHistoryImmediate() {

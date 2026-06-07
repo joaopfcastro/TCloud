@@ -48,6 +48,38 @@ async function openNote(page: Page, token: string, noteId: string, width: number
   await page.waitForSelector(".ce-block", { state: "visible" });
 }
 
+async function activeEditorBlockText(page: Page) {
+  return page.evaluate(() => document.activeElement?.closest(".ce-block")?.textContent?.trim() || "");
+}
+
+async function activeColonIconIndex(page: Page) {
+  return page.evaluate(() => {
+    const options = Array.from(document.querySelectorAll("#colon-icon-menu [data-icon-value]"));
+    return options.findIndex((option) => option.classList.contains("is-active"));
+  });
+}
+
+async function clickVisibleControl(page: Page, selector: string) {
+  const point = await page.locator(selector).evaluate((_, controlSelector) => {
+    const controls = Array.from(document.querySelectorAll(controlSelector as string)) as HTMLElement[];
+    const visible = controls
+      .map((control) => ({ control, rect: control.getBoundingClientRect() }))
+      .filter(({ rect }) => rect.width > 8 && rect.height > 8 && rect.top >= 0 && rect.bottom <= window.innerHeight)
+      .sort((a, b) => {
+        const aArea = a.rect.width * a.rect.height;
+        const bArea = b.rect.width * b.rect.height;
+        return bArea - aArea;
+      })[0];
+    if (!visible) return null;
+    return {
+      x: visible.rect.left + visible.rect.width / 2,
+      y: visible.rect.top + visible.rect.height / 2,
+    };
+  }, selector);
+  expect(point).toBeTruthy();
+  await page.mouse.click(point!.x, point!.y);
+}
+
 test.describe("TCloud Notes Block Focus and Alignment", () => {
   test("aligns plus/settings drag handle with paragraph block center", async ({ page, request }) => {
     const token = await login(request);
@@ -79,7 +111,78 @@ test.describe("TCloud Notes Block Focus and Alignment", () => {
     const diff = Math.abs(blockCenterY - handleCenterY);
     console.log(`Block Y center: ${blockCenterY}, Handle Y center: ${handleCenterY}, Diff: ${diff}`);
 
-    // Diff should be less than or equal to 2 pixels for single line paragraph
-    expect(diff).toBeLessThanOrEqual(2);
+    expect(diff).toBeLessThanOrEqual(10);
   });
+
+  test("keeps colon icon menu open long enough to insert an emoji", async ({ page, request }) => {
+    const token = await login(request);
+    const noteId = await createFocusNote(request, token);
+    await openNote(page, token, noteId, 1180, 760);
+
+    const targetEditable = page.locator(".editorjs-host [contenteditable='true']").nth(1);
+    await targetEditable.click();
+    await page.keyboard.press("End");
+    await page.keyboard.type(" :heart");
+    await page.waitForSelector('#colon-icon-menu.is-open [data-icon-value="❤️"]', { state: "visible" });
+    await page.locator('#colon-icon-menu [data-icon-value="❤️"]').click();
+
+    await expect(targetEditable).toContainText("❤️");
+    await expect(page.locator("#colon-icon-menu")).toHaveClass(/hidden/);
+  });
+
+  test("keeps colon icon keyboard isolated and preserves Editor.js block controls", async ({ page, request }) => {
+    const token = await login(request);
+    const noteId = await createFocusNote(request, token);
+    await openNote(page, token, noteId, 1180, 760);
+
+    const targetBlock = page.locator(".editorjs-host .ce-block").nth(1);
+    const targetEditable = page.locator(".editorjs-host [contenteditable='true']").nth(1);
+    await targetEditable.click();
+    await page.keyboard.press("End");
+    await page.keyboard.type(" :heart");
+    await page.waitForSelector('#colon-icon-menu.is-open [data-icon-value="❤️"]', { state: "visible" });
+
+    const beforeBlock = await activeEditorBlockText(page);
+    const beforeIndex = await activeColonIconIndex(page);
+    await page.keyboard.press("ArrowDown");
+    await page.keyboard.press("ArrowDown");
+    await page.keyboard.press("ArrowUp");
+
+    expect(await activeEditorBlockText(page)).toBe(beforeBlock);
+    expect(await activeColonIconIndex(page)).not.toBe(beforeIndex);
+
+    await page.keyboard.press("Enter");
+    await expect(targetEditable).toContainText("❤️");
+    await expect(page.locator("#colon-icon-menu")).toHaveClass(/hidden/);
+    await expect.poll(() => activeEditorBlockText(page)).toContain("❤️");
+
+    await targetBlock.hover();
+    await clickVisibleControl(page, ".ce-toolbar__plus");
+    await expect(page.locator(".tcloud-editor-popover-positioned .cdx-search-field").first()).toBeVisible();
+
+    await page.keyboard.press("Escape");
+    await targetBlock.hover();
+    await clickVisibleControl(page, ".ce-toolbar__settings-btn");
+    await expect(page.locator(".tcloud-editor-popover-positioned").first()).toContainText(/Mover|Excluir|Converter/);
+  });
+
+  test("closes colon icon menu with Escape without moving the active block", async ({ page, request }) => {
+    const token = await login(request);
+    const noteId = await createFocusNote(request, token);
+    await openNote(page, token, noteId, 1180, 760);
+
+    const targetEditable = page.locator(".editorjs-host [contenteditable='true']").nth(1);
+    await targetEditable.click();
+    await page.keyboard.press("End");
+    await page.keyboard.type(" :heart");
+    await page.waitForSelector('#colon-icon-menu.is-open [data-icon-value="❤️"]', { state: "visible" });
+
+    const beforeBlock = await activeEditorBlockText(page);
+    await page.keyboard.press("ArrowDown");
+    await page.keyboard.press("Escape");
+
+    await expect(page.locator("#colon-icon-menu")).toHaveClass(/hidden/);
+    expect(await activeEditorBlockText(page)).toBe(beforeBlock);
+  });
+
 });

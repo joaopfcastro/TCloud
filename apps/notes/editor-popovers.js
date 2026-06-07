@@ -135,7 +135,7 @@ export class EditorJsPopoverController {
     if (!this.isOpen || this.positionFrame) return;
     this.positionFrame = requestAnimationFrame(() => {
       this.positionFrame = null;
-      if (!this.anchor?.isConnected || !this.surface?.isConnected) {
+      if (!this.ensureUsableAnchor() || !this.surface?.isConnected) {
         this.clear("lost-anchor");
         return;
       }
@@ -147,6 +147,10 @@ export class EditorJsPopoverController {
     if (this.positionFrame) cancelAnimationFrame(this.positionFrame);
     this.positionFrame = requestAnimationFrame(() => {
       this.positionFrame = null;
+      if (!this.ensureUsableAnchor()) {
+        this.clear("stale-anchor");
+        return;
+      }
       const active = this.findActiveMenu();
       if (!active) {
         this.scheduleVerify();
@@ -162,6 +166,10 @@ export class EditorJsPopoverController {
     if (this.verifyFrame) cancelAnimationFrame(this.verifyFrame);
     this.verifyFrame = requestAnimationFrame(() => {
       this.verifyFrame = null;
+      if (!this.ensureUsableAnchor()) {
+        this.clear("stale-anchor");
+        return;
+      }
       const active = this.findActiveMenu();
       if (!active) {
         this.clear("menu-closed");
@@ -180,7 +188,7 @@ export class EditorJsPopoverController {
     [0, 60, 160].forEach((delay) => {
       const timer = window.setTimeout(() => {
         this.positionTimers = this.positionTimers.filter((item) => item !== timer);
-        if (!this.isOpen || !this.anchor?.isConnected || !this.surface?.isConnected) return;
+        if (!this.isOpen || !this.ensureUsableAnchor() || !this.surface?.isConnected) return;
         this.positionActiveMenu();
       }, delay);
       this.positionTimers.push(timer);
@@ -290,7 +298,7 @@ export class EditorJsPopoverController {
   }
 
   positionActiveMenu(measuredRect = null) {
-    if (!this.anchor?.isConnected || !this.surface?.isConnected) {
+    if (!this.ensureUsableAnchor() || !this.surface?.isConnected) {
       this.clear("detached");
       return;
     }
@@ -428,5 +436,36 @@ export class EditorJsPopoverController {
       return this.ownerDocument.documentElement.contains(node);
     }
     return Boolean(this.root?.contains?.(node));
+  }
+
+  ensureUsableAnchor() {
+    if (this.anchorIsUsable(this.anchor)) return true;
+    const replacement = this.findVisibleTrigger(this.anchor);
+    if (!replacement) return false;
+    this.anchor = replacement;
+    return true;
+  }
+
+  anchorIsUsable(anchor) {
+    if (!anchor || !anchor.isConnected || !this.rootContains(anchor)) return false;
+    if (!anchor.matches?.(EDITORJS_POPOVER_TRIGGER_SELECTOR)) return false;
+    const rect = anchor.getBoundingClientRect();
+    return rect.width >= 4 && rect.height >= 4;
+  }
+
+  findVisibleTrigger(previousAnchor = null) {
+    const selector = previousAnchor?.matches?.(".ce-toolbar__settings-btn")
+      ? ".ce-toolbar__settings-btn"
+      : previousAnchor?.matches?.(".ce-toolbar__plus")
+        ? ".ce-toolbar__plus"
+        : EDITORJS_POPOVER_TRIGGER_SELECTOR;
+
+    return Array.from(this.root?.querySelectorAll?.(selector) || [])
+      .filter((trigger) => this.anchorIsUsable(trigger))
+      .sort((a, b) => {
+        const aRect = a.getBoundingClientRect();
+        const bRect = b.getBoundingClientRect();
+        return (bRect.width * bRect.height) - (aRect.width * aRect.height);
+      })[0] || null;
   }
 }
