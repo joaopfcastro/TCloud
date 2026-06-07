@@ -18,7 +18,7 @@ import {
   buildTCloudBlock,
   isTCloudBlockType,
 } from "./tcloud-blocks.js";
-import { EditorJsPopoverController } from "./editor-popovers.js?v=notes-editor-popovers-controller-20260605-4";
+import { EditorJsPopoverController } from "./editor-popovers.js?v=notes-menu-system-clear-20260606-2";
 
 const TCLOUD_INDENT_MAX = 6;
 const INLINE_SANITIZER_RULES = {

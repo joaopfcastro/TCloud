@@ -53,6 +53,7 @@ export class EditorJsPopoverController {
     this.isOpen = false;
     this.positionFrame = null;
     this.verifyFrame = null;
+    this.positionTimers = [];
     this.viewportListenersAttached = false;
     this.connected = false;
     this.portedInfo = null;
@@ -153,6 +154,7 @@ export class EditorJsPopoverController {
       }
       this.attachMenu(active.menu, active.surface);
       this.positionActiveMenu(active.rect);
+      this.schedulePositionRetries();
     });
   }
 
@@ -169,7 +171,25 @@ export class EditorJsPopoverController {
         this.attachMenu(active.menu, active.surface);
       }
       this.positionActiveMenu(active.rect);
+      this.schedulePositionRetries();
     });
+  }
+
+  schedulePositionRetries() {
+    this.clearPositionTimers();
+    [0, 60, 160].forEach((delay) => {
+      const timer = window.setTimeout(() => {
+        this.positionTimers = this.positionTimers.filter((item) => item !== timer);
+        if (!this.isOpen || !this.anchor?.isConnected || !this.surface?.isConnected) return;
+        this.positionActiveMenu();
+      }, delay);
+      this.positionTimers.push(timer);
+    });
+  }
+
+  clearPositionTimers() {
+    this.positionTimers.forEach((timer) => window.clearTimeout(timer));
+    this.positionTimers = [];
   }
 
   findActiveMenu() {
@@ -316,6 +336,7 @@ export class EditorJsPopoverController {
     const roundedLeft = Math.round(left);
     const roundedTop = Math.round(top);
     this.surface.style.setProperty("position", "fixed", "important");
+    this.surface.style.setProperty("inset", `${roundedTop}px auto auto ${roundedLeft}px`, "important");
     this.surface.style.setProperty("left", `${roundedLeft}px`, "important");
     this.surface.style.setProperty("top", `${roundedTop}px`, "important");
     this.surface.style.setProperty("right", "auto", "important");
@@ -330,6 +351,7 @@ export class EditorJsPopoverController {
   clear(reason = "clear") {
     if (this.positionFrame) cancelAnimationFrame(this.positionFrame);
     if (this.verifyFrame) cancelAnimationFrame(this.verifyFrame);
+    this.clearPositionTimers();
     this.positionFrame = null;
     this.verifyFrame = null;
 
@@ -376,6 +398,7 @@ export class EditorJsPopoverController {
     element.classList.remove(POSITIONED_CLASS);
     [
       "position",
+      "inset",
       "left",
       "top",
       "right",

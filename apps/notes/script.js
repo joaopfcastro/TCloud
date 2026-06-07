@@ -1,4 +1,4 @@
-import { EditorAdapter, buildBlock, normalizeEditorData } from "./editor-adapter.js?v=notes-colon-icon-menu-20260606-1";
+import { EditorAdapter, buildBlock, normalizeEditorData } from "./editor-adapter.js?v=notes-menu-system-clear-20260606-2";
 import { NotesApi } from "./notes-api.js";
 import { NotesFilePicker } from "./file-picker.js";
 import { IMPORT_ACCEPT, isSupportedImportFile, readFileAsText } from "./export-import.js";
@@ -2903,6 +2903,7 @@ function updateSlashMenuFilter() {
   state.slashMenu.filteredOptions = filtered;
   state.slashMenu.index = filtered.length > 0 ? 0 : -1;
   renderSlashMenu();
+  positionSlashMenu(selectionPosition());
 }
 
 function closeEditorJsMenusForSlashOnly() {
@@ -2923,19 +2924,42 @@ function openSlashMenu(position, replaceCurrent = true) {
   state.slashMenu.index = 0;
   state.slashMenu.replaceCurrent = replaceCurrent;
   state.slashMenu.filteredOptions = [...SLASH_OPTIONS];
-  const bounds = noteViewportBounds();
-  const left = clamp(position.x, bounds.left + 8, Math.max(bounds.left + 8, bounds.right - 340));
-  const top = clamp(position.y, bounds.top + 8, Math.max(bounds.top + 8, bounds.bottom - 360));
-  els.slashMenu.style.left = `${left}px`;
-  els.slashMenu.style.top = `${top}px`;
-  renderSlashMenu();
   els.slashMenu.classList.remove("hidden");
+  els.slashMenu.classList.add("is-open");
+  renderSlashMenu();
+  positionSlashMenu(position);
+}
+
+function positionSlashMenu(position = selectionPosition()) {
+  if (!els.slashMenu) return;
+  const bounds = noteViewportBounds();
+  const rect = els.slashMenu.getBoundingClientRect();
+  const width = rect.width || 326;
+  const height = rect.height || 360;
+  const margin = 8;
+  const left = clamp(
+    position.x,
+    bounds.left + margin,
+    Math.max(bounds.left + margin, bounds.right - width - margin),
+  );
+  const belowTop = position.y;
+  const aboveTop = position.y - height - 18;
+  const top = belowTop + height > bounds.bottom - margin && aboveTop >= bounds.top + margin
+    ? aboveTop
+    : clamp(
+      belowTop,
+      bounds.top + margin,
+      Math.max(bounds.top + margin, bounds.bottom - height - margin),
+    );
+  els.slashMenu.style.left = `${Math.round(left)}px`;
+  els.slashMenu.style.top = `${Math.round(top)}px`;
 }
 
 function closeSlashMenu() {
   state.slashMenu.open = false;
   state.slashMenu.filteredOptions = null;
   els.slashMenu.classList.add("hidden");
+  els.slashMenu.classList.remove("is-open");
 }
 
 function closeColonIconMenu({ restoreFocus = false } = {}) {
@@ -3261,6 +3285,8 @@ function renderSlashMenu() {
     const button = document.createElement("button");
     button.type = "button";
     if (index === state.slashMenu.index) button.classList.add("is-active");
+    button.setAttribute("role", "option");
+    button.setAttribute("aria-selected", index === state.slashMenu.index ? "true" : "false");
     button.innerHTML = `
       <span class="slash-icon" aria-hidden="true">${escapeHtml(option.icon || "")}</span>
       <span class="slash-copy">
@@ -3268,6 +3294,7 @@ function renderSlashMenu() {
         <span class="slash-hint">${escapeHtml(option.hint)}</span>
       </span>
     `;
+    button.addEventListener("mousedown", (event) => event.preventDefault());
     button.addEventListener("click", () => applySlashOption(option).catch(handleUnexpectedError));
     els.slashMenu.appendChild(button);
   });
