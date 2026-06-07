@@ -341,6 +341,51 @@ function rangeSelectionRect(range) {
   return { left, top, right, bottom, width, height };
 }
 
+function rectFromBox(box) {
+  if (!box) return null;
+  const left = Number(box.left);
+  const top = Number(box.top);
+  const right = Number(box.right);
+  const bottom = Number(box.bottom);
+  if (![left, top, right, bottom].every(Number.isFinite)) return null;
+  const width = Math.max(0, right - left);
+  const height = Math.max(0, bottom - top);
+  return { left, top, right, bottom, width, height };
+}
+
+function unionRects(rects = []) {
+  const normalized = rects.map((rect) => rectFromBox(rect)).filter(Boolean);
+  if (!normalized.length) return null;
+  const left = Math.min(...normalized.map((rect) => rect.left));
+  const top = Math.min(...normalized.map((rect) => rect.top));
+  const right = Math.max(...normalized.map((rect) => rect.right));
+  const bottom = Math.max(...normalized.map((rect) => rect.bottom));
+  return rectFromBox({ left, top, right, bottom });
+}
+
+function expandRect(rect, padding = 0) {
+  const normalized = rectFromBox(rect);
+  if (!normalized) return null;
+  return rectFromBox({
+    left: normalized.left - padding,
+    top: normalized.top - padding,
+    right: normalized.right + padding,
+    bottom: normalized.bottom + padding,
+  });
+}
+
+function rectsIntersect(leftRect, rightRect) {
+  const left = rectFromBox(leftRect);
+  const right = rectFromBox(rightRect);
+  if (!left || !right) return false;
+  return !(
+    left.right <= right.left ||
+    left.left >= right.right ||
+    left.bottom <= right.top ||
+    left.top >= right.bottom
+  );
+}
+
 function visibleElement(element) {
   if (!element || !element.isConnected || !document.documentElement.contains(element)) return false;
   if (element.hidden || element.getAttribute?.("aria-hidden") === "true" || element.classList?.contains("hidden")) return false;
@@ -463,12 +508,19 @@ class TCloudInlineToolbarController {
     this.submenu = null;
     this.lastReason = "";
     this.selectionFrame = null;
+    this.pendingPointerSelectionFrame = null;
+    this.pointerSelectionRange = null;
     this.isExternalEditorMenuActive = false;
+    this.isPointerSelecting = false;
+    this.isDragSelecting = false;
     this.lastExternalMenuInteractionAt = 0;
+    this.lastPointerDownAt = 0;
     this.pendingSelectionReason = "";
     this.toolbar = this.buildToolbar();
     this.onSelectionChange = () => this.scheduleSelectionSync("selectionchange");
     this.onPointerDown = (event) => this.handlePointerDown(event);
+    this.onPointerUp = () => this.handlePointerUp();
+    this.onPointerCancel = () => this.handlePointerUp("pointercancel-selection");
     this.onEditorPopoverOpen = () => this.setExternalEditorMenuOpen(true, "editor-popover");
     this.onEditorPopoverClose = () => this.setExternalEditorMenuOpen(false, "editor-popover");
     this.onInput = (event) => {
@@ -485,6 +537,7 @@ class TCloudInlineToolbarController {
     };
     this.onKeyDown = (event) => this.handleKeyDown(event);
     this.onViewportChange = () => {
+      if (this.isPointerSelecting) return;
       if (!this.toolbar.classList.contains("is-open")) return;
       const range = this.savedRange;
       if (!range || !this.updateToolbarPosition(range)) this.hideInlineToolbar("viewport-change");
@@ -494,6 +547,8 @@ class TCloudInlineToolbarController {
     document.body.appendChild(this.toolbar);
     document.addEventListener("selectionchange", this.onSelectionChange);
     document.addEventListener("pointerdown", this.onPointerDown, true);
+    document.addEventListener("pointerup", this.onPointerUp, true);
+    document.addEventListener("pointercancel", this.onPointerCancel, true);
     document.addEventListener("input", this.onInput, true);
     document.addEventListener("focusin", this.onFocusIn, true);
     document.addEventListener("keydown", this.onKeyDown, true);
@@ -509,6 +564,8 @@ class TCloudInlineToolbarController {
   destroy() {
     document.removeEventListener("selectionchange", this.onSelectionChange);
     document.removeEventListener("pointerdown", this.onPointerDown, true);
+    document.removeEventListener("pointerup", this.onPointerUp, true);
+    document.removeEventListener("pointercancel", this.onPointerCancel, true);
     document.removeEventListener("input", this.onInput, true);
     document.removeEventListener("focusin", this.onFocusIn, true);
     document.removeEventListener("keydown", this.onKeyDown, true);
@@ -519,6 +576,7 @@ class TCloudInlineToolbarController {
     window.visualViewport?.removeEventListener("resize", this.onViewportChange);
     window.visualViewport?.removeEventListener("scroll", this.onViewportChange);
     if (this.selectionFrame) cancelAnimationFrame(this.selectionFrame);
+    if (this.pendingPointerSelectionFrame) cancelAnimationFrame(this.pendingPointerSelectionFrame);
     this.closeAllInlineSubmenus();
     this.toolbar.remove();
   }
@@ -635,7 +693,7 @@ class TCloudInlineToolbarController {
   }
 
   shouldShowInlineToolbar(range = this.getValidEditorSelection()) {
-    if (!range || !rangeInsideEditor(range, this.root)) return false;
+    if (this.isPointerSelecting || !range || !rangeInsideEditor(range, this.root)) return false;
     if (this.isExternalEditorMenuActive) {
       if (this.externalEditorMenuOpen()) return false;
       this.clearExternalMenuState();
@@ -647,6 +705,17 @@ class TCloudInlineToolbarController {
 
   scheduleSelectionSync(reason = "selectionchange") {
     this.pendingSelectionReason = reason;
+    if (this.isPointerSelecting && reason !== "pointerup-selection" && reason !== "pointercancel-selection") {
+      if (reason === "selectionchange") {
+        this.isDragSelecting = true;
+        const liveRange = this.getValidEditorSelection();
+        if (liveRange) {
+          this.pointerSelectionRange = liveRange.cloneRange();
+          this.savedRange = liveRange.cloneRange();
+        }
+      }
+      return;
+    }
     if (this.selectionFrame) return;
     this.selectionFrame = requestAnimationFrame(() => {
       this.selectionFrame = null;
@@ -655,6 +724,17 @@ class TCloudInlineToolbarController {
   }
 
   syncFromSelection(reason = "selectionchange") {
+    if (this.isPointerSelecting && reason !== "pointerup-selection" && reason !== "pointercancel-selection") {
+      if (reason === "selectionchange") {
+        this.isDragSelecting = true;
+        const liveRange = this.getValidEditorSelection();
+        if (liveRange) {
+          this.pointerSelectionRange = liveRange.cloneRange();
+          this.savedRange = liveRange.cloneRange();
+        }
+      }
+      return;
+    }
     this.hideNativeInlineToolbar();
     if (this.isExternalEditorMenuActive) {
       if (this.externalEditorMenuOpen()) {
@@ -665,18 +745,36 @@ class TCloudInlineToolbarController {
     }
     const range = this.getValidEditorSelection();
     if (range) {
+      this.pointerSelectionRange = null;
       const signature = rangeSignature(range);
       if (!sameRangeSignature(signature, this.closedSelectionSignature)) {
         this.closedSelectionSignature = null;
       }
       if (this.shouldShowInlineToolbar(range)) this.showInlineToolbar(range);
       else if (!this.submenu) this.hideInlineToolbar(reason);
+      this.isDragSelecting = false;
       return;
+    }
+    const fallbackRange =
+      (reason === "pointerup-selection" || reason === "pointercancel-selection") &&
+      rangeInsideEditor(this.pointerSelectionRange, this.root)
+        ? this.pointerSelectionRange.cloneRange()
+        : null;
+    this.pointerSelectionRange = null;
+    if (fallbackRange && fallbackRange.toString().replace(/\u200B/g, "").trim()) {
+      this.closedSelectionSignature = null;
+      if (this.shouldShowInlineToolbar(fallbackRange)) {
+        this.showInlineToolbar(fallbackRange);
+        this.isDragSelecting = false;
+        return;
+      }
     }
     if (this.submenu && rangeInsideEditor(this.savedRange, this.root) && this.isToolbarTarget(document.activeElement)) {
       this.updateToolbarPosition(this.savedRange);
+      this.isDragSelecting = false;
       return;
     }
+    this.isDragSelecting = false;
     this.closedSelectionSignature = null;
     this.hideInlineToolbar(reason);
   }
@@ -694,7 +792,11 @@ class TCloudInlineToolbarController {
   }
 
   hideInlineToolbar(reason = "manual", { suppressSelection = false, clearSelection = false } = {}) {
-    if (suppressSelection) {
+    const preserveClosedSelectionSignature =
+      suppressSelection &&
+      !clearSelection &&
+      reason !== "pointerdown-selection";
+    if (preserveClosedSelectionSignature) {
       const range = this.savedRange || this.getValidEditorSelection();
       this.closedSelectionSignature = rangeSignature(range);
     }
@@ -728,35 +830,141 @@ class TCloudInlineToolbarController {
     this.setExternalEditorMenuOpen(false, "external-menu");
   }
 
+  selectedBlockRects(range) {
+    if (!this.root) return [];
+    return Array.from(
+      this.root.querySelectorAll(".ce-block--selected, .ce-block.is-tcloud-range-selected"),
+    )
+      .filter((block) => (range ? rangeIntersectsElement(range, block) : block.classList.contains("ce-block--selected")))
+      .map((block) => rectFromBox(block.getBoundingClientRect()))
+      .filter(Boolean);
+  }
+
+  selectionAvoidanceRect(range, anchorRect) {
+    const blockRects = this.selectedBlockRects(range);
+    if (blockRects.length <= 1) return anchorRect;
+    return unionRects([anchorRect, ...blockRects]) || anchorRect;
+  }
+
+  selectionSpansMultipleBlocks(range, anchorRect) {
+    if (!range || !anchorRect) return false;
+    const blockRects = this.selectedBlockRects(range);
+    if (blockRects.length > 1) return true;
+    try {
+      const rects = Array.from(range.getClientRects()).filter((rect) => rect.width > 0 || rect.height > 0);
+      if (rects.length > 1) return true;
+    } catch (error) {
+      // Ignore selection rect read errors and fall back to the merged selection bounds.
+    }
+    return anchorRect.height > 48;
+  }
+
+  viewportBounds() {
+    const viewport = window.visualViewport;
+    const left = viewport?.offsetLeft || 0;
+    const top = viewport?.offsetTop || 0;
+    const width = viewport?.width || window.innerWidth;
+    const height = viewport?.height || window.innerHeight;
+    return rectFromBox({
+      left,
+      top,
+      right: left + width,
+      bottom: top + height,
+    });
+  }
+
+  normalizeToolbarCandidate(candidate, width, height, viewportRect) {
+    if (!candidate || !viewportRect) return null;
+    const minLeft = viewportRect.left + INLINE_TOOLBAR_MARGIN;
+    const maxLeft = Math.max(minLeft, viewportRect.right - INLINE_TOOLBAR_MARGIN - width);
+    const minTop = viewportRect.top + INLINE_TOOLBAR_MARGIN;
+    const maxTop = Math.max(minTop, viewportRect.bottom - INLINE_TOOLBAR_MARGIN - height);
+    const left = clampNumber(candidate.left, minLeft, maxLeft);
+    const top = clampNumber(candidate.top, minTop, maxTop);
+    return {
+      placement: candidate.placement,
+      rect: rectFromBox({
+        left,
+        top,
+        right: left + width,
+        bottom: top + height,
+      }),
+    };
+  }
+
+  toolbarPlacementCandidates(range, avoidanceRect, width, height, viewportRect, gap = INLINE_TOOLBAR_GAP) {
+    const centerLeft = avoidanceRect.left + (avoidanceRect.width - width) / 2;
+    const middleTop = avoidanceRect.top + (avoidanceRect.height - height) / 2;
+    const candidates = [
+      {
+        placement: "top",
+        left: centerLeft,
+        top: avoidanceRect.top - height - gap,
+      },
+      {
+        placement: "bottom",
+        left: centerLeft,
+        top: avoidanceRect.bottom + gap,
+      },
+    ];
+
+    if (this.selectionSpansMultipleBlocks(range, avoidanceRect)) {
+      candidates.push(
+        {
+          placement: "right",
+          left: avoidanceRect.right + gap,
+          top: middleTop,
+        },
+        {
+          placement: "left",
+          left: avoidanceRect.left - width - gap,
+          top: middleTop,
+        },
+      );
+    }
+
+    const floatingTop = viewportRect.top + INLINE_TOOLBAR_MARGIN;
+    candidates.push(
+      { placement: "floating", left: viewportRect.left + INLINE_TOOLBAR_MARGIN, top: floatingTop },
+      { placement: "floating", left: centerLeft, top: floatingTop },
+      { placement: "floating", left: viewportRect.right - width - INLINE_TOOLBAR_MARGIN, top: floatingTop },
+      { placement: "floating", left: viewportRect.left + INLINE_TOOLBAR_MARGIN, top: viewportRect.bottom - height - INLINE_TOOLBAR_MARGIN },
+      { placement: "floating", left: viewportRect.right - width - INLINE_TOOLBAR_MARGIN, top: viewportRect.bottom - height - INLINE_TOOLBAR_MARGIN },
+    );
+
+    return candidates
+      .map((candidate) => this.normalizeToolbarCandidate(candidate, width, height, viewportRect))
+      .filter(Boolean);
+  }
+
   updateToolbarPosition(range) {
     if (!rangeInsideEditor(range, this.root)) return false;
     const anchor = rangeSelectionRect(range);
     if (!anchor) return false;
-    const viewport = window.visualViewport;
-    const viewportWidth = viewport?.width || window.innerWidth;
-    const viewportHeight = viewport?.height || window.innerHeight;
-    const offsetLeft = viewport?.offsetLeft || 0;
-    const offsetTop = viewport?.offsetTop || 0;
-    const maxRight = offsetLeft + viewportWidth - INLINE_TOOLBAR_MARGIN;
-    const maxBottom = offsetTop + viewportHeight - INLINE_TOOLBAR_MARGIN;
+    const viewportRect = this.viewportBounds();
+    if (!viewportRect) return false;
+    const usesBlockAvoidance = this.selectedBlockRects(range).length > 1;
+    const avoidanceRect = expandRect(this.selectionAvoidanceRect(range, anchor), usesBlockAvoidance ? 6 : 0) || anchor;
+    const toolbarGap = usesBlockAvoidance ? INLINE_TOOLBAR_GAP : 4;
 
     this.toolbar.style.visibility = "hidden";
     this.toolbar.hidden = false;
     const toolbarRect = this.toolbar.getBoundingClientRect();
-    const width = Math.min(toolbarRect.width || 1, viewportWidth - INLINE_TOOLBAR_MARGIN * 2);
+    const width = Math.min(
+      toolbarRect.width || 1,
+      Math.max(1, viewportRect.width - INLINE_TOOLBAR_MARGIN * 2),
+    );
     const height = toolbarRect.height || 44;
-    const center = anchor.left + anchor.width / 2;
-    const left = clampNumber(center - width / 2, offsetLeft + INLINE_TOOLBAR_MARGIN, maxRight - width);
-    const topAbove = anchor.top - height - INLINE_TOOLBAR_GAP;
-    const topBelow = anchor.bottom + INLINE_TOOLBAR_GAP;
-    const hasRoomAbove = topAbove >= offsetTop + INLINE_TOOLBAR_MARGIN;
-    const top = hasRoomAbove
-      ? topAbove
-      : clampNumber(topBelow, offsetTop + INLINE_TOOLBAR_MARGIN, maxBottom - height);
+    const placement = this.toolbarPlacementCandidates(range, avoidanceRect, width, height, viewportRect, toolbarGap)
+      .find((candidate) => !rectsIntersect(candidate.rect, avoidanceRect));
+    if (!placement?.rect) {
+      this.toolbar.style.visibility = "";
+      return false;
+    }
 
-    this.toolbar.style.left = `${Math.round(left)}px`;
-    this.toolbar.style.top = `${Math.round(top)}px`;
-    this.toolbar.dataset.placement = hasRoomAbove ? "top" : "bottom";
+    this.toolbar.style.left = `${Math.round(placement.rect.left)}px`;
+    this.toolbar.style.top = `${Math.round(placement.rect.top)}px`;
+    this.toolbar.dataset.placement = placement.placement;
     this.toolbar.style.visibility = "";
     return true;
   }
@@ -766,14 +974,46 @@ class TCloudInlineToolbarController {
     if (this.isToolbarTarget(target)) return;
     this.closeAllInlineSubmenus();
     if (target?.closest?.(".ce-toolbar__plus, .ce-toolbar__settings-btn")) {
+      this.pointerSelectionRange = null;
       this.setExternalEditorMenuOpen(true, "external-menu");
       return;
     }
     if (target?.closest?.(".ce-toolbar__plus, .ce-toolbar__settings-btn, .ce-popover, .ce-settings, .ce-conversion-toolbar, #slash-menu, #colon-icon-menu, .colon-icon-menu, .tcloud-context-menu, .modal")) {
+      this.pointerSelectionRange = null;
       this.setExternalEditorMenuOpen(true, "external-menu");
       return;
     }
-    if (!this.isEditorTarget(target)) this.hideInlineToolbar("pointer-outside");
+    if (this.isEditorTarget(target)) {
+      this.isPointerSelecting = true;
+      this.isDragSelecting = false;
+      this.pointerSelectionRange = null;
+      this.lastPointerDownAt = performance.now();
+      if (this.selectionFrame) {
+        cancelAnimationFrame(this.selectionFrame);
+        this.selectionFrame = null;
+      }
+      if (this.pendingPointerSelectionFrame) {
+        cancelAnimationFrame(this.pendingPointerSelectionFrame);
+        this.pendingPointerSelectionFrame = null;
+      }
+      this.hideInlineToolbar("pointerdown-selection", { suppressSelection: true });
+      return;
+    }
+    this.pointerSelectionRange = null;
+    this.hideInlineToolbar("pointer-outside");
+  }
+
+  handlePointerUp(reason = "pointerup-selection") {
+    if (!this.isPointerSelecting) return;
+    this.isPointerSelecting = false;
+    this.isDragSelecting = false;
+    if (this.pendingPointerSelectionFrame) cancelAnimationFrame(this.pendingPointerSelectionFrame);
+    this.pendingPointerSelectionFrame = requestAnimationFrame(() => {
+      this.pendingPointerSelectionFrame = requestAnimationFrame(() => {
+        this.pendingPointerSelectionFrame = null;
+        this.scheduleSelectionSync(reason);
+      });
+    });
   }
 
   handleKeyDown(event) {

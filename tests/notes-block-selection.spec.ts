@@ -50,6 +50,38 @@ async function createMultiBlockNote(request: APIRequestContext, token: string) {
   return body.note.id as string;
 }
 
+async function createInlineToolbarSelectionNote(request: APIRequestContext, token: string) {
+  const blocks = [
+    {
+      type: "paragraph",
+      data: { text: "Primeiro bloco com texto suficiente para arrastar a selecao com seguranca." },
+    },
+    {
+      type: "paragraph",
+      data: { text: "Segundo bloco no meio da selecao para validar que a toolbar nao interrompe o drag." },
+    },
+    {
+      type: "paragraph",
+      data: { text: "Terceiro bloco fecha a selecao e precisa continuar completamente selecionavel." },
+    },
+    {
+      type: "paragraph",
+      data: { text: "Quarto bloco de apoio para manter a tela com espaco de editor real." },
+    },
+  ];
+  const response = await request.post(`${BASE_URL}/api/notes`, {
+    headers: { Authorization: `Bearer ${token}` },
+    data: {
+      title: `QA toolbar drag ${Date.now()}`,
+      content: { time: Date.now(), blocks, version: "2.31.6" },
+    },
+  });
+  expect(response.ok()).toBeTruthy();
+  const body = await response.json();
+  expect(body.note?.id).toBeTruthy();
+  return body.note.id as string;
+}
+
 async function openNote(page: Page, token: string, noteId: string, width: number, height: number) {
   await page.setViewportSize({ width, height });
   await page.addInitScript((authToken) => {
@@ -132,5 +164,148 @@ test.describe("TCloud Notes Block Selection and Highlighting", () => {
 
     const selectedCount = await page.locator(".ce-block.is-tcloud-range-selected").count();
     expect(selectedCount).toBe(3);
+  });
+
+  test("inline toolbar waits until pointerup and stays outside a multi-block selection", async ({ page, request }) => {
+    const token = await login(request);
+    const noteId = await createInlineToolbarSelectionNote(request, token);
+    await openNote(page, token, noteId, 1280, 900);
+
+    const editables = page.locator(".editorjs-host .ce-block [contenteditable='true']");
+    const startBox = await editables.nth(0).boundingBox();
+    const endBox = await editables.nth(2).boundingBox();
+
+    expect(startBox).toBeTruthy();
+    expect(endBox).toBeTruthy();
+
+    await page.mouse.move(
+      startBox!.x + Math.min(160, Math.max(24, startBox!.width - 24)),
+      startBox!.y + startBox!.height / 2,
+    );
+    await page.mouse.down();
+    await page.mouse.move(
+      endBox!.x + Math.min(180, Math.max(28, endBox!.width - 20)),
+      endBox!.y + endBox!.height / 2,
+      { steps: 24 },
+    );
+
+    await expect(page.locator(".tcloud-inline-toolbar--custom.is-open")).toHaveCount(0);
+    await page.mouse.up();
+
+    await expect.poll(async () => page.locator(".ce-block.is-tcloud-range-selected").count()).toBe(3);
+
+    // Headless Chromium normalizes this vertical drag into block selection without keeping
+    // a live text range, so we verify the pointerdown -> selectionchange -> pointerup
+    // toolbar lifecycle with a synthetic cross-block range using the same controller path.
+    const syntheticDragState = await page.evaluate(() => {
+      const editables = Array.from(document.querySelectorAll(".editorjs-host .ce-block [contenteditable='true']"));
+      const firstEditable = editables[0];
+      const thirdEditable = editables[2];
+      const startNode = firstEditable?.firstChild || firstEditable;
+      const endNode = thirdEditable?.firstChild || thirdEditable;
+      const firstRect = firstEditable?.getBoundingClientRect();
+
+      if (!firstEditable || !thirdEditable || !startNode || !endNode || !firstRect) {
+        return { ready: false, toolbarOpen: -1, selectedBlocks: -1 };
+      }
+
+      firstEditable.dispatchEvent(new PointerEvent("pointerdown", {
+        bubbles: true,
+        composed: true,
+        pointerId: 1,
+        buttons: 1,
+        clientX: firstRect.left + 48,
+        clientY: firstRect.top + firstRect.height / 2,
+      }));
+
+      const range = document.createRange();
+      range.setStart(startNode, 5);
+      range.setEnd(endNode, Math.max(8, (endNode.textContent || "").length - 8));
+
+      const selection = window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+      document.dispatchEvent(new Event("selectionchange"));
+
+      return {
+        ready: true,
+        toolbarOpen: document.querySelectorAll(".tcloud-inline-toolbar--custom.is-open").length,
+        selectedBlocks: document.querySelectorAll(".editorjs-host .ce-block.is-tcloud-range-selected").length,
+      };
+    });
+
+    expect(syntheticDragState.ready).toBeTruthy();
+    expect(syntheticDragState.toolbarOpen).toBe(0);
+    expect(syntheticDragState.selectedBlocks).toBe(3);
+
+    await page.evaluate(() => {
+      document.dispatchEvent(new PointerEvent("pointerup", {
+        bubbles: true,
+        composed: true,
+        pointerId: 1,
+      }));
+    });
+
+    const toolbar = page.locator(".tcloud-inline-toolbar--custom.is-open");
+    await expect(toolbar).toHaveCount(1);
+
+    const toolbarAvoidsSelection = await page.evaluate(() => {
+      const toolbarElement = document.querySelector(".tcloud-inline-toolbar--custom.is-open");
+      const selectedBlocks = Array.from(document.querySelectorAll(".editorjs-host .ce-block.is-tcloud-range-selected"));
+      if (!toolbarElement || !selectedBlocks.length) return false;
+
+      const toolbarRect = toolbarElement.getBoundingClientRect();
+      const blockRects = selectedBlocks.map((block) => block.getBoundingClientRect());
+      const selectionBounds = {
+        left: Math.min(...blockRects.map((rect) => rect.left)),
+        top: Math.min(...blockRects.map((rect) => rect.top)),
+        right: Math.max(...blockRects.map((rect) => rect.right)),
+        bottom: Math.max(...blockRects.map((rect) => rect.bottom)),
+      };
+
+      return (
+        toolbarRect.bottom <= selectionBounds.top ||
+        toolbarRect.top >= selectionBounds.bottom ||
+        toolbarRect.right <= selectionBounds.left ||
+        toolbarRect.left >= selectionBounds.right
+      );
+    });
+    expect(toolbarAvoidsSelection).toBeTruthy();
+
+    await page.evaluate(() => {
+      const editable = document.querySelector(".editorjs-host .ce-block [contenteditable='true']");
+      const textNode = editable?.firstChild || editable;
+      const content = textNode?.textContent || "";
+      const start = content.indexOf("Primeiro");
+      if (!textNode || start < 0) return;
+
+      const range = document.createRange();
+      range.setStart(textNode, start);
+      range.setEnd(textNode, start + "Primeiro".length);
+
+      const selection = window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+      document.dispatchEvent(new Event("selectionchange"));
+    });
+
+    await expect(toolbar).toHaveCount(1);
+    await expect.poll(async () => page.evaluate(() => {
+      const toolbarElement = document.querySelector(".tcloud-inline-toolbar--custom.is-open");
+      const selection = window.getSelection();
+      if (!toolbarElement || !selection?.rangeCount) return Number.POSITIVE_INFINITY;
+      const selectionRect = selection.getRangeAt(0).getBoundingClientRect();
+      const toolbarRect = toolbarElement.getBoundingClientRect();
+      if (!selectionRect.width && !selectionRect.height) return Number.POSITIVE_INFINITY;
+      if (toolbarRect.bottom <= selectionRect.top) return selectionRect.top - toolbarRect.bottom;
+      if (toolbarRect.top >= selectionRect.bottom) return toolbarRect.top - selectionRect.bottom;
+      return 0;
+    })).toBeLessThanOrEqual(16);
+    await page.locator('.tcloud-inline-toolbar--custom [data-tcloud-action="bold"]').click();
+
+    await expect.poll(async () => page.evaluate(() => {
+      const html = document.querySelector(".editorjs-host .ce-block [contenteditable='true']")?.innerHTML || "";
+      return /<(strong|b)>Primeiro<\/(strong|b)>/.test(html);
+    })).toBeTruthy();
   });
 });

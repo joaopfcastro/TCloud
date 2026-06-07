@@ -6214,6 +6214,7 @@ body,
   -webkit-backdrop-filter: blur(18px) saturate(160%) !important;
   overflow-x: auto !important;
   overflow-y: visible !important;
+  pointer-events: auto !important;
   scrollbar-width: none;
   white-space: nowrap !important;
 }
@@ -6241,12 +6242,19 @@ body,
   border-bottom: 1px solid var(--tcloud-toolbar-border);
   background: var(--tcloud-toolbar-bg);
   transform: rotate(45deg);
+  pointer-events: none !important;
 }
 
 .tcloud-inline-toolbar--custom[data-placement="bottom"]::after {
   top: -7px;
   bottom: auto;
   transform: rotate(225deg);
+}
+
+.tcloud-inline-toolbar--custom[data-placement="left"]::after,
+.tcloud-inline-toolbar--custom[data-placement="right"]::after,
+.tcloud-inline-toolbar--custom[data-placement="floating"]::after {
+  content: none;
 }
 
 .editorjs-host .tcloud-inline-toolbar__native,
@@ -6279,6 +6287,7 @@ body,
   min-width: 1px;
   margin: 4px 3px;
   background: var(--tcloud-toolbar-divider);
+  pointer-events: none;
 }
 
 .editorjs-host .ce-inline-toolbar.tcloud-inline-toolbar .ce-inline-tool,
@@ -6301,6 +6310,7 @@ body,
   font-size: 14px !important;
   font-weight: 750 !important;
   line-height: 1 !important;
+  pointer-events: auto !important;
 }
 
 .editorjs-host .ce-inline-toolbar.tcloud-inline-toolbar .ce-inline-tool:hover,
@@ -6438,6 +6448,7 @@ body,
   box-shadow: 0 18px 44px rgba(0, 0, 0, 0.24);
   backdrop-filter: blur(18px) saturate(160%);
   -webkit-backdrop-filter: blur(18px) saturate(160%);
+  pointer-events: auto !important;
 }
 
 .tcloud-inline-toolbar__dropdown[open] .tcloud-inline-toolbar__dropdown-menu {
@@ -6462,6 +6473,7 @@ body,
   font-weight: 620;
   padding: 0 9px;
   cursor: pointer;
+  pointer-events: auto !important;
 }
 
 .tcloud-inline-toolbar__menu button > span:first-child {
