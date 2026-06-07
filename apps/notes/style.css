@@ -1564,6 +1564,111 @@ button:disabled,
   font-size: 13px;
 }
 
+.colon-icon-menu {
+  position: fixed;
+  z-index: var(--tcloud-inline-z-popover);
+  display: grid;
+  gap: 3px;
+  width: min(300px, calc(100vw - 20px));
+  max-height: min(360px, calc(100vh - 24px));
+  overflow-y: auto;
+  padding: 6px;
+  border: 1px solid var(--notes-popover-border);
+  border-radius: var(--notes-popover-radius);
+  background: var(--notes-popover-bg);
+  color: var(--notes-text-primary);
+  box-shadow: var(--notes-popover-shadow);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+}
+
+.colon-icon-menu.is-open {
+  animation: tcloud-menu-in 120ms ease-out;
+}
+
+.colon-icon-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px 8px 6px;
+  color: var(--notes-text-secondary);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.colon-icon-header small {
+  max-width: 120px;
+  overflow: hidden;
+  color: var(--notes-text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-overflow: ellipsis;
+  text-transform: none;
+  white-space: nowrap;
+}
+
+.colon-icon-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 38px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--notes-text-primary);
+  cursor: pointer;
+  padding: 6px 8px;
+  text-align: left;
+}
+
+.colon-icon-option:hover,
+.colon-icon-option.is-active {
+  background: var(--notes-menu-active);
+}
+
+.colon-icon-symbol {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  font-size: 19px;
+}
+
+.colon-icon-copy {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+
+.colon-icon-label {
+  overflow: hidden;
+  color: var(--notes-text-primary);
+  font-size: 13px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.colon-icon-alias {
+  overflow: hidden;
+  color: var(--notes-text-secondary);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.colon-icon-empty {
+  padding: 14px 10px;
+  color: var(--notes-text-secondary);
+  font-size: 13px;
+}
+
 .modal {
   position: fixed;
   inset: 0;

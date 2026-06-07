@@ -1,4 +1,4 @@
-import { EditorAdapter, buildBlock, normalizeEditorData } from "./editor-adapter.js?v=notes-editor-popovers-controller-20260605-4";
+import { EditorAdapter, buildBlock, normalizeEditorData } from "./editor-adapter.js?v=notes-colon-icon-menu-20260606-1";
 import { NotesApi } from "./notes-api.js";
 import { NotesFilePicker } from "./file-picker.js";
 import { IMPORT_ACCEPT, isSupportedImportFile, readFileAsText } from "./export-import.js";
@@ -67,6 +67,8 @@ const NOTE_ICON_CATALOG = [
   { value: "▰", label: "Bloco", group: "Sugestões", aliases: ["bloco", "quadrado", "padrao", "padrão", "default", "note"] },
   { value: "⭐", label: "Estrela", group: "Sugestões", aliases: ["estrela", "favorito", "favorite", "star"] },
   { value: "✅", label: "Check", group: "Sugestões", aliases: ["check", "feito", "ok", "done", "concluido", "concluído", "tarefa"] },
+  { value: "👎", label: "Negativo", group: "Sugestões", aliases: ["negativo", "nao", "não", "dislike", "thumbs down"] },
+  { value: "❌", label: "Erro", group: "Sugestões", aliases: ["erro", "x", "cancelar", "negado", "incorreto"] },
   { value: "📌", label: "Pin", group: "Sugestões", aliases: ["pin", "fixar", "fixado", "importante"] },
   { value: "🧠", label: "Cérebro", group: "Sugestões", aliases: ["cerebro", "cérebro", "mente", "neurologia", "psico"] },
   { value: "📚", label: "Livros", group: "Sugestões", aliases: ["livro", "livros", "book", "books", "estudo", "academico", "acadêmico"] },
@@ -130,7 +132,7 @@ const NOTE_ICON_CATALOG = [
   { value: "👤", label: "Usuário", group: "Pessoas", aliases: ["usuario", "usuário", "user", "perfil", "pessoa", "profile"] },
   { value: "👥", label: "Grupo", group: "Pessoas", aliases: ["grupo", "team", "equipe", "pessoas", "people"] },
   { value: "❤️", label: "Coração", group: "Pessoas", aliases: ["coracao", "coração", "heart", "amor", "saude", "saúde"] },
-  { value: "👍", label: "Joia", group: "Pessoas", aliases: ["joia", "curtir", "like", "thumbs up", "ok", "positivo"] },
+  { value: "👍", label: "Joia", group: "Pessoas", aliases: ["joia", "curtir", "like", "thumbs up", "ok", "positivo", "sim"] },
 
   // Ideias
   { value: "💡", label: "Ideia", group: "Ideias", aliases: ["ideia", "lampada", "lâmpada", "insight", "lightbulb", "criatividade"] },
@@ -301,6 +303,16 @@ const state = {
     replaceCurrent: true,
     filteredOptions: null,
   },
+  colonIconMenu: {
+    open: false,
+    index: 0,
+    query: "",
+    triggerRange: null,
+    triggerText: "",
+    filteredOptions: [],
+    composing: false,
+    raf: 0,
+  },
   ui: {
     sidebarCollapsed: false,
     compactWindow: false,
@@ -401,6 +413,7 @@ const els = {
   folderNameCancelButton: document.getElementById("folder-name-cancel-button"),
   folderNameSubmitButton: document.getElementById("folder-name-submit-button"),
   slashMenu: document.getElementById("slash-menu"),
+  colonIconMenu: document.getElementById("colon-icon-menu"),
   noteCover: document.getElementById("note-cover"),
   noteCoverButton: document.getElementById("note-cover-button"),
   noteCoverMenu: document.getElementById("note-cover-menu"),
@@ -946,6 +959,7 @@ function closeTransientOverlays() {
   state.editor?.hideInlineToolbar?.("transient-overlay");
   closeIconMenu();
   closeCoverMenu();
+  closeColonIconMenu();
   closeSlashMenu();
   hideAllContextMenus();
   window.TCloudApp?.closeWindowMenus?.();
@@ -953,6 +967,7 @@ function closeTransientOverlays() {
 
 function openCoverMenuAt(x, y) {
   if (!els.noteCoverMenu || !state.currentNote || state.currentNote.deleted_at) return;
+  closeColonIconMenu();
   closeIconMenu();
   renderCoverMenu();
   els.noteCoverMenu.classList.remove("hidden");
@@ -963,6 +978,7 @@ function openCoverMenuAt(x, y) {
 
 function openCoverMenuFromButton() {
   if (!els.noteCoverMenu || !els.noteCoverButton || !state.currentNote || state.currentNote.deleted_at) return;
+  closeColonIconMenu();
   closeIconMenu();
   renderCoverMenu();
   positionAppearancePopover(els.noteCoverMenu, els.noteCoverButton, { align: "start", width: 340 });
@@ -972,6 +988,7 @@ function openCoverMenuFromButton() {
 
 function openIconMenuFromButton() {
   if (!els.noteIconMenu || !els.noteIconButton || !state.currentNote || state.currentNote.deleted_at) return;
+  closeColonIconMenu();
   closeCoverMenu();
   state.ui.iconQuery = "";
   renderIconMenu();
@@ -2899,6 +2916,7 @@ function closeEditorJsMenusForSlashOnly() {
 
 function openSlashMenu(position, replaceCurrent = true) {
   state.editor?.hideInlineToolbar?.("slash-menu");
+  closeColonIconMenu();
   closeEditorJsMenusForSlashOnly();
   requestAnimationFrame(closeEditorJsMenusForSlashOnly);
   state.slashMenu.open = true;
@@ -2918,6 +2936,307 @@ function closeSlashMenu() {
   state.slashMenu.open = false;
   state.slashMenu.filteredOptions = null;
   els.slashMenu.classList.add("hidden");
+}
+
+function closeColonIconMenu({ restoreFocus = false } = {}) {
+  state.colonIconMenu.open = false;
+  state.colonIconMenu.index = 0;
+  state.colonIconMenu.query = "";
+  state.colonIconMenu.triggerRange = null;
+  state.colonIconMenu.triggerText = "";
+  state.colonIconMenu.filteredOptions = [];
+  if (state.colonIconMenu.raf) {
+    window.cancelAnimationFrame(state.colonIconMenu.raf);
+    state.colonIconMenu.raf = 0;
+  }
+  els.colonIconMenu?.classList.add("hidden");
+  els.colonIconMenu?.classList.remove("is-open");
+  if (els.colonIconMenu) {
+    els.colonIconMenu.innerHTML = "";
+  }
+  if (restoreFocus) state.editor?.focus?.();
+}
+
+function editorEditableFromNode(node) {
+  const element = node?.nodeType === Node.ELEMENT_NODE ? node : node?.parentElement;
+  const editable = element?.closest?.("[contenteditable='true']");
+  return editable && els.editorHolder?.contains(editable) ? editable : null;
+}
+
+function isEditorTextTarget(target) {
+  if (!(target instanceof HTMLElement)) return false;
+  if (!target.closest(".editorjs-host")) return false;
+  if (target.closest("input, textarea, select, button")) return false;
+  return Boolean(target.closest("[contenteditable='true']"));
+}
+
+function textBeforeCaretInCurrentEditable() {
+  const selection = window.getSelection();
+  if (!selection || !selection.rangeCount || !selection.isCollapsed) return "";
+  const range = selection.getRangeAt(0);
+  const editable = editorEditableFromNode(range.startContainer);
+  if (!editable) return "";
+  const beforeRange = range.cloneRange();
+  beforeRange.selectNodeContents(editable);
+  try {
+    beforeRange.setEnd(range.startContainer, range.startOffset);
+  } catch (error) {
+    return "";
+  }
+  return beforeRange.toString();
+}
+
+function eventShouldOpenColonIconMenu(event) {
+  if (
+    event.key !== ":" ||
+    event.defaultPrevented ||
+    event.metaKey ||
+    event.ctrlKey ||
+    event.altKey ||
+    !state.currentNote ||
+    state.currentNote.deleted_at ||
+    state.colonIconMenu.composing
+  ) {
+    return false;
+  }
+  if (!isEditorTextTarget(event.target)) return false;
+  const before = textBeforeCaretInCurrentEditable();
+  if (/[\p{L}\p{N}_]$/u.test(before)) return false;
+  return /(^|[\s([{'"“‘])$/.test(before);
+}
+
+function inputShouldOpenColonIconMenu(event) {
+  if (
+    state.colonIconMenu.open ||
+    state.colonIconMenu.composing ||
+    !state.currentNote ||
+    state.currentNote.deleted_at ||
+    !isEditorTextTarget(event.target)
+  ) {
+    return false;
+  }
+  return getColonIconQuery() !== null;
+}
+
+function setRangeByTextOffsets(range, root, startOffset, endOffset) {
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  let currentOffset = 0;
+  let startSet = false;
+  let endSet = false;
+
+  while (walker.nextNode()) {
+    const node = walker.currentNode;
+    const length = node.textContent?.length || 0;
+    const nextOffset = currentOffset + length;
+
+    if (!startSet && startOffset <= nextOffset) {
+      range.setStart(node, Math.max(0, Math.min(length, startOffset - currentOffset)));
+      startSet = true;
+    }
+    if (!endSet && endOffset <= nextOffset) {
+      range.setEnd(node, Math.max(0, Math.min(length, endOffset - currentOffset)));
+      endSet = true;
+      break;
+    }
+    currentOffset = nextOffset;
+  }
+
+  if (!startSet) {
+    range.selectNodeContents(root);
+    range.collapse(false);
+  }
+  if (!endSet) {
+    range.setEnd(root, root.childNodes.length);
+  }
+}
+
+function getColonIconQuery() {
+  const selection = window.getSelection();
+  if (!selection || !selection.rangeCount || !selection.isCollapsed) return null;
+  const range = selection.getRangeAt(0);
+  const editable = editorEditableFromNode(range.startContainer);
+  if (!editable) return null;
+
+  const beforeRange = range.cloneRange();
+  beforeRange.selectNodeContents(editable);
+  try {
+    beforeRange.setEnd(range.startContainer, range.startOffset);
+  } catch (error) {
+    return null;
+  }
+
+  const textBefore = beforeRange.toString();
+  const colonIndex = textBefore.lastIndexOf(":");
+  if (colonIndex === -1) return null;
+
+  const prefixBeforeColon = textBefore.slice(0, colonIndex);
+  const query = textBefore.slice(colonIndex + 1);
+  if (/[\p{L}\p{N}_]$/u.test(prefixBeforeColon)) return null;
+  if (!/(^|[\s([{'"“‘])$/.test(prefixBeforeColon)) return null;
+  if (/\s/.test(query)) return null;
+  if (query.length > 32) return null;
+
+  const triggerRange = document.createRange();
+  triggerRange.selectNodeContents(editable);
+  setRangeByTextOffsets(triggerRange, editable, colonIndex, textBefore.length);
+  state.colonIconMenu.triggerRange = triggerRange;
+  state.colonIconMenu.triggerText = `:${query}`;
+  return query;
+}
+
+function colonIconMatchScore(item, query) {
+  const label = normalizeIconSearch(item?.label);
+  const group = normalizeIconSearch(item?.group);
+  const aliases = Array.isArray(item?.aliases) ? item.aliases.map(normalizeIconSearch) : [];
+  const fields = [label, group, ...aliases].filter(Boolean);
+  if (fields.some((field) => field === query)) return 100;
+  if (fields.some((field) => field.startsWith(query))) return 80;
+  if (fields.some((field) => field.includes(query))) return 50;
+  return 0;
+}
+
+function filterColonIconOptions(query) {
+  const normalized = normalizeIconSearch(query);
+  const unique = new Map();
+  [...getRecentIconItems(), ...NOTE_ICON_CATALOG].forEach((item) => {
+    if (!item?.value || unique.has(item.value)) return;
+    unique.set(item.value, item);
+  });
+  const items = Array.from(unique.values());
+  if (!normalized) return items.slice(0, 24);
+  return items
+    .map((item) => ({ item, score: colonIconMatchScore(item, normalized) }))
+    .filter((entry) => entry.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 30)
+    .map((entry) => entry.item);
+}
+
+function positionColonIconMenu(position = selectionPosition()) {
+  if (!els.colonIconMenu) return;
+  const bounds = noteViewportBounds();
+  const rect = els.colonIconMenu.getBoundingClientRect();
+  const width = rect.width || 300;
+  const height = rect.height || 260;
+  const left = clamp(position.x, bounds.left + 8, Math.max(bounds.left + 8, bounds.right - width - 8));
+  const belowTop = position.y;
+  const aboveTop = position.y - height - 22;
+  const top = belowTop + height > bounds.bottom - 8 && aboveTop >= bounds.top + 8
+    ? aboveTop
+    : clamp(belowTop, bounds.top + 8, Math.max(bounds.top + 8, bounds.bottom - height - 8));
+  els.colonIconMenu.style.left = `${Math.round(left)}px`;
+  els.colonIconMenu.style.top = `${Math.round(top)}px`;
+}
+
+function openColonIconMenu(position) {
+  if (!els.colonIconMenu) return;
+  state.editor?.hideInlineToolbar?.("colon-icon-menu");
+  closeSlashMenu();
+  closeIconMenu();
+  closeCoverMenu();
+  hideAllContextMenus();
+  closeEditorJsMenusForSlashOnly();
+  requestAnimationFrame(closeEditorJsMenusForSlashOnly);
+
+  state.colonIconMenu.open = true;
+  state.colonIconMenu.index = 0;
+  state.colonIconMenu.query = "";
+  state.colonIconMenu.triggerRange = null;
+  state.colonIconMenu.triggerText = ":";
+  state.colonIconMenu.filteredOptions = filterColonIconOptions("");
+
+  els.colonIconMenu.classList.remove("hidden");
+  els.colonIconMenu.classList.add("is-open");
+  renderColonIconMenu();
+  positionColonIconMenu(position);
+}
+
+function renderColonIconMenu() {
+  if (!els.colonIconMenu) return;
+  const options = state.colonIconMenu.filteredOptions || [];
+  els.colonIconMenu.innerHTML = "";
+
+  const header = document.createElement("div");
+  header.className = "colon-icon-header";
+  header.innerHTML = `
+    <span>Ícones</span>
+    <small>${escapeHtml(state.colonIconMenu.triggerText || ":")}</small>
+  `;
+  els.colonIconMenu.appendChild(header);
+
+  if (!options.length) {
+    const empty = document.createElement("div");
+    empty.className = "colon-icon-empty";
+    empty.textContent = "Nenhum ícone encontrado";
+    els.colonIconMenu.appendChild(empty);
+    return;
+  }
+
+  options.forEach((item, index) => {
+    const button = document.createElement("button");
+    const primaryAlias = Array.isArray(item.aliases) && item.aliases.length ? item.aliases[0] : item.label;
+    button.type = "button";
+    button.className = `colon-icon-option${index === state.colonIconMenu.index ? " is-active" : ""}`;
+    button.dataset.iconValue = item.value;
+    button.setAttribute("role", "option");
+    button.setAttribute("aria-selected", index === state.colonIconMenu.index ? "true" : "false");
+    button.innerHTML = `
+      <span class="colon-icon-symbol" aria-hidden="true">${escapeHtml(item.value)}</span>
+      <span class="colon-icon-copy">
+        <span class="colon-icon-label">${escapeHtml(item.label || item.value)}</span>
+        <span class="colon-icon-alias">:${escapeHtml(primaryAlias || "")}</span>
+      </span>
+    `;
+    button.addEventListener("mousedown", (event) => event.preventDefault());
+    button.addEventListener("click", () => applyColonIconOption(item).catch(handleUnexpectedError));
+    els.colonIconMenu.appendChild(button);
+  });
+}
+
+function updateColonIconMenuFilter() {
+  if (!state.colonIconMenu.open) return;
+  const query = getColonIconQuery();
+  if (query === null) {
+    closeColonIconMenu();
+    return;
+  }
+  state.colonIconMenu.query = query;
+  state.colonIconMenu.triggerText = `:${query}`;
+  state.colonIconMenu.filteredOptions = filterColonIconOptions(query);
+  state.colonIconMenu.index = state.colonIconMenu.filteredOptions.length ? 0 : -1;
+  renderColonIconMenu();
+  positionColonIconMenu(selectionPosition());
+}
+
+function scheduleColonIconMenuFilterUpdate() {
+  if (!state.colonIconMenu.open || state.colonIconMenu.raf) return;
+  state.colonIconMenu.raf = window.requestAnimationFrame(() => {
+    state.colonIconMenu.raf = 0;
+    updateColonIconMenuFilter();
+  });
+}
+
+async function applyColonIconOption(item) {
+  const value = String(item?.value || "").trim();
+  if (!value || !editorRangeIsValid(state.colonIconMenu.triggerRange)) return;
+  const range = state.colonIconMenu.triggerRange.cloneRange();
+  closeColonIconMenu();
+
+  const selection = window.getSelection();
+  selection?.removeAllRanges();
+  selection?.addRange(range);
+  range.deleteContents();
+
+  const textNode = document.createTextNode(`${value} `);
+  range.insertNode(textNode);
+  range.setStartAfter(textNode);
+  range.collapse(true);
+  selection?.removeAllRanges();
+  selection?.addRange(range);
+
+  pushRecentIcon(value);
+  await state.editor?.notifyManualChange?.();
+  markDirty("content");
 }
 
 function renderSlashMenu() {
@@ -3534,6 +3853,7 @@ function wireEvents() {
       applyCoverColorFromMenu().catch(handleUnexpectedError);
       return;
     }
+    if (state.colonIconMenu.open && !target.closest("#colon-icon-menu")) closeColonIconMenu();
     if (state.slashMenu.open && !target.closest("#slash-menu")) closeSlashMenu();
     if (!target.closest("#note-icon-menu") && !target.closest("#note-icon-button")) closeIconMenu();
     if (!target.closest("#note-cover-menu") && !target.closest("#note-cover-button")) closeCoverMenu();
@@ -3596,12 +3916,34 @@ function wireEvents() {
   window.TCloudApp?.ready?.().then(() => publishWindowActions()).catch(() => {});
   window.addEventListener("tcloud-app-session-changed", publishWindowActions);
   window.addEventListener("pageshow", publishWindowActions);
+  window.addEventListener("resize", () => closeColonIconMenu());
   document.addEventListener("visibilitychange", () => {
     if (!document.hidden) publishWindowActions();
   });
 
-  // Intercepta a tecla "/" na fase de captura para evitar que o EditorJS a processe e abra o popover nativo dele
+  document.addEventListener("compositionstart", () => {
+    state.colonIconMenu.composing = true;
+    closeColonIconMenu();
+  });
+
+  document.addEventListener("compositionend", () => {
+    state.colonIconMenu.composing = false;
+  });
+
+  document.addEventListener("selectionchange", () => {
+    scheduleColonIconMenuFilterUpdate();
+  });
+
+  // Intercepta as teclas ":" e "/" na fase de captura para controlar os popovers do editor.
   document.addEventListener("keydown", (event) => {
+    if (eventShouldOpenColonIconMenu(event)) {
+      event.stopPropagation();
+      window.requestAnimationFrame(() => {
+        openColonIconMenu(selectionPosition());
+        updateColonIconMenuFilter();
+      });
+      return;
+    }
     if (eventShouldOpenSlashMenu(event)) {
       event.stopPropagation();
       event.stopImmediatePropagation();
@@ -3609,11 +3951,20 @@ function wireEvents() {
     }
   }, true);
 
-  document.addEventListener("input", () => {
+  document.addEventListener("input", (event) => {
+    if (inputShouldOpenColonIconMenu(event)) {
+      openColonIconMenu(selectionPosition());
+      updateColonIconMenuFilter();
+      return;
+    }
+    if (state.colonIconMenu.open) updateColonIconMenuFilter();
     if (state.slashMenu.open) updateSlashMenuFilter();
   });
 
   document.addEventListener("keyup", (event) => {
+    if (state.colonIconMenu.open && !["ArrowDown", "ArrowUp", "Enter", "Tab", "Escape"].includes(event.key)) {
+      updateColonIconMenuFilter();
+    }
     if (state.slashMenu.open && event.key !== "ArrowDown" && event.key !== "ArrowUp" && event.key !== "Enter") {
       updateSlashMenuFilter();
     }
@@ -3735,6 +4086,36 @@ function wireEvents() {
             deleteCurrentNote().catch(handleUnexpectedError);
           }).catch(() => {});
         }
+        return;
+      }
+    }
+
+    if (state.colonIconMenu.open) {
+      const options = state.colonIconMenu.filteredOptions || [];
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        state.colonIconMenu.index = options.length ? (state.colonIconMenu.index + 1) % options.length : -1;
+        renderColonIconMenu();
+        return;
+      }
+      if (event.key === "ArrowUp") {
+        event.preventDefault();
+        state.colonIconMenu.index = options.length ? (state.colonIconMenu.index - 1 + options.length) % options.length : -1;
+        renderColonIconMenu();
+        return;
+      }
+      if ((event.key === "Enter" || event.key === "Tab") && options.length && state.colonIconMenu.index >= 0) {
+        event.preventDefault();
+        applyColonIconOption(options[state.colonIconMenu.index]).catch(handleUnexpectedError);
+        return;
+      }
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeColonIconMenu();
+        return;
+      }
+      if (event.key === " ") {
+        closeColonIconMenu();
         return;
       }
     }
@@ -3997,6 +4378,7 @@ async function openRevisionsForId(noteId) {
 
 function showContextMenuAt(menu, x, y) {
   if (!menu) return;
+  closeColonIconMenu();
   hideAllContextMenus();
   menu.classList.remove("hidden");
   positionFloatingElement(menu, x, y, { margin: 8 });
@@ -4084,6 +4466,7 @@ function handleSidebarDrop(event, targetFolderId = "") {
 function openNoteMoreMenu(event) {
   event.preventDefault();
   event.stopPropagation();
+  closeColonIconMenu();
   state.editor?.hideInlineToolbar?.("note-more-menu");
   const context = currentMenuContext(state.currentNote, { compactWindow: false });
   const directStandaloneIds = context.noteTrashed
@@ -4511,6 +4894,7 @@ function wireContextMenus() {
   });
 
   document.addEventListener("scroll", () => {
+    closeColonIconMenu();
     hideAllContextMenus();
   }, { capture: true, passive: true });
 

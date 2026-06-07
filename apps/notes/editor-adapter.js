@@ -224,6 +224,8 @@ function isBlockedInlineToolbarTarget(element) {
     ".sidebar, " +
     ".appearance-popover, " +
     "#slash-menu, " +
+    "#colon-icon-menu, " +
+    ".colon-icon-menu, " +
     ".tcloud-block-card.is-image",
   ));
 }
@@ -767,7 +769,7 @@ class TCloudInlineToolbarController {
       this.setExternalEditorMenuOpen(true, "external-menu");
       return;
     }
-    if (target?.closest?.(".ce-toolbar__plus, .ce-toolbar__settings-btn, .ce-popover, .ce-settings, .ce-conversion-toolbar, #slash-menu, .tcloud-context-menu, .modal")) {
+    if (target?.closest?.(".ce-toolbar__plus, .ce-toolbar__settings-btn, .ce-popover, .ce-settings, .ce-conversion-toolbar, #slash-menu, #colon-icon-menu, .colon-icon-menu, .tcloud-context-menu, .modal")) {
       this.setExternalEditorMenuOpen(true, "external-menu");
       return;
     }
@@ -786,8 +788,8 @@ class TCloudInlineToolbarController {
       }
       return;
     }
-    if (event.key === "/") {
-      this.hideInlineToolbar("slash-key", { suppressSelection: true });
+    if (event.key === ":" || event.key === "/") {
+      this.hideInlineToolbar(event.key === ":" ? "colon-key" : "slash-key", { suppressSelection: true });
       return;
     }
 
