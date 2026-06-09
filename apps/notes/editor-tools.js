@@ -167,6 +167,93 @@ function cleanupInlineSpans(root) {
   root.normalize?.();
 }
 
+function htmlTemplate(html = "") {
+  const template = document.createElement("template");
+  template.innerHTML = String(html || "");
+  return template;
+}
+
+function applyAttributes(element, attributes = {}) {
+  Object.entries(attributes).forEach(([key, value]) => {
+    if (value !== null && value !== undefined && value !== "") {
+      element.setAttribute(key, String(value));
+    }
+  });
+}
+
+function meaningfulChildNodes(container) {
+  return Array.from(container.childNodes || []).filter((node) => {
+    if (node.nodeType === Node.TEXT_NODE) return Boolean(node.textContent?.trim());
+    return node.nodeType === Node.ELEMENT_NODE;
+  });
+}
+
+function serializeTemplate(template) {
+  cleanupInlineSpans(template.content);
+  return template.innerHTML;
+}
+
+export function wrapHtmlContent(html, tagName, attributes = {}) {
+  const template = htmlTemplate(html);
+  if (!meaningfulChildNodes(template.content).length) return "";
+  const wrapper = document.createElement(tagName);
+  applyAttributes(wrapper, attributes);
+  while (template.content.firstChild) wrapper.appendChild(template.content.firstChild);
+  template.content.appendChild(wrapper);
+  return serializeTemplate(template);
+}
+
+export function toggleHtmlWrapper(html, selector, tagName, attributes = {}) {
+  const template = htmlTemplate(html);
+  const children = meaningfulChildNodes(template.content);
+  if (!children.length) return "";
+  if (
+    children.length === 1 &&
+    children[0].nodeType === Node.ELEMENT_NODE &&
+    children[0].matches?.(selector)
+  ) {
+    const wrapper = children[0];
+    while (wrapper.firstChild) template.content.insertBefore(wrapper.firstChild, wrapper);
+    wrapper.remove();
+    return serializeTemplate(template);
+  }
+  return wrapHtmlContent(template.innerHTML, tagName, attributes);
+}
+
+export function applyHtmlInlineStyle(html, stylePatch = {}) {
+  const template = htmlTemplate(html);
+  if (!meaningfulChildNodes(template.content).length) return "";
+
+  const normalizedPatch = {};
+  if (Object.prototype.hasOwnProperty.call(stylePatch, "color")) {
+    normalizedPatch.color = stylePatch.color ? normalizeHex(stylePatch.color) : null;
+  }
+  if (Object.prototype.hasOwnProperty.call(stylePatch, "backgroundColor")) {
+    normalizedPatch.backgroundColor = stylePatch.backgroundColor ? normalizeHex(stylePatch.backgroundColor) : null;
+  }
+
+  patchFragmentStyles(template.content, normalizedPatch);
+  cleanupInlineSpans(template.content);
+
+  const hasStyle = Object.values(normalizedPatch).some(Boolean);
+  if (!hasStyle) return serializeTemplate(template);
+
+  const wrapper = document.createElement("span");
+  if (normalizedPatch.color) wrapper.style.color = normalizedPatch.color;
+  if (normalizedPatch.backgroundColor) wrapper.style.backgroundColor = normalizedPatch.backgroundColor;
+  while (template.content.firstChild) wrapper.appendChild(template.content.firstChild);
+  template.content.appendChild(wrapper);
+  return serializeTemplate(template);
+}
+
+export function clearHtmlInlineFormatting(html) {
+  const template = htmlTemplate(html);
+  Array.from(template.content.querySelectorAll("strong,b,em,i,u,s,strike,code,span[style]"))
+    .reverse()
+    .forEach(unwrapElement);
+  return serializeTemplate(template);
+}
+
 function patchFragmentStyles(fragment, stylePatch) {
   if (!fragment?.querySelectorAll) return;
   fragment.querySelectorAll("[style]").forEach((element) => {
