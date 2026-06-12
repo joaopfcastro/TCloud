@@ -8048,6 +8048,11 @@ body,
     box-shadow 120ms ease;
 }
 
+.editorjs-host.has-tcloud-multiblock-selection
+  .ce-block.is-tcloud-range-selected {
+  position: relative;
+}
+
 /* Bloco único com cursor/foco */
 .editorjs-host.has-tcloud-active-block
   .ce-block.is-tcloud-active-block
@@ -8096,6 +8101,27 @@ body,
   background: var(--tcloud-block-multi-bg) !important;
   outline: 1px solid var(--tcloud-block-multi-border) !important;
   box-shadow: none !important;
+}
+
+.editorjs-host.has-tcloud-multiblock-selection
+  .ce-block.is-tcloud-range-selected::before {
+  content: "";
+  position: absolute;
+  inset: 2px 0;
+  border-radius: var(--tcloud-block-focus-radius);
+  pointer-events: none;
+}
+
+.editorjs-host.has-tcloud-multiblock-selection
+  .ce-block.is-tcloud-selection-start::before {
+  border-top-left-radius: var(--tcloud-block-focus-radius);
+  border-top-right-radius: var(--tcloud-block-focus-radius);
+}
+
+.editorjs-host.has-tcloud-multiblock-selection
+  .ce-block.is-tcloud-selection-end::before {
+  border-bottom-left-radius: var(--tcloud-block-focus-radius);
+  border-bottom-right-radius: var(--tcloud-block-focus-radius);
 }
 
 /* Trilho lateral para seleção múltipla */

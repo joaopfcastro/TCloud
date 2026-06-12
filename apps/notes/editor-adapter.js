@@ -10,7 +10,7 @@ import {
   getSelectedInlineState,
   normalizeHex,
   toggleHtmlWrapper,
-} from "./editor-tools.js?v=notes-multiblock-transform-20260607-1";
+} from "./editor-tools.js?v=notes-multiblock-snapshot-20260609-1";
 import {
   TCloudAudioTool,
   TCloudFileTool,
@@ -633,8 +633,16 @@ class TCloudInlineToolbarController {
     toolbar.setAttribute("aria-label", "Formatação do texto selecionado");
     toolbar.setAttribute("aria-hidden", "true");
     toolbar.hidden = true;
-    toolbar.addEventListener("mousedown", (event) => event.preventDefault());
-    toolbar.addEventListener("pointerdown", (event) => event.preventDefault());
+    toolbar.addEventListener("mousedown", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      this.adapter.blockSelectionController?.freeze?.("toolbar-mousedown");
+    });
+    toolbar.addEventListener("pointerdown", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      this.adapter.blockSelectionController?.freeze?.("toolbar-pointerdown");
+    });
     toolbar.addEventListener("click", (event) => {
       const target = event.target.closest("[data-tcloud-action]");
       if (!target || target.disabled) return;
@@ -834,7 +842,7 @@ class TCloudInlineToolbarController {
   showInlineToolbar(range) {
     if (!rangeInsideEditor(range, this.root)) return;
     this.savedRange = range.cloneRange();
-    this.adapter.blockSelectionController?.sync?.();
+    this.adapter.blockSelectionController?.captureFromRange?.(this.savedRange, "inline-toolbar");
     this.toolbar.hidden = false;
     this.toolbar.classList.add("is-open");
     this.toolbar.setAttribute("aria-hidden", "false");
@@ -859,9 +867,19 @@ class TCloudInlineToolbarController {
     this.toolbar.hidden = true;
     this.toolbar.setAttribute("aria-hidden", "true");
     this.toolbar.querySelectorAll("[aria-expanded='true']").forEach((button) => button.setAttribute("aria-expanded", "false"));
-    if (clearSelection) window.getSelection()?.removeAllRanges();
+    if (clearSelection) {
+      window.getSelection()?.removeAllRanges();
+      this.adapter.blockSelectionController?.clearSnapshot?.(reason);
+    }
     if (!suppressSelection || clearSelection) this.savedRange = null;
     this.hideNativeInlineToolbar();
+  }
+
+  prepareCommandExecution(reason = "toolbar-command") {
+    if (this.savedRange) {
+      this.adapter.blockSelectionController?.captureFromRange?.(this.savedRange, reason);
+    }
+    this.adapter.blockSelectionController?.freeze?.(reason);
   }
 
   setExternalEditorMenuOpen(isOpen, reason = "external-menu") {
@@ -1105,6 +1123,7 @@ class TCloudInlineToolbarController {
 
   async runAction(action, target) {
     if (!action) return;
+    this.prepareCommandExecution(`action:${action}`);
     if (action === "block-menu") {
       this.openBlockMenu(target);
       return;
@@ -1233,8 +1252,21 @@ class TCloudInlineToolbarController {
     }
     if (action === "clear") changed = document.execCommand("removeFormat");
     if (action === "copy") {
-      await navigator.clipboard?.writeText?.(window.getSelection()?.toString() || this.savedRange.toString() || "");
+      const text = this.adapter.hasMultiBlockSelection(this.savedRange)
+        ? this.adapter.getSelectedBlocksPlainText(this.savedRange)
+        : window.getSelection()?.toString() || this.savedRange.toString() || "";
+      await navigator.clipboard?.writeText?.(text);
       this.hideInlineToolbar("copy", { suppressSelection: true, clearSelection: true });
+      return;
+    }
+    if (action === "duplicate-blocks") {
+      await this.adapter.duplicateSelectedBlocks(this.savedRange);
+      this.hideInlineToolbar("duplicate-blocks", { suppressSelection: true, clearSelection: true });
+      return;
+    }
+    if (action === "delete-blocks") {
+      await this.adapter.deleteSelectedBlocks(this.savedRange);
+      this.hideInlineToolbar("delete-blocks", { suppressSelection: true, clearSelection: true });
       return;
     }
 
@@ -1275,15 +1307,20 @@ class TCloudInlineToolbarController {
   }
 
   openSubmenu(anchor, menu) {
+    this.prepareCommandExecution(`open-menu:${menu.dataset.menuType || "submenu"}`);
     const wasSame = this.submenu?.dataset.menuType === menu.dataset.menuType;
     this.closeAllInlineSubmenus();
     if (wasSame) return;
     this.submenu = menu;
     this.submenu.addEventListener("mousedown", (event) => {
       if (!event.target.matches?.("input")) event.preventDefault();
+      event.stopPropagation();
+      this.adapter.blockSelectionController?.freeze?.("submenu-mousedown");
     });
     this.submenu.addEventListener("pointerdown", (event) => {
       if (!event.target.matches?.("input")) event.preventDefault();
+      event.stopPropagation();
+      this.adapter.blockSelectionController?.freeze?.("submenu-pointerdown");
     });
     this.submenu.addEventListener("click", (event) => {
       const target = event.target.closest("[data-tcloud-action]");
@@ -1353,10 +1390,17 @@ class TCloudInlineToolbarController {
     menu.className = "tcloud-inline-toolbar__menu tcloud-inline-toolbar__more-menu";
     menu.dataset.menuType = "more";
     menu.setAttribute("role", "menu");
-    [
+    const actions = [
       ["copy", "Copiar seleção", '<i class="ph ph-copy" aria-hidden="true"></i>'],
       ["clear", "Limpar formatação", '<i class="ph ph-eraser" aria-hidden="true"></i>'],
-    ].forEach(([action, label, icon]) => menu.appendChild(createMenuButton({ action, label, icon })));
+    ];
+    if (this.adapter.hasMultiBlockSelection(this.savedRange)) {
+      actions.push(
+        ["duplicate-blocks", "Duplicar blocos", '<i class="ph ph-copy-simple" aria-hidden="true"></i>'],
+        ["delete-blocks", "Excluir blocos", '<i class="ph ph-trash" aria-hidden="true"></i>'],
+      );
+    }
+    actions.forEach(([action, label, icon]) => menu.appendChild(createMenuButton({ action, label, icon })));
     this.openSubmenu(anchor, menu);
   }
 
@@ -1604,13 +1648,16 @@ class TCloudBlockSelectionController {
     this.adapter = adapter;
     this.root = holderElement(adapter.holder);
     this.frame = null;
+    this.selectionSnapshot = this.emptySnapshot();
 
     this.onSelectionChange = () => this.scheduleSync();
+    this.onPointerDown = (event) => this.handlePointerDown(event);
     this.onPointerUp = () => this.scheduleSync();
-    this.onKeyUp = () => this.scheduleSync();
+    this.onKeyUp = (event) => this.handleKeyUp(event);
     this.onFocusIn = () => this.scheduleSync();
 
     document.addEventListener("selectionchange", this.onSelectionChange);
+    document.addEventListener("pointerdown", this.onPointerDown, true);
     document.addEventListener("pointerup", this.onPointerUp, true);
     document.addEventListener("keyup", this.onKeyUp, true);
     document.addEventListener("focusin", this.onFocusIn, true);
@@ -1620,11 +1667,198 @@ class TCloudBlockSelectionController {
 
   destroy() {
     document.removeEventListener("selectionchange", this.onSelectionChange);
+    document.removeEventListener("pointerdown", this.onPointerDown, true);
     document.removeEventListener("pointerup", this.onPointerUp, true);
     document.removeEventListener("keyup", this.onKeyUp, true);
     document.removeEventListener("focusin", this.onFocusIn, true);
     if (this.frame) cancelAnimationFrame(this.frame);
     this.clear();
+  }
+
+  emptySnapshot() {
+    return {
+      active: false,
+      source: "",
+      indexes: [],
+      ids: [],
+      anchorIndex: -1,
+      focusIndex: -1,
+      range: null,
+      rect: null,
+      text: "",
+      createdAt: 0,
+      frozen: false,
+      frozenReason: "",
+    };
+  }
+
+  blocks() {
+    return Array.from(this.root?.querySelectorAll(".ce-block") || []);
+  }
+
+  normalizeIndexes(indexes = []) {
+    const blocks = this.blocks();
+    const contentBlocks = this.adapter.lastSavedContent?.blocks || [];
+    const hasContent = contentBlocks.length > 0;
+    return Array.from(new Set(indexes))
+      .map((index) => Number(index))
+      .filter((index) => (
+        Number.isInteger(index) &&
+        index >= 0 &&
+        index < blocks.length &&
+        (!hasContent || index < contentBlocks.length)
+      ))
+      .sort((a, b) => a - b);
+  }
+
+  indexesFromRange(range) {
+    if (!range || !this.root || !rangeInsideEditor(range, this.root)) return [];
+    return this.blocks()
+      .map((block, index) => (rangeIntersectsElement(range, block) ? index : -1))
+      .filter((index) => index >= 0);
+  }
+
+  indexesFromCurrentSelection() {
+    const blocks = this.blocks();
+    const selected = new Set();
+    blocks.forEach((block, index) => {
+      if (block.classList.contains("ce-block--selected")) selected.add(index);
+    });
+    const selection = window.getSelection();
+    if (selection?.rangeCount && !selection.isCollapsed) {
+      this.indexesFromRange(selection.getRangeAt(0)).forEach((index) => selected.add(index));
+    }
+    return this.normalizeIndexes(Array.from(selected));
+  }
+
+  visualIndexes() {
+    return this.normalizeIndexes(
+      this.blocks()
+        .map((block, index) => (
+          block.classList.contains("is-tcloud-range-selected") ||
+          block.classList.contains("ce-block--selected")
+            ? index
+            : -1
+        ))
+        .filter((index) => index >= 0)
+    );
+  }
+
+  snapshotIsValid(snapshot = this.selectionSnapshot) {
+    if (!snapshot?.active) return false;
+    const indexes = this.normalizeIndexes(snapshot.indexes);
+    if (!indexes.length) return false;
+    const contentBlocks = this.adapter.lastSavedContent?.blocks || [];
+    if (contentBlocks.length && snapshot.ids?.length === indexes.length) {
+      const stillSameBlocks = indexes.every((index, offset) => {
+        const expectedId = snapshot.ids[offset];
+        return !expectedId || contentBlocks[index]?.id === expectedId;
+      });
+      if (!stillSameBlocks) return false;
+    }
+    return true;
+  }
+
+  cloneSnapshot(snapshot = this.selectionSnapshot) {
+    return {
+      ...snapshot,
+      indexes: [...(snapshot.indexes || [])],
+      ids: [...(snapshot.ids || [])],
+      range: snapshot.range?.cloneRange?.() || null,
+      rect: snapshot.rect ? { ...snapshot.rect } : null,
+    };
+  }
+
+  captureFromIndexes(indexes = [], reason = "selectionchange", range = null) {
+    const normalized = this.normalizeIndexes(indexes);
+    if (normalized.length <= 1) {
+      if (!this.selectionSnapshot.frozen) this.selectionSnapshot = this.emptySnapshot();
+      return this.getSnapshot();
+    }
+    const contentBlocks = this.adapter.lastSavedContent?.blocks || [];
+    const frozen = Boolean(this.selectionSnapshot.frozen);
+    this.selectionSnapshot = {
+      active: true,
+      source: reason,
+      indexes: normalized,
+      ids: normalized.map((index) => contentBlocks[index]?.id || ""),
+      anchorIndex: normalized[0],
+      focusIndex: normalized[normalized.length - 1],
+      range: range?.cloneRange?.() || null,
+      rect: rangeSelectionRect(range) || unionRects(
+        normalized
+          .map((index) => rectFromBox(this.blocks()[index]?.getBoundingClientRect?.()))
+          .filter(Boolean)
+      ),
+      text: range?.toString?.() || normalized.map((index) => blockPlainText(contentBlocks[index])).join("\n"),
+      createdAt: Date.now(),
+      frozen,
+      frozenReason: frozen ? this.selectionSnapshot.frozenReason : "",
+    };
+    this.renderSelectionSnapshot();
+    return this.getSnapshot();
+  }
+
+  captureFromCurrentSelection(reason = "selectionchange") {
+    const selection = window.getSelection();
+    const range = selection?.rangeCount ? selection.getRangeAt(0) : null;
+    return this.captureFromIndexes(this.indexesFromCurrentSelection(), reason, range);
+  }
+
+  captureFromRange(range, reason = "saved-range") {
+    const indexes = this.indexesFromRange(range);
+    if (!indexes.length) return this.getSnapshot();
+    return this.captureFromIndexes(indexes, reason, range);
+  }
+
+  getSnapshot() {
+    if (!this.snapshotIsValid()) return this.emptySnapshot();
+    const normalized = this.normalizeIndexes(this.selectionSnapshot.indexes);
+    const snapshot = this.cloneSnapshot(this.selectionSnapshot);
+    snapshot.indexes = normalized;
+    snapshot.active = normalized.length > 0;
+    return snapshot;
+  }
+
+  getSelectedIndexes(preferredRange = null, { allowSnapshot = true } = {}) {
+    if (allowSnapshot && this.snapshotIsValid()) {
+      const snapshotIndexes = this.normalizeIndexes(this.selectionSnapshot.indexes);
+      if (snapshotIndexes.length > 1) return snapshotIndexes;
+    }
+    const preferredIndexes = this.indexesFromRange(preferredRange);
+    if (preferredIndexes.length) return this.normalizeIndexes(preferredIndexes);
+    const currentIndexes = this.indexesFromCurrentSelection();
+    if (currentIndexes.length) return currentIndexes;
+    return this.visualIndexes();
+  }
+
+  hasMultiBlockSelection(preferredRange = null) {
+    return this.getSelectedIndexes(preferredRange).length > 1;
+  }
+
+  freeze(reason = "toolbar") {
+    if (!this.snapshotIsValid()) {
+      if (reason === "saved-range") return this.getSnapshot();
+      this.captureFromCurrentSelection(reason);
+    }
+    if (this.snapshotIsValid()) {
+      this.selectionSnapshot.frozen = true;
+      this.selectionSnapshot.frozenReason = reason;
+      this.renderSelectionSnapshot();
+    }
+    return this.getSnapshot();
+  }
+
+  unfreeze(reason = "manual") {
+    if (!this.selectionSnapshot.active) return;
+    this.selectionSnapshot.frozen = false;
+    this.selectionSnapshot.frozenReason = reason;
+  }
+
+  clearSnapshot(reason = "manual", { render = true } = {}) {
+    this.selectionSnapshot = this.emptySnapshot();
+    this.selectionSnapshot.source = reason;
+    if (render) this.clearVisualSelection();
   }
 
   scheduleSync() {
@@ -1635,7 +1869,7 @@ class TCloudBlockSelectionController {
     });
   }
 
-  clear() {
+  clearVisualSelection() {
     this.root?.classList.remove(
       "has-tcloud-active-block",
       "has-tcloud-single-block-selection",
@@ -1658,13 +1892,68 @@ class TCloudBlockSelectionController {
     });
   }
 
+  clear() {
+    this.clearSnapshot("clear", { render: false });
+    this.clearVisualSelection();
+  }
+
+  renderSelectionSnapshot() {
+    if (!this.root || !document.contains(this.root)) return;
+    const indexes = this.normalizeIndexes(this.selectionSnapshot.indexes);
+    this.clearVisualSelection();
+    if (indexes.length <= 1) return;
+
+    const blocks = this.blocks();
+    this.root.classList.add("has-tcloud-multiblock-selection");
+    indexes.forEach((blockIndex, ordinal) => {
+      const block = blocks[blockIndex];
+      if (!block) return;
+      block.classList.add("is-tcloud-range-selected");
+      block.dataset.tcloudSelectedIndex = String(ordinal);
+    });
+    blocks[indexes[0]]?.classList.add("is-tcloud-selection-start");
+    blocks[indexes[indexes.length - 1]]?.classList.add("is-tcloud-selection-end");
+  }
+
+  handlePointerDown(event) {
+    const target = event.target;
+    if (target?.closest?.(".tcloud-inline-toolbar--custom, .tcloud-inline-toolbar__menu, .tcloud-context-menu")) {
+      this.freeze("toolbar-pointerdown");
+      return;
+    }
+    if (this.root?.contains(target)) {
+      if (event.button === 2) {
+        this.freeze("editor-context-pointerdown");
+        return;
+      }
+      this.clearSnapshot("editor-pointerdown", { render: false });
+      return;
+    }
+    if (!isBlockedInlineToolbarTarget(nodeToElement(target))) {
+      this.clearSnapshot("pointer-outside");
+    }
+  }
+
+  handleKeyUp(event) {
+    if (event.key === "Escape") {
+      this.clearSnapshot("escape");
+      return;
+    }
+    this.scheduleSync();
+  }
+
   sync() {
     if (!this.root || !document.contains(this.root)) return;
 
     const selection = window.getSelection();
     const blocks = Array.from(this.root.querySelectorAll(".ce-block"));
 
-    this.clear();
+    if (this.selectionSnapshot.frozen && this.snapshotIsValid()) {
+      this.renderSelectionSnapshot();
+      return;
+    }
+
+    this.clearVisualSelection();
 
     // 1. Gather blocks selected by Editor.js native mechanisms
     const editorSelectedBlocks = blocks.filter((block) =>
@@ -1698,14 +1987,16 @@ class TCloudBlockSelectionController {
     const selectedBlocks = blocks.filter((block) => selectedSet.has(block));
 
     if (selectedBlocks.length > 1) {
-      this.root.classList.add("has-tcloud-multiblock-selection");
-      selectedBlocks.forEach((block, index) => {
-        block.classList.add("is-tcloud-range-selected");
-        block.dataset.tcloudSelectedIndex = String(index);
-      });
-      selectedBlocks[0].classList.add("is-tcloud-selection-start");
-      selectedBlocks[selectedBlocks.length - 1].classList.add("is-tcloud-selection-end");
+      this.captureFromIndexes(
+        selectedBlocks.map((block) => blocks.indexOf(block)),
+        "sync",
+        range
+      );
       return;
+    }
+
+    if (this.selectionSnapshot.active && !this.selectionSnapshot.frozen) {
+      this.clearSnapshot("sync-single-or-empty", { render: false });
     }
 
     // 3. Fallback: single active block focused by cursor (collapsed range or focused element)
@@ -1967,6 +2258,7 @@ export class EditorAdapter {
 
   async render(data, { isNewNote = false } = {}) {
     await this.init(data);
+    this.blockSelectionController?.clearSnapshot?.("render");
     this.hideInlineToolbar("render");
     this.rendering = true;
     try {
@@ -2144,6 +2436,15 @@ export class EditorAdapter {
     this.toolbarController?.hideInlineToolbar(reason);
   }
 
+  freezeBlockSelection(preferredRange = null, reason = "manual") {
+    if (preferredRange) this.blockSelectionController?.captureFromRange?.(preferredRange, reason);
+    return this.blockSelectionController?.freeze?.(reason);
+  }
+
+  clearBlockSelection(reason = "manual") {
+    this.blockSelectionController?.clearSnapshot?.(reason);
+  }
+
   async focus() {
     await this.init();
     if (typeof this.editor.caret?.setToLastBlock === "function") {
@@ -2271,6 +2572,35 @@ export class EditorAdapter {
     this.triggerHistorySave();
   }
 
+  async duplicateSelectedBlocks(preferredRange = null) {
+    const indexes = this.getSelectedBlockIndexes(preferredRange);
+    if (indexes.length <= 1) {
+      await this.duplicateBlock();
+      return { changed: true, changedCount: indexes.length || 1, skippedCount: 0 };
+    }
+
+    const insertAt = indexes[indexes.length - 1] + 1;
+    return this.mutateBlocksTransaction((content) => {
+      const clones = indexes
+        .map((index) => content.blocks[index])
+        .filter(Boolean)
+        .map((block) => ({
+          ...JSON.parse(JSON.stringify(block)),
+          id: blockId(),
+        }));
+      if (!clones.length) return { changedCount: 0, skippedCount: indexes.length, lastChangedIndex: -1 };
+      content.blocks.splice(insertAt, 0, ...clones);
+      return {
+        changedCount: clones.length,
+        skippedCount: Math.max(0, indexes.length - clones.length),
+        lastChangedIndex: insertAt + clones.length - 1,
+      };
+    }, {
+      focusIndex: insertAt,
+      reason: "duplicate-selected-blocks",
+    });
+  }
+
   async deleteBlockAtIndex(index) {
     await this.init();
     if (index === -1) return;
@@ -2305,6 +2635,38 @@ export class EditorAdapter {
     const index = blocks.indexOf(blockElement);
     if (index === -1) return;
     await this.deleteBlockAtIndex(index);
+  }
+
+  async deleteSelectedBlocks(preferredRange = null) {
+    const indexes = this.getSelectedBlockIndexes(preferredRange);
+    if (indexes.length <= 1) {
+      await this.deleteBlock();
+      return { changed: true, changedCount: indexes.length || 1, skippedCount: 0 };
+    }
+
+    const focusIndex = Math.max(0, indexes[0] - 1);
+    return this.mutateBlocksTransaction((content) => {
+      let changedCount = 0;
+      indexes
+        .slice()
+        .sort((a, b) => b - a)
+        .forEach((index) => {
+          if (!content.blocks[index]) return;
+          content.blocks.splice(index, 1);
+          changedCount++;
+        });
+      if (!content.blocks.length) {
+        content.blocks = [buildBlock("paragraph", { text: "" })];
+      }
+      return {
+        changedCount,
+        skippedCount: Math.max(0, indexes.length - changedCount),
+        lastChangedIndex: Math.min(focusIndex, content.blocks.length - 1),
+      };
+    }, {
+      focusIndex,
+      reason: "delete-selected-blocks",
+    });
   }
 
   async deleteBlock() {
@@ -2375,7 +2737,11 @@ export class EditorAdapter {
   }
 
   getSelectedBlockIndexes(preferredRange = null) {
-    this.blockSelectionController?.sync?.();
+    const snapshotIndexes = this.blockSelectionController?.getSelectedIndexes?.(preferredRange, {
+      allowSnapshot: true,
+    });
+    if (snapshotIndexes?.length) return snapshotIndexes;
+
     const holder = holderElement(this.holder);
     const blocks = Array.from(holder?.querySelectorAll(".ce-block") || []);
     const selected = new Set();
@@ -2413,7 +2779,10 @@ export class EditorAdapter {
   }
 
   hasMultiBlockSelection(preferredRange = null) {
-    return this.getSelectedBlockIndexes(preferredRange).length > 1;
+    return Boolean(
+      this.blockSelectionController?.hasMultiBlockSelection?.(preferredRange) ||
+      this.getSelectedBlockIndexes(preferredRange).length > 1
+    );
   }
 
   getSelectionSummary(preferredRange = null) {
@@ -2432,6 +2801,14 @@ export class EditorAdapter {
       firstIndex: indexes[0] ?? -1,
       lastIndex: indexes[indexes.length - 1] ?? -1,
     };
+  }
+
+  getSelectedBlocksPlainText(preferredRange = null) {
+    const indexes = this.getSelectedBlockIndexes(preferredRange);
+    return indexes
+      .map((index) => blockPlainText(this.lastSavedContent?.blocks?.[index]))
+      .filter((text) => text.trim())
+      .join("\n");
   }
 
   async notifyManualChange() {

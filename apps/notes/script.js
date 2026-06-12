@@ -1,4 +1,4 @@
-import { EditorAdapter, buildBlock, normalizeEditorData } from "./editor-adapter.js?v=notes-multiblock-transform-20260607-1";
+import { EditorAdapter, buildBlock, normalizeEditorData } from "./editor-adapter.js?v=notes-multiblock-snapshot-20260609-1";
 import { NotesApi } from "./notes-api.js";
 import { NotesFilePicker } from "./file-picker.js";
 import { IMPORT_ACCEPT, isSupportedImportFile, readFileAsText } from "./export-import.js";
@@ -4662,7 +4662,7 @@ function editorPasteContextAction() {
   };
 }
 
-function buildEditorContextActions({ hasSelection = false, readOnly = false, hasBlock = false } = {}) {
+function buildEditorContextActions({ hasSelection = false, readOnly = false, hasBlock = false, hasMultiBlockSelection = false } = {}) {
   const hasNote = Boolean(state.currentNote?.id);
   if (!hasNote) return []; // No current note, don't return actions (or return global actions if any, none exist)
 
@@ -4717,6 +4717,22 @@ function buildEditorContextActions({ hasSelection = false, readOnly = false, has
     if (!readOnly) {
       actions.push(
         editorPasteContextAction()
+      );
+    }
+    if (!readOnly && hasMultiBlockSelection) {
+      actions.push(
+        {
+          id: "editor.duplicateBlock",
+          label: "Duplicar blocos",
+          icon: "ph-copy-simple",
+          separatorBefore: true,
+        },
+        {
+          id: "editor.deleteBlock",
+          label: "Excluir blocos",
+          icon: "ph-trash",
+          variant: "danger",
+        }
       );
     }
     // Search & Meta
@@ -4915,10 +4931,18 @@ async function executeEditorContextAction(action) {
 
   if (action === "editor.duplicateBlock") {
     if (readOnly || !state.editor) return;
-    if (state.contextMenuTargetBlock && typeof state.editor.duplicateBlockByElement === "function") {
+    const range = state.contextMenuTargetRange?.cloneRange?.() || null;
+    const hasMultiBlockSelection = Boolean(state.editor.hasMultiBlockSelection?.(range));
+    if (hasMultiBlockSelection && typeof state.editor.duplicateSelectedBlocks === "function") {
+      const result = await state.editor.duplicateSelectedBlocks(range);
+      const count = result?.changedCount || 0;
+      showToast(count > 1 ? `${count} blocos duplicados.` : "Bloco duplicado.", "success");
+    } else if (state.contextMenuTargetBlock && typeof state.editor.duplicateBlockByElement === "function") {
       await state.editor.duplicateBlockByElement(state.contextMenuTargetBlock);
+      showToast("Bloco duplicado.", "success");
     } else {
       await state.editor.duplicateBlock();
+      showToast("Bloco duplicado.", "success");
     }
     markDirty("content");
     return;
@@ -4926,10 +4950,18 @@ async function executeEditorContextAction(action) {
 
   if (action === "editor.deleteBlock") {
     if (readOnly || !state.editor) return;
-    if (state.contextMenuTargetBlock && typeof state.editor.deleteBlockByElement === "function") {
+    const range = state.contextMenuTargetRange?.cloneRange?.() || null;
+    const hasMultiBlockSelection = Boolean(state.editor.hasMultiBlockSelection?.(range));
+    if (hasMultiBlockSelection && typeof state.editor.deleteSelectedBlocks === "function") {
+      const result = await state.editor.deleteSelectedBlocks(range);
+      const count = result?.changedCount || 0;
+      showToast(count > 1 ? `${count} blocos excluídos.` : "Bloco excluído.", "info");
+    } else if (state.contextMenuTargetBlock && typeof state.editor.deleteBlockByElement === "function") {
       await state.editor.deleteBlockByElement(state.contextMenuTargetBlock);
+      showToast("Bloco excluído.", "info");
     } else {
       await state.editor.deleteBlock();
+      showToast("Bloco excluído.", "info");
     }
     markDirty("content");
     return;
@@ -4996,10 +5028,13 @@ function wireContextMenus() {
       state.contextMenuTargetFolderId = "";
       state.contextMenuTargetBlock = targetBlock;
       state.contextMenuTargetRange = captureEditorContextRange(event, target);
+      state.editor?.freezeBlockSelection?.(state.contextMenuTargetRange, "context-menu");
+      const hasMultiBlockSelection = Boolean(state.editor?.hasMultiBlockSelection?.(state.contextMenuTargetRange));
       const actions = buildEditorContextActions({
-        hasSelection: Boolean(selectionText.trim()),
+        hasSelection: Boolean(selectionText.trim() || hasMultiBlockSelection),
         readOnly: Boolean(state.currentNote?.deleted_at),
         hasBlock: Boolean(targetBlock),
+        hasMultiBlockSelection,
       });
       const normalized = normalizeVisibleContextActions(actions, { hideDisabled: true });
       if (!normalized.length) return;
