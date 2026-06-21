@@ -294,4 +294,91 @@ test.describe("TCloud Notes multiblock formatting", () => {
       return current.every((block) => !/<(strong|b|span|em|i|u|s|strike|code)(\\s|>)/.test(String(block.data.text)));
     }).toBeTruthy();
   });
+
+  test("opens the inline toolbar and applies bold after a natural vertical multi-block drag", async ({ page, request }) => {
+    const token = await login(request);
+    const blocks = [0, 1, 2].map((index) => ({
+      id: `drag${index}`,
+      type: "paragraph",
+      data: { text: `Arrasto ${index + 1}` },
+    }));
+    const noteId = await createNote(request, token, blocks);
+    await openNote(page, token, noteId);
+
+    const editables = page.locator(".editorjs-host .ce-block [contenteditable='true']");
+    const startBox = await editables.nth(0).boundingBox();
+    const endBox = await editables.nth(2).boundingBox();
+    expect(startBox).toBeTruthy();
+    expect(endBox).toBeTruthy();
+
+    await page.mouse.move(
+      startBox!.x + Math.min(160, Math.max(24, startBox!.width - 24)),
+      startBox!.y + startBox!.height / 2,
+    );
+    await page.mouse.down();
+    await page.mouse.move(
+      endBox!.x + Math.min(180, Math.max(28, endBox!.width - 20)),
+      endBox!.y + endBox!.height / 2,
+      { steps: 24 },
+    );
+    await expect(page.locator(".tcloud-inline-toolbar--custom.is-open")).toHaveCount(0);
+    await page.mouse.up();
+
+    await expect.poll(async () => page.locator(".ce-block.is-tcloud-range-selected").count()).toBe(3);
+    await expect(page.locator(".tcloud-inline-toolbar--custom.is-open")).toHaveCount(1);
+    await expect(page.locator("[data-tcloud-selection-count]")).toHaveText("3 blocos");
+
+    await page.locator('.tcloud-inline-toolbar--custom [data-tcloud-action="bold"]').click();
+
+    await expect.poll(async () => {
+      const current = await savedBlocks(page);
+      return current.every((block) => /<(strong|b)>/.test(String(block.data.text)));
+    }).toBeTruthy();
+  });
+
+  test("opens the inline toolbar for a multi-block selection that includes an image block", async ({ page, request }) => {
+    const token = await login(request);
+    const blocks: NoteBlock[] = [
+      { id: "txt-a", type: "paragraph", data: { text: "Texto antes da imagem" } },
+      { id: "img1", type: "tcloudImage", data: { name: "foto.png", path: "/qa/foto.png", mime: "image/png" } },
+      { id: "txt-b", type: "paragraph", data: { text: "Texto depois da imagem" } },
+    ];
+    const noteId = await createNote(request, token, blocks);
+    await openNote(page, token, noteId);
+
+    const editables = page.locator(".editorjs-host .ce-block [contenteditable='true']");
+    const startBox = await editables.nth(0).boundingBox();
+    const endBox = await editables.nth(1).boundingBox();
+    expect(startBox).toBeTruthy();
+    expect(endBox).toBeTruthy();
+
+    await page.mouse.move(
+      startBox!.x + Math.min(160, Math.max(24, startBox!.width - 24)),
+      startBox!.y + startBox!.height / 2,
+    );
+    await page.mouse.down();
+    await page.mouse.move(
+      endBox!.x + Math.min(180, Math.max(28, endBox!.width - 20)),
+      endBox!.y + endBox!.height / 2,
+      { steps: 24 },
+    );
+    await page.mouse.up();
+
+    await expect.poll(async () => page.locator(".ce-block.is-tcloud-range-selected").count()).toBeGreaterThanOrEqual(2);
+    await expect(page.locator(".tcloud-inline-toolbar--custom.is-open")).toHaveCount(1);
+    await expect(page.locator("[data-tcloud-selection-count]")).toHaveText(/blocos/);
+
+    await page.locator('.tcloud-inline-toolbar--custom [data-tcloud-action="bold"]').click();
+
+    await expect.poll(async () => {
+      const current = await savedBlocks(page);
+      const txtA = String(current[0]?.data?.text || "");
+      const txtB = String(current[2]?.data?.text || "");
+      return /<(strong|b)>/.test(txtA) && /<(strong|b)>/.test(txtB);
+    }).toBeTruthy();
+
+    const result = await savedBlocks(page);
+    expect(result[1]?.type).toBe("tcloudImage");
+    expect(result[1]?.id).toBe("img1");
+  });
 });

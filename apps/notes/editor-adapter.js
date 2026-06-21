@@ -270,8 +270,7 @@ function isBlockedInlineToolbarTarget(element) {
     ".appearance-popover, " +
     "#slash-menu, " +
     "#colon-icon-menu, " +
-    ".colon-icon-menu, " +
-    ".tcloud-block-card.is-image",
+    ".colon-icon-menu",
   ));
 }
 
@@ -821,6 +820,13 @@ class TCloudInlineToolbarController {
         ? this.pointerSelectionRange.cloneRange()
         : null;
     this.pointerSelectionRange = null;
+    if (this.adapter.blockSelectionController?.hasMultiBlockSelection?.(null)) {
+      this.closedSelectionSignature = null;
+      if (this.showInlineToolbarForBlockSelection()) {
+        this.isDragSelecting = false;
+        return;
+      }
+    }
     if (fallbackRange && fallbackRange.toString().replace(/\u200B/g, "").trim()) {
       this.closedSelectionSignature = null;
       if (this.shouldShowInlineToolbar(fallbackRange)) {
@@ -850,6 +856,57 @@ class TCloudInlineToolbarController {
     if (!this.updateToolbarPosition(this.savedRange)) {
       this.hideInlineToolbar("position-failed");
     }
+  }
+
+  buildRangeFromSelectedBlocks(indexes, blocks) {
+    if (!indexes?.length || !blocks?.length) return null;
+    const first = blocks[indexes[0]];
+    const last = blocks[indexes[indexes.length - 1]];
+    if (!first || !last) return null;
+    const firstHost = first.querySelector("[contenteditable='true']") || first;
+    const lastHost = last.querySelector("[contenteditable='true']") || last;
+    const startNode = firstHost.firstChild || firstHost;
+    const endNode = lastHost.lastChild || lastHost;
+    try {
+      const range = document.createRange();
+      range.setStart(startNode, 0);
+      const endOffset = endNode.nodeType === Node.TEXT_NODE
+        ? (endNode.textContent || "").length
+        : (endNode.childNodes?.length || 0);
+      range.setEnd(endNode, endOffset);
+      return range;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  showInlineToolbarForBlockSelection() {
+    const ctrl = this.adapter.blockSelectionController;
+    if (!ctrl) return false;
+    ctrl.captureFromCurrentSelection?.("inline-toolbar");
+    const indexes = ctrl.getSelectedIndexes?.(null);
+    if (!indexes || indexes.length <= 1) return false;
+    const blocks = ctrl.blocks?.() || [];
+    const syntheticRange = this.buildRangeFromSelectedBlocks(indexes, blocks);
+    const blockRects = indexes.map((index) => rectFromBox(blocks[index]?.getBoundingClientRect?.())).filter(Boolean);
+    const anchorRect = unionRects(blockRects) ||
+      (syntheticRange && rangeSelectionRect(syntheticRange));
+    if (!anchorRect) return false;
+    const signature = rangeSignature(syntheticRange) || { blockIndexes: indexes.slice() };
+    if (sameRangeSignature(signature, this.closedSelectionSignature)) return false;
+    this.closedSelectionSignature = null;
+    this.savedRange = syntheticRange;
+    if (syntheticRange) ctrl.captureFromRange?.(syntheticRange, "inline-toolbar");
+    this.pointerSelectionRange = null;
+    this.toolbar.hidden = false;
+    this.toolbar.classList.add("is-open");
+    this.toolbar.setAttribute("aria-hidden", "false");
+    this.updateToolbarState();
+    if (!this.updateToolbarPosition(this.savedRange, anchorRect)) {
+      this.hideInlineToolbar("position-failed");
+      return false;
+    }
+    return true;
   }
 
   hideInlineToolbar(reason = "manual", { suppressSelection = false, clearSelection = false } = {}) {
@@ -906,7 +963,9 @@ class TCloudInlineToolbarController {
     return Array.from(
       this.root.querySelectorAll(".ce-block--selected, .ce-block.is-tcloud-range-selected"),
     )
-      .filter((block) => (range ? rangeIntersectsElement(range, block) : block.classList.contains("ce-block--selected")))
+      .filter((block) => (range
+        ? rangeIntersectsElement(range, block)
+        : (block.classList.contains("ce-block--selected") || block.classList.contains("is-tcloud-range-selected"))))
       .map((block) => rectFromBox(block.getBoundingClientRect()))
       .filter(Boolean);
   }
@@ -918,9 +977,10 @@ class TCloudInlineToolbarController {
   }
 
   selectionSpansMultipleBlocks(range, anchorRect) {
-    if (!range || !anchorRect) return false;
+    if (!anchorRect) return false;
     const blockRects = this.selectedBlockRects(range);
     if (blockRects.length > 1) return true;
+    if (!range) return anchorRect.height > 48;
     try {
       const rects = Array.from(range.getClientRects()).filter((rect) => rect.width > 0 || rect.height > 0);
       if (rects.length > 1) return true;
@@ -1008,14 +1068,17 @@ class TCloudInlineToolbarController {
       .filter(Boolean);
   }
 
-  updateToolbarPosition(range) {
-    if (!rangeInsideEditor(range, this.root)) return false;
-    const anchor = rangeSelectionRect(range);
+  updateToolbarPosition(range, explicitAnchorRect = null) {
+    const explicit = rectFromBox(explicitAnchorRect);
+    if (!range && !explicit) return false;
+    if (explicit && !this.root) return false;
+    if (range && !rangeInsideEditor(range, this.root) && !explicit) return false;
+    const anchor = explicit || rangeSelectionRect(range);
     if (!anchor) return false;
     const viewportRect = this.viewportBounds();
     if (!viewportRect) return false;
-    const usesBlockAvoidance = this.selectedBlockRects(range).length > 1;
-    const avoidanceRect = expandRect(this.selectionAvoidanceRect(range, anchor), usesBlockAvoidance ? 6 : 0) || anchor;
+    const usesBlockAvoidance = (explicit ? true : this.selectedBlockRects(range).length > 1);
+    const avoidanceRect = expandRect(explicit || this.selectionAvoidanceRect(range, anchor), usesBlockAvoidance ? 6 : 0) || anchor;
     const toolbarGap = usesBlockAvoidance ? INLINE_TOOLBAR_GAP : 4;
 
     this.toolbar.style.visibility = "hidden";
@@ -1966,7 +2029,7 @@ class TCloudBlockSelectionController {
     let endElement = null;
     let range = null;
 
-    if (selection && selection.rangeCount > 0) {
+    if (selection && selection.rangeCount > 0 && !selection.isCollapsed) {
       range = selection.getRangeAt(0);
       startElement = nodeToElement(range.startContainer);
       endElement = nodeToElement(range.endContainer);
@@ -2449,6 +2512,15 @@ export class EditorAdapter {
     await this.init();
     if (typeof this.editor.caret?.setToLastBlock === "function") {
       this.editor.caret.setToLastBlock("end");
+    }
+  }
+
+  async focusFirstBlock() {
+    await this.init();
+    if (typeof this.editor.caret?.setToFirstBlock === "function") {
+      this.editor.caret.setToFirstBlock("end");
+    } else if (typeof this.editor.caret?.setToBlock === "function") {
+      this.editor.caret.setToBlock(0, "end");
     }
   }
 

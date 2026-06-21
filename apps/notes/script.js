@@ -2406,6 +2406,12 @@ async function openNote(noteId, options = {}) {
 
     renderNotesList();
     setSaveState("saved", { at: Date.now() });
+
+    const activeEl = document.activeElement;
+    const focusIsOutsideEditor = activeEl && activeEl.tagName !== "INPUT" && activeEl.tagName !== "TEXTAREA" && !activeEl.isContentEditable;
+    if (focusIsOutsideEditor) {
+      await state.editor.focusFirstBlock().catch(() => {});
+    }
   } catch (error) {
     if (requestId === state.currentOpenNoteRequestId) {
       state.loadingNote = false;
@@ -3440,6 +3446,9 @@ function renderSlashMenu() {
     button.addEventListener("mousedown", (event) => event.preventDefault());
     button.addEventListener("click", () => applySlashOption(option).catch(handleUnexpectedError));
     els.slashMenu.appendChild(button);
+    if (index === state.slashMenu.index) {
+      button.scrollIntoView?.({ block: "nearest" });
+    }
   });
 }
 
@@ -3903,6 +3912,24 @@ function wireEvents() {
   els.newFolderButton?.addEventListener("click", () => runNotesCommand("folder.create", { targetFolderId: folderTargetForCreation() }).catch(handleUnexpectedError));
   els.sidebarToggleButton?.addEventListener("click", () => setSidebarCollapsed(true));
   els.sidebarOpenButton?.addEventListener("click", () => setSidebarCollapsed(false));
+
+  els.notesList?.addEventListener("keydown", (event) => {
+    if (event.key !== "ArrowDown" && event.key !== "ArrowUp" && event.key !== "Home" && event.key !== "End") return;
+    const items = Array.from(els.notesList.querySelectorAll(".tree-note, .tree-folder-label, .smart-view-item")).filter((el) => {
+      if (el.closest(".hidden")) return false;
+      return el.offsetParent !== null || el.getClientRects().length > 0;
+    });
+    if (!items.length) return;
+    const currentIndex = items.indexOf(document.activeElement);
+    let nextIndex = currentIndex;
+    if (event.key === "ArrowDown") nextIndex = currentIndex < 0 ? 0 : Math.min(currentIndex + 1, items.length - 1);
+    else if (event.key === "ArrowUp") nextIndex = currentIndex < 0 ? 0 : Math.max(currentIndex - 1, 0);
+    else if (event.key === "Home") nextIndex = 0;
+    else if (event.key === "End") nextIndex = items.length - 1;
+    if (nextIndex === currentIndex) return;
+    event.preventDefault();
+    items[nextIndex].focus();
+  });
   els.templatesButton?.addEventListener("click", () => openModal("templates"));
   els.importButton?.addEventListener("click", () => openImportExportModal().catch(handleUnexpectedError));
   els.exportButton?.addEventListener("click", () => runNotesCommand("note.export").catch(handleUnexpectedError));

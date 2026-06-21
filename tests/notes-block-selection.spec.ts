@@ -194,58 +194,8 @@ test.describe("TCloud Notes Block Selection and Highlighting", () => {
 
     await expect.poll(async () => page.locator(".ce-block.is-tcloud-range-selected").count()).toBe(3);
 
-    // Headless Chromium normalizes this vertical drag into block selection without keeping
-    // a live text range, so we verify the pointerdown -> selectionchange -> pointerup
-    // toolbar lifecycle with a synthetic cross-block range using the same controller path.
-    const syntheticDragState = await page.evaluate(() => {
-      const editables = Array.from(document.querySelectorAll(".editorjs-host .ce-block [contenteditable='true']"));
-      const firstEditable = editables[0];
-      const thirdEditable = editables[2];
-      const startNode = firstEditable?.firstChild || firstEditable;
-      const endNode = thirdEditable?.firstChild || thirdEditable;
-      const firstRect = firstEditable?.getBoundingClientRect();
-
-      if (!firstEditable || !thirdEditable || !startNode || !endNode || !firstRect) {
-        return { ready: false, toolbarOpen: -1, selectedBlocks: -1 };
-      }
-
-      firstEditable.dispatchEvent(new PointerEvent("pointerdown", {
-        bubbles: true,
-        composed: true,
-        pointerId: 1,
-        buttons: 1,
-        clientX: firstRect.left + 48,
-        clientY: firstRect.top + firstRect.height / 2,
-      }));
-
-      const range = document.createRange();
-      range.setStart(startNode, 5);
-      range.setEnd(endNode, Math.max(8, (endNode.textContent || "").length - 8));
-
-      const selection = window.getSelection();
-      selection?.removeAllRanges();
-      selection?.addRange(range);
-      document.dispatchEvent(new Event("selectionchange"));
-
-      return {
-        ready: true,
-        toolbarOpen: document.querySelectorAll(".tcloud-inline-toolbar--custom.is-open").length,
-        selectedBlocks: document.querySelectorAll(".editorjs-host .ce-block.is-tcloud-range-selected").length,
-      };
-    });
-
-    expect(syntheticDragState.ready).toBeTruthy();
-    expect(syntheticDragState.toolbarOpen).toBe(0);
-    expect(syntheticDragState.selectedBlocks).toBe(3);
-
-    await page.evaluate(() => {
-      document.dispatchEvent(new PointerEvent("pointerup", {
-        bubbles: true,
-        composed: true,
-        pointerId: 1,
-      }));
-    });
-
+    // After the fix, the inline toolbar opens on multi-block selection even when the
+    // browser normalizes the vertical drag into block selection without a live text range.
     const toolbar = page.locator(".tcloud-inline-toolbar--custom.is-open");
     await expect(toolbar).toHaveCount(1);
 
@@ -273,6 +223,9 @@ test.describe("TCloud Notes Block Selection and Highlighting", () => {
     expect(toolbarAvoidsSelection).toBeTruthy();
 
     await page.evaluate(() => {
+      document.querySelectorAll(".editorjs-host .ce-block").forEach((block) => {
+        block.classList.remove("ce-block--selected", "is-tcloud-range-selected", "is-tcloud-selection-start", "is-tcloud-selection-end");
+      });
       const editable = document.querySelector(".editorjs-host .ce-block [contenteditable='true']");
       const textNode = editable?.firstChild || editable;
       const content = textNode?.textContent || "";

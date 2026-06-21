@@ -8381,7 +8381,8 @@ body,
 .colon-icon-option:focus-visible,
 .colon-icon-option.is-active,
 .wiki-link-menu button:hover,
-.wiki-link-menu button:focus-visible {
+.wiki-link-menu button:focus-visible,
+.wiki-link-menu button.is-active {
   background: var(--tn-menu-bg-active) !important;
   color: var(--tn-menu-text) !important;
   outline: none !important;
