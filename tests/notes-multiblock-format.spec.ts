@@ -295,6 +295,78 @@ test.describe("TCloud Notes multiblock formatting", () => {
     }).toBeTruthy();
   });
 
+  test("unifies mixed bold state instead of inverting per block", async ({ page, request }) => {
+    const token = await login(request);
+    const blocks = [0, 1, 2].map((index) => ({
+      id: `mix${index}`,
+      type: "paragraph",
+      data: { text: index === 0 ? "<b>Misto 1</b>" : `Misto ${index + 1}` },
+    }));
+    const noteId = await createNote(request, token, blocks);
+    await openNote(page, token, noteId);
+
+    await selectBlocks(page, 0, 2);
+    await page.locator('.tcloud-inline-toolbar--custom [data-tcloud-action="bold"]').click();
+
+    await expect.poll(async () => {
+      const current = await savedBlocks(page);
+      return current.every((block) => /<(strong|b)>/.test(String(block.data.text)));
+    }).toBeTruthy();
+
+    await selectBlocks(page, 0, 2);
+    await page.locator('.tcloud-inline-toolbar--custom [data-tcloud-action="bold"]').click();
+
+    await expect.poll(async () => {
+      const current = await savedBlocks(page);
+      return current.every((block) => !/<(strong|b)>/.test(String(block.data.text)));
+    }).toBeTruthy();
+  });
+
+  test("unifies mixed italic state via toolbar button", async ({ page, request }) => {
+    const token = await login(request);
+    const blocks: NoteBlock[] = [
+      { id: "it0", type: "paragraph", data: { text: "<i>Itálico 1</i>" } },
+      { id: "it1", type: "paragraph", data: { text: "Itálico 2" } },
+      { id: "it2", type: "paragraph", data: { text: "Itálico 3" } },
+    ];
+    const noteId = await createNote(request, token, blocks);
+    await openNote(page, token, noteId);
+
+    await selectBlocks(page, 0, 2);
+    await page.locator('.tcloud-inline-toolbar--custom [data-tcloud-action="italic"]').click();
+
+    await expect.poll(async () => {
+      const current = await savedBlocks(page);
+      return current.every((block) => /<(em|i)>/.test(String(block.data.text)));
+    }).toBeTruthy();
+  });
+
+  test("unifies mixed underline and strikethrough state", async ({ page, request }) => {
+    const token = await login(request);
+    const blocks: NoteBlock[] = [
+      { id: "u0", type: "paragraph", data: { text: "<u>Sub 1</u>" } },
+      { id: "u1", type: "paragraph", data: { text: "Sub 2" } },
+      { id: "s0", type: "paragraph", data: { text: "Tach 1" } },
+      { id: "s1", type: "paragraph", data: { text: "<s>Tach 2</s>" } },
+    ];
+    const noteId = await createNote(request, token, blocks);
+    await openNote(page, token, noteId);
+
+    await selectBlocks(page, 0, 1);
+    await page.locator('.tcloud-inline-toolbar--custom [data-tcloud-action="underline"]').click();
+    await expect.poll(async () => {
+      const current = await savedBlocks(page);
+      return /<u>/.test(String(current[0].data.text)) && /<u>/.test(String(current[1].data.text));
+    }).toBeTruthy();
+
+    await selectBlocks(page, 2, 3);
+    await page.locator('.tcloud-inline-toolbar--custom [data-tcloud-action="strike"]').click();
+    await expect.poll(async () => {
+      const current = await savedBlocks(page);
+      return /<s>/.test(String(current[2].data.text)) && /<s>/.test(String(current[3].data.text));
+    }).toBeTruthy();
+  });
+
   test("opens the inline toolbar and applies bold after a natural vertical multi-block drag", async ({ page, request }) => {
     const token = await login(request);
     const blocks = [0, 1, 2].map((index) => ({

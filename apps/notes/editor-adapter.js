@@ -1,6 +1,7 @@
 import {
   CodeBlockTool,
   DividerTool,
+  INLINE_SANITIZER_RULES,
   QuoteTool,
   TextColorTool,
   TodoTool,
@@ -9,7 +10,6 @@ import {
   clearHtmlInlineFormatting,
   getSelectedInlineState,
   normalizeHex,
-  toggleHtmlWrapper,
 } from "./editor-tools.js?v=notes-multiblock-snapshot-20260609-1";
 import {
   TCloudAudioTool,
@@ -24,19 +24,6 @@ import {
 import { EditorJsPopoverController } from "./editor-popovers.js?v=notes-menu-system-clear-20260606-2";
 
 const TCLOUD_INDENT_MAX = 6;
-const INLINE_SANITIZER_RULES = {
-  br: true,
-  b: true,
-  strong: true,
-  i: true,
-  em: true,
-  u: true,
-  s: true,
-  strike: true,
-  code: true,
-  span: { style: true },
-  a: { href: true, target: true, rel: true },
-};
 const CONVERTIBLE_BLOCK_TYPES = new Set(["paragraph", "header", "list", "todo", "quote", "codeBlock"]);
 const TEXT_FORMAT_COMPATIBLE_BLOCK_TYPES = new Set(["paragraph", "header", "list", "todo", "quote"]);
 const TEXT_FIELDS_BY_BLOCK_TYPE = {
@@ -77,6 +64,14 @@ function headerToolWithInlineSanitizer() {
   return class TCloudHeaderTool extends window.Header {
     static get sanitize() {
       return { level: false, text: INLINE_SANITIZER_RULES };
+    }
+  };
+}
+
+function listToolWithInlineSanitizer() {
+  return class TCloudListTool extends window.EditorjsList {
+    static get sanitize() {
+      return { style: false, items: INLINE_SANITIZER_RULES, meta: false };
     }
   };
 }
@@ -526,6 +521,20 @@ function closestInlineTag(range, selector) {
   return element?.closest?.(selector) || null;
 }
 
+function findInlineWrapperInRange(range, selector) {
+  if (!range) return null;
+  const ancestor = closestInlineTag(range, selector);
+  if (ancestor && ancestor.textContent === range.toString()) return ancestor;
+  const common = range.commonAncestorContainer;
+  if (common?.nodeType === Node.ELEMENT_NODE) {
+    const matchingChildren = Array.from(common.children).filter((el) => el.matches?.(selector));
+    if (matchingChildren.length === 1 && matchingChildren[0].textContent === range.toString()) {
+      return matchingChildren[0];
+    }
+  }
+  return null;
+}
+
 function unwrapInlineElement(element) {
   const parent = element?.parentNode;
   if (!parent) return false;
@@ -533,6 +542,29 @@ function unwrapInlineElement(element) {
   parent.removeChild(element);
   parent.normalize?.();
   return true;
+}
+
+function unwrapAllInlineInRange(range, selector) {
+  if (!range) return false;
+  let changed = false;
+  const common = range.commonAncestorContainer;
+  const root = common?.nodeType === Node.ELEMENT_NODE ? common : common?.parentElement;
+  if (!root) return false;
+  const candidates = Array.from(root.querySelectorAll(selector));
+  candidates.forEach((el) => {
+    if (!range.intersectsNode || !range.intersectsNode(el)) {
+      if (!intersectsRangeFallback(range, el)) return;
+    }
+    changed = unwrapInlineElement(el) || changed;
+  });
+  return changed;
+}
+
+function intersectsRangeFallback(range, el) {
+  const elRange = document.createRange();
+  elRange.selectNode(el);
+  return range.compareBoundaryPoints(Range.START_TO_END, elRange) > 0 &&
+    range.compareBoundaryPoints(Range.END_TO_START, elRange) < 0;
 }
 
 function toggleInlineElement(range, selector, tagName, attributes = {}) {
@@ -880,10 +912,10 @@ class TCloudInlineToolbarController {
     }
   }
 
-  showInlineToolbarForBlockSelection() {
+  showInlineToolbarForBlockSelection({ skipCapture = false } = {}) {
     const ctrl = this.adapter.blockSelectionController;
     if (!ctrl) return false;
-    ctrl.captureFromCurrentSelection?.("inline-toolbar");
+    if (!skipCapture) ctrl.captureFromCurrentSelection?.("inline-toolbar");
     const indexes = ctrl.getSelectedIndexes?.(null);
     if (!indexes || indexes.length <= 1) return false;
     const blocks = ctrl.blocks?.() || [];
@@ -896,7 +928,7 @@ class TCloudInlineToolbarController {
     if (sameRangeSignature(signature, this.closedSelectionSignature)) return false;
     this.closedSelectionSignature = null;
     this.savedRange = syntheticRange;
-    if (syntheticRange) ctrl.captureFromRange?.(syntheticRange, "inline-toolbar");
+    if (syntheticRange && !skipCapture) ctrl.captureFromRange?.(syntheticRange, "inline-toolbar");
     this.pointerSelectionRange = null;
     this.toolbar.hidden = false;
     this.toolbar.classList.add("is-open");
@@ -937,6 +969,36 @@ class TCloudInlineToolbarController {
       this.adapter.blockSelectionController?.captureFromRange?.(this.savedRange, reason);
     }
     this.adapter.blockSelectionController?.freeze?.(reason);
+    // Stash the current selection indexes so refreshAfterBatchAction can
+    // restore them even after render() clears the snapshot.
+    const ctrl = this.adapter.blockSelectionController;
+    this.stashedSelectionIndexes = ctrl
+      ? ctrl.normalizeIndexes(ctrl.selectionSnapshot.indexes)
+      : [];
+  }
+
+  refreshAfterBatchAction(reason = "post-action", overrideIndexes = null) {
+    const ctrl = this.adapter.blockSelectionController;
+    if (!ctrl) {
+      this.hideInlineToolbar(reason);
+      return;
+    }
+    const indexes = ctrl.normalizeIndexes(overrideIndexes || this.stashedSelectionIndexes || ctrl.selectionSnapshot.indexes);
+    this.stashedSelectionIndexes = null;
+    if (indexes.length <= 1) {
+      this.hideInlineToolbar(`${reason}-single`, { suppressSelection: true });
+      return;
+    }
+    // Re-capture by indexes (IDs may have changed after conversion/render)
+    ctrl.captureFromIndexes(indexes, reason, null);
+    ctrl.freeze(reason);
+    // Reset closedSelectionSignature so the toolbar can re-open for the same blocks
+    this.closedSelectionSignature = null;
+    // Re-show toolbar anchored to the still-selected blocks (skip re-capture;
+    // we already set the snapshot above with fresh IDs after conversion)
+    if (!this.showInlineToolbarForBlockSelection({ skipCapture: true })) {
+      this.hideInlineToolbar(`${reason}-position`, { suppressSelection: true });
+    }
   }
 
   setExternalEditorMenuOpen(isOpen, reason = "external-menu") {
@@ -1216,7 +1278,7 @@ class TCloudInlineToolbarController {
           level: Number(variant || 2),
           style: variant || "unordered",
         }, this.savedRange);
-        this.hideInlineToolbar("block-convert", { suppressSelection: true, clearSelection: true });
+        this.refreshAfterBatchAction("block-convert");
         return;
       }
       if (!restoreRange(this.savedRange, this.root)) {
@@ -1234,13 +1296,13 @@ class TCloudInlineToolbarController {
     const batchInlineActions = new Set(["bold", "italic", "underline", "strike", "inline-code", "clear"]);
     if (batchInlineActions.has(action) && this.adapter.hasMultiBlockSelection(this.savedRange)) {
       await this.adapter.applyInlineActionToSelectedBlocks(action, this.savedRange);
-      this.hideInlineToolbar(action, { suppressSelection: true, clearSelection: true });
+      this.refreshAfterBatchAction(action);
       return;
     }
 
     if ((action === "indent" || action === "outdent") && this.adapter.hasMultiBlockSelection(this.savedRange)) {
       await this.adapter.changeSelectedBlocksIndent(action === "indent" ? 1 : -1, this.savedRange);
-      this.hideInlineToolbar(action, { suppressSelection: true, clearSelection: true });
+      this.refreshAfterBatchAction(action);
       return;
     }
 
@@ -1305,12 +1367,14 @@ class TCloudInlineToolbarController {
     }
     if (action === "indent") {
       await this.adapter.changeSelectedBlocksIndent(1, this.savedRange);
-      this.hideInlineToolbar(action, { suppressSelection: true, clearSelection: true });
+      if (this.adapter.hasMultiBlockSelection(this.savedRange)) this.refreshAfterBatchAction("indent");
+      else this.hideInlineToolbar("indent", { suppressSelection: true });
       return;
     }
     if (action === "outdent") {
       await this.adapter.changeSelectedBlocksIndent(-1, this.savedRange);
-      this.hideInlineToolbar(action, { suppressSelection: true, clearSelection: true });
+      if (this.adapter.hasMultiBlockSelection(this.savedRange)) this.refreshAfterBatchAction("outdent");
+      else this.hideInlineToolbar("outdent", { suppressSelection: true });
       return;
     }
     if (action === "clear") changed = document.execCommand("removeFormat");
@@ -1319,12 +1383,12 @@ class TCloudInlineToolbarController {
         ? this.adapter.getSelectedBlocksPlainText(this.savedRange)
         : window.getSelection()?.toString() || this.savedRange.toString() || "";
       await navigator.clipboard?.writeText?.(text);
-      this.hideInlineToolbar("copy", { suppressSelection: true, clearSelection: true });
+      this.refreshAfterBatchAction("copy");
       return;
     }
     if (action === "duplicate-blocks") {
       await this.adapter.duplicateSelectedBlocks(this.savedRange);
-      this.hideInlineToolbar("duplicate-blocks", { suppressSelection: true, clearSelection: true });
+      this.refreshAfterBatchAction("duplicate-blocks");
       return;
     }
     if (action === "delete-blocks") {
@@ -1334,13 +1398,17 @@ class TCloudInlineToolbarController {
     }
 
     if (changed) await this.adapter.notifyManualChange();
-    this.hideInlineToolbar(action, { suppressSelection: true, clearSelection: true });
+    if (this.adapter.hasMultiBlockSelection(this.savedRange)) {
+      this.refreshAfterBatchAction(action);
+    } else {
+      this.hideInlineToolbar(action, { suppressSelection: true, clearSelection: true });
+    }
   }
 
   async applyColor(mode, value) {
     if (this.adapter.hasMultiBlockSelection(this.savedRange)) {
       await this.adapter.applyColorToSelectedBlocks(mode, value, this.savedRange);
-      this.hideInlineToolbar("color", { suppressSelection: true, clearSelection: true });
+      this.refreshAfterBatchAction("color");
       return;
     }
     const styleKey = mode === "background" ? "backgroundColor" : "color";
@@ -1595,20 +1663,36 @@ class TCloudInlineToolbarController {
     const inlineState = !isMultiBlock && rangeInsideEditor(range, this.root) ? getSelectedInlineState(range) : { color: "", backgroundColor: "" };
     const activeLink = !isMultiBlock && Boolean(closestInlineTag(range, "a"));
     const activeCode = !isMultiBlock && Boolean(closestInlineTag(range, "code"));
+    const boldState = isMultiBlock ? this.adapter.getMultiBlockFormatState(range, "strong,b") : (Boolean(closestInlineTag(range, "strong,b")) ? "all" : "none");
+    const italicState = isMultiBlock ? this.adapter.getMultiBlockFormatState(range, "em,i") : (Boolean(closestInlineTag(range, "em,i")) ? "all" : "none");
+    const underlineState = isMultiBlock ? this.adapter.getMultiBlockFormatState(range, "u") : (Boolean(closestInlineTag(range, "u")) ? "all" : "none");
+    const strikeState = isMultiBlock ? this.adapter.getMultiBlockFormatState(range, "s,strike") : (Boolean(closestInlineTag(range, "s,strike")) ? "all" : "none");
+    const codeState = isMultiBlock ? this.adapter.getMultiBlockFormatState(range, "code") : (activeCode ? "all" : "none");
     const states = {
-      bold: !isMultiBlock && Boolean(closestInlineTag(range, "strong,b")),
-      italic: !isMultiBlock && Boolean(closestInlineTag(range, "em,i")),
-      underline: !isMultiBlock && Boolean(closestInlineTag(range, "u")),
-      strike: !isMultiBlock && Boolean(closestInlineTag(range, "s,strike")),
-      "inline-code": activeCode,
+      bold: boldState === "all",
+      italic: italicState === "all",
+      underline: underlineState === "all",
+      strike: strikeState === "all",
+      "inline-code": codeState === "all",
       link: activeLink,
       "text-color": Boolean(inlineState.color),
       "highlight-color": Boolean(inlineState.backgroundColor),
+    };
+    const partialStates = {
+      bold: boldState === "partial",
+      italic: italicState === "partial",
+      underline: underlineState === "partial",
+      strike: strikeState === "partial",
+      "inline-code": codeState === "partial",
     };
     Object.entries(states).forEach(([action, active]) => {
       const button = this.toolbar.querySelector(`[data-tcloud-action="${action}"]`);
       button?.classList.toggle("is-active", Boolean(active));
       button?.setAttribute("aria-pressed", active ? "true" : "false");
+    });
+    Object.entries(partialStates).forEach(([action, partial]) => {
+      const button = this.toolbar.querySelector(`[data-tcloud-action="${action}"]`);
+      button?.classList.toggle("is-partial", Boolean(partial));
     });
     const unlink = this.toolbar.querySelector('[data-tcloud-action="unlink"]');
     if (unlink) {
@@ -1673,17 +1757,34 @@ class TCloudInlineToolbarController {
 
 function rangeIntersectsElement(range, element) {
   if (!range || !element) return false;
-  const elementRange = document.createRange();
   try {
-    elementRange.selectNodeContents(element);
-    return !(
-      range.compareBoundaryPoints(Range.END_TO_START, elementRange) >= 0 ||
-      range.compareBoundaryPoints(Range.START_TO_END, elementRange) <= 0
-    );
+    return range.intersectsNode(element);
   } catch (error) {
     return false;
-  } finally {
-    elementRange.detach?.();
+  }
+}
+
+function rangeIntersection(range, element) {
+  if (!range || !element || range.collapsed) return null;
+  try {
+    if (!range.intersectsNode(element)) return null;
+
+    const intersection = range.cloneRange();
+
+    const startCmp = range.comparePoint(element, 0);
+    if (startCmp >= 0) {
+      intersection.setStart(element, 0);
+    }
+
+    const endCmp = range.comparePoint(element, element.childNodes.length);
+    if (endCmp <= 0) {
+      intersection.setEnd(element, element.childNodes.length);
+    }
+
+    if (intersection.collapsed) return null;
+    return intersection;
+  } catch (error) {
+    return null;
   }
 }
 
@@ -1706,7 +1807,7 @@ function rangeLooksLikeMultiBlockSelection(range, blocks = [], visualSelected = 
   return matchingBlocks > 1;
 }
 
-class TCloudBlockSelectionController {
+export class TCloudBlockSelectionController {
   constructor(adapter) {
     this.adapter = adapter;
     this.root = holderElement(adapter.holder);
@@ -1717,12 +1818,16 @@ class TCloudBlockSelectionController {
     this.onPointerDown = (event) => this.handlePointerDown(event);
     this.onPointerUp = () => this.scheduleSync();
     this.onKeyUp = (event) => this.handleKeyUp(event);
+    this.onKeyDown = (event) => this.handleKeyDown(event);
+    this.onCopy = (event) => this.handleCopy(event);
     this.onFocusIn = () => this.scheduleSync();
 
     document.addEventListener("selectionchange", this.onSelectionChange);
     document.addEventListener("pointerdown", this.onPointerDown, true);
     document.addEventListener("pointerup", this.onPointerUp, true);
     document.addEventListener("keyup", this.onKeyUp, true);
+    document.addEventListener("keydown", this.onKeyDown, true);
+    document.addEventListener("copy", this.onCopy, true);
     document.addEventListener("focusin", this.onFocusIn, true);
 
     this.scheduleSync();
@@ -1733,6 +1838,8 @@ class TCloudBlockSelectionController {
     document.removeEventListener("pointerdown", this.onPointerDown, true);
     document.removeEventListener("pointerup", this.onPointerUp, true);
     document.removeEventListener("keyup", this.onKeyUp, true);
+    document.removeEventListener("keydown", this.onKeyDown, true);
+    document.removeEventListener("copy", this.onCopy, true);
     document.removeEventListener("focusin", this.onFocusIn, true);
     if (this.frame) cancelAnimationFrame(this.frame);
     this.clear();
@@ -1761,15 +1868,12 @@ class TCloudBlockSelectionController {
 
   normalizeIndexes(indexes = []) {
     const blocks = this.blocks();
-    const contentBlocks = this.adapter.lastSavedContent?.blocks || [];
-    const hasContent = contentBlocks.length > 0;
     return Array.from(new Set(indexes))
       .map((index) => Number(index))
       .filter((index) => (
         Number.isInteger(index) &&
         index >= 0 &&
-        index < blocks.length &&
-        (!hasContent || index < contentBlocks.length)
+        index < blocks.length
       ))
       .sort((a, b) => a - b);
   }
@@ -2005,6 +2109,128 @@ class TCloudBlockSelectionController {
     this.scheduleSync();
   }
 
+  handleKeyDown(event) {
+    if (!this.root || !document.contains(this.root)) return;
+    const target = event.target;
+    const insideEditor = Boolean(target?.closest?.(".editorjs-host, .codex-editor") && this.root?.contains(target));
+    if (!insideEditor) return;
+
+    const isShiftArrow = event.shiftKey && (event.key === "ArrowUp" || event.key === "ArrowDown");
+    const isBulkDelete = (event.key === "Backspace" || event.key === "Delete") && this.hasMultiBlockSelection(null);
+
+    if (isShiftArrow) {
+      event.preventDefault();
+      event.stopPropagation();
+      this.expandSelectionWithArrow(event.key === "ArrowDown" ? 1 : -1);
+      return;
+    }
+
+    if (isBulkDelete) {
+      event.preventDefault();
+      event.stopPropagation();
+      this.adapter.deleteSelectedBlocks(this.selectionSnapshot.range).catch((error) => {
+        console.warn("[TCloud] Falha ao deletar blocos selecionados via teclado:", error);
+      });
+      return;
+    }
+  }
+
+  expandSelectionWithArrow(direction) {
+    const blocks = this.blocks();
+    if (!blocks.length) return;
+
+    const currentSnapshot = this.snapshotIsValid() ? this.getSnapshot() : null;
+    let anchorIndex;
+    let focusIndex;
+
+    if (currentSnapshot && currentSnapshot.indexes.length > 1) {
+      anchorIndex = currentSnapshot.anchorIndex;
+      focusIndex = currentSnapshot.focusIndex + direction;
+    } else {
+      anchorIndex = this.currentBlockIndexSync();
+      focusIndex = anchorIndex + direction;
+    }
+
+    if (focusIndex < 0 || focusIndex >= blocks.length) return;
+
+    const start = Math.min(anchorIndex, focusIndex);
+    const end = Math.max(anchorIndex, focusIndex);
+    const indexes = [];
+    for (let i = start; i <= end; i++) indexes.push(i);
+
+    const range = this.buildRangeAcrossBlocks(start, end);
+    if (range) {
+      const selection = window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+    }
+
+    this.captureFromIndexes(indexes, "keyboard-arrow", range);
+    this.freeze("keyboard-arrow");
+    if (typeof blocks[focusIndex]?.scrollIntoView === "function") {
+      blocks[focusIndex].scrollIntoView({ block: "nearest", behavior: "smooth" });
+    }
+  }
+
+  buildRangeAcrossBlocks(startIndex, endIndex) {
+    const blocks = this.blocks();
+    const startBlock = blocks[startIndex];
+    const endBlock = blocks[endIndex];
+    if (!startBlock || !endBlock) return null;
+    try {
+      const range = document.createRange();
+      range.setStartBefore(startBlock);
+      range.setEndAfter(endBlock);
+      return range;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  currentBlockIndexSync() {
+    const selection = window.getSelection();
+    if (selection?.rangeCount) {
+      const node = selection.getRangeAt(0).commonAncestorContainer;
+      const element = node?.nodeType === Node.TEXT_NODE ? node.parentElement : node;
+      const blockElement = element?.closest?.(".ce-block");
+      if (blockElement && this.root?.contains(blockElement)) {
+        const blocks = this.blocks();
+        const domIndex = blocks.indexOf(blockElement);
+        if (domIndex >= 0) return domIndex;
+      }
+    }
+    const activeBlock = this.root?.querySelector(".ce-block.is-tcloud-active-block");
+    if (activeBlock) {
+      const blocks = this.blocks();
+      const domIndex = blocks.indexOf(activeBlock);
+      if (domIndex >= 0) return domIndex;
+    }
+    return 0;
+  }
+
+  handleCopy(event) {
+    if (!this.root || !document.contains(this.root)) return;
+    if (!this.hasMultiBlockSelection(null)) return;
+    const snapshot = this.getSnapshot();
+    if (!snapshot?.indexes?.length) return;
+
+    const contentBlocks = this.adapter.lastSavedContent?.blocks || [];
+    const text = snapshot.indexes
+      .map((index) => blockPlainText(contentBlocks[index]))
+      .filter(Boolean)
+      .join("\n");
+
+    const json = JSON.stringify({
+      tcloudNotesBlocks: snapshot.indexes.map((index) => contentBlocks[index]).filter(Boolean),
+    });
+
+    if (event.clipboardData) {
+      event.preventDefault();
+      event.clipboardData.setData("text/plain", text);
+      event.clipboardData.setData("application/x-tcloud-notes-blocks", json);
+    }
+  }
+
   sync() {
     if (!this.root || !document.contains(this.root)) return;
 
@@ -2231,7 +2457,7 @@ export class EditorAdapter {
           },
         },
         list: {
-          class: window.EditorjsList,
+          class: listToolWithInlineSanitizer(),
           inlineToolbar: false,
           config: {
             defaultStyle: "unordered",
@@ -2299,6 +2525,7 @@ export class EditorAdapter {
 
     this.readyPromise = this.editor.isReady;
     await this.readyPromise;
+    this.lastSavedContent = normalizeEditorData(initialData);
     if (!this.toolbarController) {
       this.toolbarController = new TCloudInlineToolbarController(this);
     }
@@ -2713,11 +2940,12 @@ export class EditorAdapter {
     const indexes = this.getSelectedBlockIndexes(preferredRange);
     if (indexes.length <= 1) {
       await this.deleteBlock();
+      this.blockSelectionController?.clearSnapshot?.("delete-selected-blocks");
       return { changed: true, changedCount: indexes.length || 1, skippedCount: 0 };
     }
 
     const focusIndex = Math.max(0, indexes[0] - 1);
-    return this.mutateBlocksTransaction((content) => {
+    const result = await this.mutateBlocksTransaction((content) => {
       let changedCount = 0;
       indexes
         .slice()
@@ -2739,6 +2967,8 @@ export class EditorAdapter {
       focusIndex,
       reason: "delete-selected-blocks",
     });
+    this.blockSelectionController?.clearSnapshot?.("delete-selected-blocks");
+    return result;
   }
 
   async deleteBlock() {
@@ -2883,6 +3113,46 @@ export class EditorAdapter {
       .join("\n");
   }
 
+  getMultiBlockFormatState(preferredRange, selector) {
+    const indexes = this.getSelectedBlockIndexes(preferredRange);
+    if (indexes.length <= 1) return "none";
+    const root = holderElement(this.holder);
+    if (!root) return "none";
+    const blockEls = Array.from(root.querySelectorAll(".ce-block"));
+    let baseRange = (preferredRange && rangeInsideEditor(preferredRange, root)) ? preferredRange : null;
+    if (!baseRange) {
+      const snapshotRange = this.blockSelectionController?.getSnapshot?.()?.range;
+      if (snapshotRange && rangeInsideEditor(snapshotRange, root)) baseRange = snapshotRange;
+    }
+    if (!baseRange) return "none";
+    let allHave = true;
+    let anyHave = false;
+    let compatible = 0;
+    indexes.forEach((index) => {
+      const blockEl = blockEls[index];
+      if (!blockEl) return;
+      const blockData = this.lastSavedContent?.blocks?.[index];
+      if (!isTextFormatCompatibleBlock(blockData)) return;
+      const editables = Array.from(blockEl.querySelectorAll("[contenteditable='true']"));
+      if (!editables.length) return;
+      compatible++;
+      let blockHasFormat = false;
+      let hasSubRange = false;
+      editables.forEach((editable) => {
+        const subRange = rangeIntersection(baseRange, editable);
+        if (!subRange) return;
+        hasSubRange = true;
+        if (findInlineWrapperInRange(subRange, selector)) blockHasFormat = true;
+      });
+      if (hasSubRange && blockHasFormat) anyHave = true;
+      if (hasSubRange && !blockHasFormat) allHave = false;
+    });
+    if (compatible === 0) return "none";
+    if (allHave) return "all";
+    if (anyHave) return "partial";
+    return "none";
+  }
+
   async notifyManualChange() {
     await this.onChange();
     if (!this.isUndoingOrRedoing) this.triggerHistorySave();
@@ -2905,10 +3175,19 @@ export class EditorAdapter {
     content.time = Date.now();
     const wasUndoingOrRedoing = this.isUndoingOrRedoing;
     this.isUndoingOrRedoing = true;
+    const holderEl = holderElement(this.holder);
+    const savedScrollTop = holderEl?.scrollTop;
+    const savedWindowScrollY = window.scrollY;
     try {
       await this.render(content);
     } finally {
       this.isUndoingOrRedoing = wasUndoingOrRedoing;
+    }
+    if (holderEl && savedScrollTop !== undefined) {
+      requestAnimationFrame(() => {
+        holderEl.scrollTop = savedScrollTop;
+        if (savedWindowScrollY !== undefined) window.scrollTo(0, savedWindowScrollY);
+      });
     }
     transactionHistory.push(JSON.parse(JSON.stringify(content)));
     while (transactionHistory.length > this.maxHistorySize) transactionHistory.shift();
@@ -3024,45 +3303,124 @@ export class EditorAdapter {
   async applyInlineActionToSelectedBlocks(action, preferredRange = null) {
     const indexes = this.getSelectedBlockIndexes(preferredRange);
     if (indexes.length <= 1) return null;
+    const safeIndexes = [...indexes];
 
-    return this.mutateBlocksTransaction((content) => {
-      let changedCount = 0;
-      let skippedCount = 0;
-      let lastChangedIndex = indexes[indexes.length - 1];
+    if (action === "clear") {
+      return this.mutateBlocksTransaction((content) => {
+        let changedCount = 0;
+        let skippedCount = 0;
+        let lastChangedIndex = safeIndexes[safeIndexes.length - 1];
 
-      indexes.forEach((index) => {
-        const block = content.blocks[index];
-        if (!isTextFormatCompatibleBlock(block)) {
-          skippedCount++;
-          return;
-        }
+        safeIndexes.forEach((index) => {
+          const block = content.blocks[index];
+          if (!isTextFormatCompatibleBlock(block)) {
+            skippedCount++;
+            return;
+          }
 
-        const changed = applyToBlockTextFields(block, (html) => {
-          if (action === "bold") return toggleHtmlWrapper(html, "strong,b", "strong");
-          if (action === "italic") return toggleHtmlWrapper(html, "em,i", "em");
-          if (action === "underline") return toggleHtmlWrapper(html, "u", "u");
-          if (action === "strike") return toggleHtmlWrapper(html, "s,strike", "s");
-          if (action === "inline-code") return toggleHtmlWrapper(html, "code", "code");
-          if (action === "clear") return clearHtmlInlineFormatting(html);
-          return html;
+          const changed = applyToBlockTextFields(block, (html) => clearHtmlInlineFormatting(html));
+          if (changed) {
+            changedCount++;
+            lastChangedIndex = index;
+          }
         });
 
-        if (changed) {
-          changedCount++;
-          lastChangedIndex = index;
+        return { changedCount, skippedCount, lastChangedIndex };
+      }, {
+        focusIndex: safeIndexes[safeIndexes.length - 1],
+        reason: `inline-${action}-selected-blocks`,
+      });
+    }
+
+    const toggleActions = {
+      bold: { selector: "strong,b", tag: "strong" },
+      italic: { selector: "em,i", tag: "em" },
+      underline: { selector: "u", tag: "u" },
+      strike: { selector: "s,strike", tag: "s" },
+      "inline-code": { selector: "code", tag: "code" },
+    };
+    const toggle = toggleActions[action];
+    if (!toggle) return null;
+
+    const root = holderElement(this.holder);
+    if (!root) return null;
+    const blocks = Array.from(root.querySelectorAll(".ce-block"));
+
+    let baseRange = (preferredRange && rangeInsideEditor(preferredRange, root))
+      ? preferredRange
+      : null;
+    if (!baseRange) {
+      const snapshotRange = this.blockSelectionController?.getSnapshot?.()?.range;
+      if (snapshotRange && rangeInsideEditor(snapshotRange, root)) baseRange = snapshotRange;
+    }
+    if (!baseRange) return null;
+
+    let changedCount = 0;
+    let skippedCount = 0;
+    let lastChangedIndex = safeIndexes[safeIndexes.length - 1];
+
+    const blockChecks = [];
+    let compatibleCount = 0;
+    let allHaveFormat = true;
+
+    safeIndexes.forEach((index) => {
+      const blockEl = blocks[index];
+      if (!blockEl) { skippedCount++; return; }
+      const blockData = this.lastSavedContent?.blocks?.[index];
+      if (!isTextFormatCompatibleBlock(blockData)) { skippedCount++; return; }
+      const editables = Array.from(blockEl.querySelectorAll("[contenteditable='true']"));
+      if (!editables.length) { skippedCount++; return; }
+
+      compatibleCount++;
+      let blockHasFormat = true;
+      let hasSubRange = false;
+      editables.forEach((editable) => {
+        const subRange = rangeIntersection(baseRange, editable);
+        if (!subRange) return;
+        hasSubRange = true;
+        const existing = findInlineWrapperInRange(subRange, toggle.selector);
+        if (!existing) blockHasFormat = false;
+      });
+      if (!hasSubRange) blockHasFormat = false;
+      if (!blockHasFormat) allHaveFormat = false;
+      blockChecks.push({ index, editables });
+    });
+
+    const targetApply = compatibleCount > 0 ? !allHaveFormat : false;
+
+    blockChecks.forEach(({ index, editables }) => {
+      let blockChanged = false;
+      editables.forEach((editable) => {
+        const subRange = rangeIntersection(baseRange, editable);
+        if (!subRange) return;
+        if (targetApply) {
+          const existing = findInlineWrapperInRange(subRange, toggle.selector);
+          if (!existing) {
+            const nextRange = wrapRangeWithElement(subRange, toggle.tag);
+            if (nextRange) blockChanged = true;
+          }
+        } else {
+          if (unwrapAllInlineInRange(subRange, toggle.selector)) blockChanged = true;
         }
       });
 
-      return { changedCount, skippedCount, lastChangedIndex };
-    }, {
-      focusIndex: indexes[indexes.length - 1],
-      reason: `inline-${action}-selected-blocks`,
+      if (blockChanged) {
+        changedCount++;
+        lastChangedIndex = index;
+      }
     });
+
+    if (changedCount > 0) {
+      await this.notifyManualChange();
+    }
+
+    return { changedCount, skippedCount, lastChangedIndex };
   }
 
   async applyColorToSelectedBlocks(mode, value, preferredRange = null) {
     const indexes = this.getSelectedBlockIndexes(preferredRange);
     if (indexes.length <= 1) return null;
+    const safeIndexes = [...indexes];
 
     const styleKey = mode === "background" ? "backgroundColor" : "color";
     const normalized = normalizeHex(value);
@@ -3071,9 +3429,9 @@ export class EditorAdapter {
     return this.mutateBlocksTransaction((content) => {
       let changedCount = 0;
       let skippedCount = 0;
-      let lastChangedIndex = indexes[indexes.length - 1];
+      let lastChangedIndex = safeIndexes[safeIndexes.length - 1];
 
-      indexes.forEach((index) => {
+      safeIndexes.forEach((index) => {
         const block = content.blocks[index];
         if (!isTextFormatCompatibleBlock(block)) {
           skippedCount++;
@@ -3092,7 +3450,7 @@ export class EditorAdapter {
 
       return { changedCount, skippedCount, lastChangedIndex };
     }, {
-      focusIndex: indexes[indexes.length - 1],
+      focusIndex: safeIndexes[safeIndexes.length - 1],
       reason: `color-${mode}-selected-blocks`,
     });
   }

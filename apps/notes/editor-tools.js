@@ -1,3 +1,17 @@
+export const INLINE_SANITIZER_RULES = {
+  br: true,
+  b: true,
+  strong: true,
+  i: true,
+  em: true,
+  u: true,
+  s: true,
+  strike: true,
+  code: true,
+  span: { style: true },
+  a: { href: true, target: true, rel: true },
+};
+
 function editableText(initialValue, className, placeholder) {
   const element = document.createElement("div");
   element.className = className;
@@ -810,6 +824,10 @@ export class TodoTool {
     return { title: "Checklist" };
   }
 
+  static get sanitize() {
+    return { text: INLINE_SANITIZER_RULES, checked: false };
+  }
+
   constructor({ data = {} }) {
     this.data = {
       text: data.text || "",
@@ -844,6 +862,10 @@ export class TodoTool {
 export class QuoteTool {
   static get toolbox() {
     return { title: "Citação" };
+  }
+
+  static get sanitize() {
+    return { text: INLINE_SANITIZER_RULES, caption: INLINE_SANITIZER_RULES };
   }
 
   constructor({ data = {} }) {

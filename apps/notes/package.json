@@ -1,0 +1,14 @@
+{
+  "name": "tcloud-notes",
+  "private": true,
+  "version": "0.4.0",
+  "type": "module",
+  "scripts": {
+    "test": "node --experimental-vm-modules ./node_modules/.bin/jest --config jest.config.mjs",
+    "test:watch": "npm test -- --watch"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0"
+  }
+}
