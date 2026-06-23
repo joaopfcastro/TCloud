@@ -589,6 +589,8 @@ class TCloudInlineToolbarController {
     this.isExternalEditorMenuActive = false;
     this.isPointerSelecting = false;
     this.isDragSelecting = false;
+    this.isExecutingCommand = false;
+    this.lastPointerActionAt = 0;
     this.lastExternalMenuInteractionAt = 0;
     this.lastPointerDownAt = 0;
     this.pendingSelectionReason = "";
@@ -614,6 +616,7 @@ class TCloudInlineToolbarController {
     this.onKeyDown = (event) => this.handleKeyDown(event);
     this.onViewportChange = () => {
       if (this.isPointerSelecting) return;
+      if (this.isExecutingCommand) return;
       if (!this.toolbar.classList.contains("is-open")) return;
       const range = this.savedRange;
       if (!range || !this.updateToolbarPosition(range)) this.hideInlineToolbar("viewport-change");
@@ -653,6 +656,7 @@ class TCloudInlineToolbarController {
     window.visualViewport?.removeEventListener("scroll", this.onViewportChange);
     if (this.selectionFrame) cancelAnimationFrame(this.selectionFrame);
     if (this.pendingPointerSelectionFrame) cancelAnimationFrame(this.pendingPointerSelectionFrame);
+    this.isExecutingCommand = false;
     this.closeAllInlineSubmenus();
     this.toolbar.remove();
   }
@@ -673,12 +677,22 @@ class TCloudInlineToolbarController {
       event.preventDefault();
       event.stopPropagation();
       this.adapter.blockSelectionController?.freeze?.("toolbar-pointerdown");
+      if (this.selectionFrame) {
+        cancelAnimationFrame(this.selectionFrame);
+        this.selectionFrame = null;
+      }
+      const target = event.target.closest("[data-tcloud-action]");
+      if (target && !target.disabled) {
+        this.lastPointerActionAt = performance.now();
+        this.runAction(target.dataset.tcloudAction, target).catch(console.warn);
+      }
     });
     toolbar.addEventListener("click", (event) => {
       const target = event.target.closest("[data-tcloud-action]");
       if (!target || target.disabled) return;
       event.preventDefault();
       event.stopPropagation();
+      if (performance.now() - this.lastPointerActionAt < 400) return;
       this.runAction(target.dataset.tcloudAction, target).catch(console.warn);
     });
 
@@ -795,6 +809,7 @@ class TCloudInlineToolbarController {
   }
 
   scheduleSelectionSync(reason = "selectionchange") {
+    if (this.isExecutingCommand) return;
     this.pendingSelectionReason = reason;
     if (this.isPointerSelecting && reason !== "pointerup-selection" && reason !== "pointercancel-selection") {
       if (reason === "selectionchange") {
@@ -815,6 +830,7 @@ class TCloudInlineToolbarController {
   }
 
   syncFromSelection(reason = "selectionchange") {
+    if (this.isExecutingCommand) return;
     if (this.isPointerSelecting && reason !== "pointerup-selection" && reason !== "pointercancel-selection") {
       if (reason === "selectionchange") {
         this.isDragSelecting = true;
@@ -962,9 +978,11 @@ class TCloudInlineToolbarController {
     }
     if (!suppressSelection || clearSelection) this.savedRange = null;
     this.hideNativeInlineToolbar();
+    this.isExecutingCommand = false;
   }
 
   prepareCommandExecution(reason = "toolbar-command") {
+    this.isExecutingCommand = true;
     if (this.savedRange) {
       this.adapter.blockSelectionController?.captureFromRange?.(this.savedRange, reason);
     }
@@ -978,6 +996,7 @@ class TCloudInlineToolbarController {
   }
 
   refreshAfterBatchAction(reason = "post-action", overrideIndexes = null) {
+    this.isExecutingCommand = false;
     const ctrl = this.adapter.blockSelectionController;
     if (!ctrl) {
       this.hideInlineToolbar(reason);
@@ -1131,10 +1150,13 @@ class TCloudInlineToolbarController {
   }
 
   updateToolbarPosition(range, explicitAnchorRect = null) {
+    if (this.isExecutingCommand) return false;
+    if (!this.toolbar.classList.contains("is-open")) return false;
     const explicit = rectFromBox(explicitAnchorRect);
     if (!range && !explicit) return false;
     if (explicit && !this.root) return false;
     if (range && !rangeInsideEditor(range, this.root) && !explicit) return false;
+    if (range && range.collapsed && !explicit) return false;
     const anchor = explicit || rangeSelectionRect(range);
     if (!anchor) return false;
     const viewportRect = this.viewportBounds();
@@ -1441,7 +1463,10 @@ class TCloudInlineToolbarController {
     this.prepareCommandExecution(`open-menu:${menu.dataset.menuType || "submenu"}`);
     const wasSame = this.submenu?.dataset.menuType === menu.dataset.menuType;
     this.closeAllInlineSubmenus();
-    if (wasSame) return;
+    if (wasSame) {
+      this.isExecutingCommand = false;
+      return;
+    }
     this.submenu = menu;
     this.submenu.addEventListener("mousedown", (event) => {
       if (!event.target.matches?.("input")) event.preventDefault();
@@ -1452,18 +1477,29 @@ class TCloudInlineToolbarController {
       if (!event.target.matches?.("input")) event.preventDefault();
       event.stopPropagation();
       this.adapter.blockSelectionController?.freeze?.("submenu-pointerdown");
+      if (this.selectionFrame) {
+        cancelAnimationFrame(this.selectionFrame);
+        this.selectionFrame = null;
+      }
+      const target = event.target.closest("[data-tcloud-action]");
+      if (target && !target.disabled) {
+        this.lastPointerActionAt = performance.now();
+        this.runAction(target.dataset.tcloudAction, target).catch(console.warn);
+      }
     });
     this.submenu.addEventListener("click", (event) => {
       const target = event.target.closest("[data-tcloud-action]");
       if (!target || target.disabled) return;
       event.preventDefault();
       event.stopPropagation();
+      if (performance.now() - this.lastPointerActionAt < 400) return;
       this.runAction(target.dataset.tcloudAction, target).catch(console.warn);
     });
     document.body.appendChild(this.submenu);
     this.activeAnchor = anchor;
     anchor?.setAttribute("aria-expanded", "true");
     this.positionSubmenu();
+    this.isExecutingCommand = false;
   }
 
   positionSubmenu() {
