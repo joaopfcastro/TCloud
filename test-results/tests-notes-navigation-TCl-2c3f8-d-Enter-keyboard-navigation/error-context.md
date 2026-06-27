@@ -1,0 +1,2778 @@
+# Instructions
+
+- Following Playwright test failed.
+- Explain why, be concise, respect Playwright best practices.
+- Provide a snippet of code with the fix, if possible.
+
+# Test info
+
+- Name: tests/notes-navigation.spec.ts >> TCloud Notes Navigation >> wiki-link autocomplete supports ArrowDown and Enter keyboard navigation
+- Location: tests/notes-navigation.spec.ts:111:7
+
+# Error details
+
+```
+Error: expect(received).toContain(expected) // indexOf
+
+Expected substring: "Wiki Target 1782077528425"
+Received string:    "QA cores 1782077533205"
+
+Call Log:
+- Timeout 5000ms exceeded while waiting on the predicate
+```
+
+# Page snapshot
+
+```yaml
+- generic [ref=e1]:
+  - generic [ref=e3]:
+    - complementary [ref=e4]:
+      - generic [ref=e5]:
+        - generic [ref=e6]:
+          - generic [ref=e7]: 
+          - heading "TCloud Notes" [level=1] [ref=e8]
+        - button "Recolher sidebar" [expanded] [ref=e9] [cursor=pointer]:
+          - generic [ref=e10]: 
+      - generic [ref=e11]:
+        - button " Nova nota" [ref=e12] [cursor=pointer]:
+          - generic [ref=e13]: 
+          - text: Nova nota
+        - button "Nova pasta" [ref=e14] [cursor=pointer]:
+          - generic [ref=e15]: 
+          - generic [ref=e16]: Nova pasta
+      - generic [ref=e17]:
+        - generic [ref=e18]: Buscar
+        - searchbox "Buscar" [ref=e19]
+      - tablist "Filtros principais" [ref=e20]:
+        - button " Minhas Notas 431" [ref=e21] [cursor=pointer]:
+          - generic [ref=e22]: 
+          - generic [ref=e23]: Minhas Notas
+          - generic [ref=e24]: "431"
+        - button " Favoritas 0" [ref=e25] [cursor=pointer]:
+          - generic [ref=e26]: 
+          - generic [ref=e27]: Favoritas
+          - generic [ref=e28]: "0"
+        - button " Recentes 8" [ref=e29] [cursor=pointer]:
+          - generic [ref=e30]: 
+          - generic [ref=e31]: Recentes
+          - generic [ref=e32]: "8"
+        - button " Arquivadas 0" [ref=e33] [cursor=pointer]:
+          - generic [ref=e34]: 
+          - generic [ref=e35]: Arquivadas
+          - generic [ref=e36]: "0"
+        - button " Lixeira 9" [ref=e37] [cursor=pointer]:
+          - generic [ref=e38]: 
+          - generic [ref=e39]: Lixeira
+          - generic [ref=e40]: "9"
+      - tree "Lista de notas" [ref=e41]:
+        - button "Minhas notas 431" [ref=e43] [cursor=pointer]:
+          - generic [ref=e44]: Minhas notas
+          - generic [ref=e45]: "431"
+        - generic [ref=e46]:
+          - treeitem "Expandir pasta Obstetricia Criar nota em Obstetricia Mais ações" [ref=e47]:
+            - button "Expandir pasta" [ref=e48] [cursor=pointer]:
+              - generic [ref=e49]: 
+            - button "Obstetricia" [ref=e50] [cursor=pointer]:
+              - generic [ref=e52]: 
+              - generic [ref=e53]: Obstetricia
+            - generic [ref=e54]:
+              - button "Criar nota em Obstetricia" [ref=e55] [cursor=pointer]:
+                - generic [ref=e56]: 
+              - button "Mais ações" [ref=e57] [cursor=pointer]:
+                - generic [ref=e58]: 
+          - text:           
+        - treeitem "Selecionar nota QA toolbar inline mouse 1780014444151" [ref=e59] [cursor=pointer]:
+          - generic [ref=e60]:
+            - checkbox "Selecionar nota" [ref=e61]
+            - generic [ref=e62]: 
+            - generic [ref=e63]: QA toolbar inline mouse 1780014444151
+          - generic [ref=e65]: ...
+        - treeitem "Selecionar nota QA popovers 1780695451515" [ref=e66] [cursor=pointer]:
+          - generic [ref=e67]:
+            - checkbox "Selecionar nota" [ref=e68]
+            - generic [ref=e69]: 
+            - generic [ref=e70]: QA popovers 1780695451515
+          - generic [ref=e72]: ...
+        - treeitem "Selecionar nota QA popovers 1780695479234" [ref=e73] [cursor=pointer]:
+          - generic [ref=e74]:
+            - checkbox "Selecionar nota" [ref=e75]
+            - generic [ref=e76]: 
+            - generic [ref=e77]: QA popovers 1780695479234
+          - generic [ref=e79]: ...
+        - treeitem "Selecionar nota QA popovers 1780695502664" [ref=e80] [cursor=pointer]:
+          - generic [ref=e81]:
+            - checkbox "Selecionar nota" [ref=e82]
+            - generic [ref=e83]: 
+            - generic [ref=e84]: QA popovers 1780695502664
+          - generic [ref=e86]: ...
+        - treeitem "Selecionar nota QA popovers 1780695521295" [ref=e87] [cursor=pointer]:
+          - generic [ref=e88]:
+            - checkbox "Selecionar nota" [ref=e89]
+            - generic [ref=e90]: 
+            - generic [ref=e91]: QA popovers 1780695521295
+          - generic [ref=e93]: ...
+        - treeitem "Selecionar nota QA popovers manual 1780695591093" [ref=e94] [cursor=pointer]:
+          - generic [ref=e95]:
+            - checkbox "Selecionar nota" [ref=e96]
+            - generic [ref=e97]: 
+            - generic [ref=e98]: QA popovers manual 1780695591093
+          - generic [ref=e100]: ...
+        - treeitem "Selecionar nota QA popovers 1780695631150" [ref=e101] [cursor=pointer]:
+          - generic [ref=e102]:
+            - checkbox "Selecionar nota" [ref=e103]
+            - generic [ref=e104]: 
+            - generic [ref=e105]: QA popovers 1780695631150
+          - generic [ref=e107]: ...
+        - treeitem "Selecionar nota QA popovers 1780695658802" [ref=e108] [cursor=pointer]:
+          - generic [ref=e109]:
+            - checkbox "Selecionar nota" [ref=e110]
+            - generic [ref=e111]: 
+            - generic [ref=e112]: QA popovers 1780695658802
+          - generic [ref=e114]: ...
+        - treeitem "Selecionar nota QA popovers manual 1780695709798" [ref=e115] [cursor=pointer]:
+          - generic [ref=e116]:
+            - checkbox "Selecionar nota" [ref=e117]
+            - generic [ref=e118]: 
+            - generic [ref=e119]: QA popovers manual 1780695709798
+          - generic [ref=e121]: ...
+        - treeitem "Selecionar nota QA popovers 1780695739419" [ref=e122] [cursor=pointer]:
+          - generic [ref=e123]:
+            - checkbox "Selecionar nota" [ref=e124]
+            - generic [ref=e125]: 
+            - generic [ref=e126]: QA popovers 1780695739419
+          - generic [ref=e128]: ...
+        - treeitem "Selecionar nota QA popovers 1780695778802" [ref=e129] [cursor=pointer]:
+          - generic [ref=e130]:
+            - checkbox "Selecionar nota" [ref=e131]
+            - generic [ref=e132]: 
+            - generic [ref=e133]: QA popovers 1780695778802
+          - generic [ref=e135]: ...
+        - treeitem "Selecionar nota QA popovers 1780695816072" [ref=e136] [cursor=pointer]:
+          - generic [ref=e137]:
+            - checkbox "Selecionar nota" [ref=e138]
+            - generic [ref=e139]: 
+            - generic [ref=e140]: QA popovers 1780695816072
+          - generic [ref=e142]: ...
+        - treeitem "Selecionar nota debug popover 1780695845829" [ref=e143] [cursor=pointer]:
+          - generic [ref=e144]:
+            - checkbox "Selecionar nota" [ref=e145]
+            - generic [ref=e146]: 
+            - generic [ref=e147]: debug popover 1780695845829
+          - generic [ref=e149]: ...
+        - treeitem "Selecionar nota QA popovers 1780695912300" [ref=e150] [cursor=pointer]:
+          - generic [ref=e151]:
+            - checkbox "Selecionar nota" [ref=e152]
+            - generic [ref=e153]: 
+            - generic [ref=e154]: QA popovers 1780695912300
+          - generic [ref=e156]: ...
+        - treeitem "Selecionar nota QA popovers manual 1780695965103" [ref=e157] [cursor=pointer]:
+          - generic [ref=e158]:
+            - checkbox "Selecionar nota" [ref=e159]
+            - generic [ref=e160]: 
+            - generic [ref=e161]: QA popovers manual 1780695965103
+          - generic [ref=e163]: ...
+        - treeitem "Selecionar nota QA popovers 1780696015319" [ref=e164] [cursor=pointer]:
+          - generic [ref=e165]:
+            - checkbox "Selecionar nota" [ref=e166]
+            - generic [ref=e167]: 
+            - generic [ref=e168]: QA popovers 1780696015319
+          - generic [ref=e170]: ...
+        - treeitem "Selecionar nota QA popovers 1780696045712" [ref=e171] [cursor=pointer]:
+          - generic [ref=e172]:
+            - checkbox "Selecionar nota" [ref=e173]
+            - generic [ref=e174]: 
+            - generic [ref=e175]: QA popovers 1780696045712
+          - generic [ref=e177]: ...
+        - treeitem "Selecionar nota QA popovers 1780696046472" [ref=e178] [cursor=pointer]:
+          - generic [ref=e179]:
+            - checkbox "Selecionar nota" [ref=e180]
+            - generic [ref=e181]: 
+            - generic [ref=e182]: QA popovers 1780696046472
+          - generic [ref=e184]: ...
+        - treeitem "Selecionar nota QA popovers manual 1780696101267" [ref=e185] [cursor=pointer]:
+          - generic [ref=e186]:
+            - checkbox "Selecionar nota" [ref=e187]
+            - generic [ref=e188]: 
+            - generic [ref=e189]: QA popovers manual 1780696101267
+          - generic [ref=e191]: ...
+        - treeitem "Selecionar nota QA matrix 1780696180745" [ref=e192] [cursor=pointer]:
+          - generic [ref=e193]:
+            - checkbox "Selecionar nota" [ref=e194]
+            - generic [ref=e195]: 
+            - generic [ref=e196]: QA matrix 1780696180745
+          - generic [ref=e198]: ...
+        - treeitem "Selecionar nota QA inline/context 1780696211101" [ref=e199] [cursor=pointer]:
+          - generic [ref=e200]:
+            - checkbox "Selecionar nota" [ref=e201]
+            - generic [ref=e202]: 
+            - generic [ref=e203]: QA inline/context 1780696211101
+          - generic [ref=e205]: ...
+        - treeitem "Selecionar nota QA inspect 1780696238746" [ref=e206] [cursor=pointer]:
+          - generic [ref=e207]:
+            - checkbox "Selecionar nota" [ref=e208]
+            - generic [ref=e209]: 
+            - generic [ref=e210]: QA inspect 1780696238746
+          - generic [ref=e212]: ...
+        - treeitem "Selecionar nota QA click color 1780696262427" [ref=e213] [cursor=pointer]:
+          - generic [ref=e214]:
+            - checkbox "Selecionar nota" [ref=e215]
+            - generic [ref=e216]: 
+            - generic [ref=e217]: QA click color 1780696262427
+          - generic [ref=e219]: ...
+        - treeitem "Selecionar nota QA inline/context 1780696285782" [ref=e220] [cursor=pointer]:
+          - generic [ref=e221]:
+            - checkbox "Selecionar nota" [ref=e222]
+            - generic [ref=e223]: 
+            - generic [ref=e224]: QA inline/context 1780696285782
+          - generic [ref=e226]: ...
+        - treeitem "Selecionar nota QA viewport 1780696320793" [ref=e227] [cursor=pointer]:
+          - generic [ref=e228]:
+            - checkbox "Selecionar nota" [ref=e229]
+            - generic [ref=e230]: 
+            - generic [ref=e231]: QA viewport 1780696320793
+          - generic [ref=e233]: ...
+        - treeitem "Selecionar nota QA scroll resize 1780696349755" [ref=e234] [cursor=pointer]:
+          - generic [ref=e235]:
+            - checkbox "Selecionar nota" [ref=e236]
+            - generic [ref=e237]: 
+            - generic [ref=e238]: QA scroll resize 1780696349755
+          - generic [ref=e240]: ...
+        - treeitem "Selecionar nota QA popovers 1780698122140" [ref=e241] [cursor=pointer]:
+          - generic [ref=e242]:
+            - checkbox "Selecionar nota" [ref=e243]
+            - generic [ref=e244]: 
+            - generic [ref=e245]: QA popovers 1780698122140
+          - generic [ref=e247]: ...
+        - treeitem "Selecionar nota QA popovers 1780698438605" [ref=e248] [cursor=pointer]:
+          - generic [ref=e249]:
+            - checkbox "Selecionar nota" [ref=e250]
+            - generic [ref=e251]: 
+            - generic [ref=e252]: QA popovers 1780698438605
+          - generic [ref=e254]: ...
+        - treeitem "Selecionar nota QA popovers 1780698530152" [ref=e255] [cursor=pointer]:
+          - generic [ref=e256]:
+            - checkbox "Selecionar nota" [ref=e257]
+            - generic [ref=e258]: 
+            - generic [ref=e259]: QA popovers 1780698530152
+          - generic [ref=e261]: ...
+        - treeitem "Selecionar nota QA popovers 1780698576446" [ref=e262] [cursor=pointer]:
+          - generic [ref=e263]:
+            - checkbox "Selecionar nota" [ref=e264]
+            - generic [ref=e265]: 
+            - generic [ref=e266]: QA popovers 1780698576446
+          - generic [ref=e268]: ...
+        - treeitem "Selecionar nota QA popovers 1780698733884" [ref=e269] [cursor=pointer]:
+          - generic [ref=e270]:
+            - checkbox "Selecionar nota" [ref=e271]
+            - generic [ref=e272]: 
+            - generic [ref=e273]: QA popovers 1780698733884
+          - generic [ref=e275]: ...
+        - treeitem "Selecionar nota QA popovers 1780698853616" [ref=e276] [cursor=pointer]:
+          - generic [ref=e277]:
+            - checkbox "Selecionar nota" [ref=e278]
+            - generic [ref=e279]: 
+            - generic [ref=e280]: QA popovers 1780698853616
+          - generic [ref=e282]: ...
+        - treeitem "Selecionar nota QA popovers 1780698978557" [ref=e283] [cursor=pointer]:
+          - generic [ref=e284]:
+            - checkbox "Selecionar nota" [ref=e285]
+            - generic [ref=e286]: 
+            - generic [ref=e287]: QA popovers 1780698978557
+          - generic [ref=e289]: ...
+        - treeitem "Selecionar nota QA popovers 1780699045036" [ref=e290] [cursor=pointer]:
+          - generic [ref=e291]:
+            - checkbox "Selecionar nota" [ref=e292]
+            - generic [ref=e293]: 
+            - generic [ref=e294]: QA popovers 1780699045036
+          - generic [ref=e296]: ...
+        - treeitem "Selecionar nota QA popovers 1780699124836" [ref=e297] [cursor=pointer]:
+          - generic [ref=e298]:
+            - checkbox "Selecionar nota" [ref=e299]
+            - generic [ref=e300]: 
+            - generic [ref=e301]: QA popovers 1780699124836
+          - generic [ref=e303]: ...
+        - treeitem "Selecionar nota QA popovers 1780700786466" [ref=e304] [cursor=pointer]:
+          - generic [ref=e305]:
+            - checkbox "Selecionar nota" [ref=e306]
+            - generic [ref=e307]: 
+            - generic [ref=e308]: QA popovers 1780700786466
+          - generic [ref=e310]: ...
+        - treeitem "Selecionar nota QA popovers 1780700842541" [ref=e311] [cursor=pointer]:
+          - generic [ref=e312]:
+            - checkbox "Selecionar nota" [ref=e313]
+            - generic [ref=e314]: 
+            - generic [ref=e315]: QA popovers 1780700842541
+          - generic [ref=e317]: ...
+        - treeitem "Selecionar nota QA popovers 1780700872761" [ref=e318] [cursor=pointer]:
+          - generic [ref=e319]:
+            - checkbox "Selecionar nota" [ref=e320]
+            - generic [ref=e321]: 
+            - generic [ref=e322]: QA popovers 1780700872761
+          - generic [ref=e324]: ...
+        - treeitem "Selecionar nota QA popovers 1780700913617" [ref=e325] [cursor=pointer]:
+          - generic [ref=e326]:
+            - checkbox "Selecionar nota" [ref=e327]
+            - generic [ref=e328]: 
+            - generic [ref=e329]: QA popovers 1780700913617
+          - generic [ref=e331]: ...
+        - treeitem "Selecionar nota QA popovers 1780700975847" [ref=e332] [cursor=pointer]:
+          - generic [ref=e333]:
+            - checkbox "Selecionar nota" [ref=e334]
+            - generic [ref=e335]: 
+            - generic [ref=e336]: QA popovers 1780700975847
+          - generic [ref=e338]: ...
+        - treeitem "Selecionar nota QA popovers 1780701100523" [ref=e339] [cursor=pointer]:
+          - generic [ref=e340]:
+            - checkbox "Selecionar nota" [ref=e341]
+            - generic [ref=e342]: 
+            - generic [ref=e343]: QA popovers 1780701100523
+          - generic [ref=e345]: ...
+        - treeitem "Selecionar nota QA popovers 1780701162191" [ref=e346] [cursor=pointer]:
+          - generic [ref=e347]:
+            - checkbox "Selecionar nota" [ref=e348]
+            - generic [ref=e349]: 
+            - generic [ref=e350]: QA popovers 1780701162191
+          - generic [ref=e352]: ...
+        - treeitem "Selecionar nota QA popovers 1780701189794" [ref=e353] [cursor=pointer]:
+          - generic [ref=e354]:
+            - checkbox "Selecionar nota" [ref=e355]
+            - generic [ref=e356]: 
+            - generic [ref=e357]: QA popovers 1780701189794
+          - generic [ref=e359]: ...
+        - treeitem "Selecionar nota QA popovers 1780701302476" [ref=e360] [cursor=pointer]:
+          - generic [ref=e361]:
+            - checkbox "Selecionar nota" [ref=e362]
+            - generic [ref=e363]: 
+            - generic [ref=e364]: QA popovers 1780701302476
+          - generic [ref=e366]: ...
+        - treeitem "Selecionar nota QA popovers 1780701329784" [ref=e367] [cursor=pointer]:
+          - generic [ref=e368]:
+            - checkbox "Selecionar nota" [ref=e369]
+            - generic [ref=e370]: 
+            - generic [ref=e371]: QA popovers 1780701329784
+          - generic [ref=e373]: ...
+        - treeitem "Selecionar nota QA popovers 1780702394878" [ref=e374] [cursor=pointer]:
+          - generic [ref=e375]:
+            - checkbox "Selecionar nota" [ref=e376]
+            - generic [ref=e377]: 
+            - generic [ref=e378]: QA popovers 1780702394878
+          - generic [ref=e380]: ...
+        - treeitem "Selecionar nota QA cores 1780703512211" [ref=e381] [cursor=pointer]:
+          - generic [ref=e382]:
+            - checkbox "Selecionar nota" [ref=e383]
+            - generic [ref=e384]: 
+            - generic [ref=e385]: QA cores 1780703512211
+          - generic [ref=e387]: ...
+        - treeitem "Selecionar nota QA cores 1780703661239" [ref=e388] [cursor=pointer]:
+          - generic [ref=e389]:
+            - checkbox "Selecionar nota" [ref=e390]
+            - generic [ref=e391]: 
+            - generic [ref=e392]: QA cores 1780703661239
+          - generic [ref=e394]: ...
+        - treeitem "Selecionar nota QA cores 1780703772483" [ref=e395] [cursor=pointer]:
+          - generic [ref=e396]:
+            - checkbox "Selecionar nota" [ref=e397]
+            - generic [ref=e398]: 
+            - generic [ref=e399]: QA cores 1780703772483
+          - generic [ref=e401]: ...
+        - treeitem "Selecionar nota QA cores 1780703791105" [ref=e402] [cursor=pointer]:
+          - generic [ref=e403]:
+            - checkbox "Selecionar nota" [ref=e404]
+            - generic [ref=e405]: 
+            - generic [ref=e406]: QA cores 1780703791105
+          - generic [ref=e408]: ...
+        - treeitem "Selecionar nota QA popovers 1780703791104" [ref=e409] [cursor=pointer]:
+          - generic [ref=e410]:
+            - checkbox "Selecionar nota" [ref=e411]
+            - generic [ref=e412]: 
+            - generic [ref=e413]: QA popovers 1780703791104
+          - generic [ref=e415]: ...
+        - treeitem "Selecionar nota QA cores 1780704886147" [ref=e416] [cursor=pointer]:
+          - generic [ref=e417]:
+            - checkbox "Selecionar nota" [ref=e418]
+            - generic [ref=e419]: 
+            - generic [ref=e420]: QA cores 1780704886147
+          - generic [ref=e422]: ...
+        - treeitem "Selecionar nota QA popovers 1780704886146" [ref=e423] [cursor=pointer]:
+          - generic [ref=e424]:
+            - checkbox "Selecionar nota" [ref=e425]
+            - generic [ref=e426]: 
+            - generic [ref=e427]: QA popovers 1780704886146
+          - generic [ref=e429]: ...
+        - treeitem "Selecionar nota QA cores multi 1780737030177" [ref=e430] [cursor=pointer]:
+          - generic [ref=e431]:
+            - checkbox "Selecionar nota" [ref=e432]
+            - generic [ref=e433]: 
+            - generic [ref=e434]: QA cores multi 1780737030177
+          - generic [ref=e436]: ...
+        - treeitem "Selecionar nota QA cores multi 1780737037099" [ref=e437] [cursor=pointer]:
+          - generic [ref=e438]:
+            - checkbox "Selecionar nota" [ref=e439]
+            - generic [ref=e440]: 
+            - generic [ref=e441]: QA cores multi 1780737037099
+          - generic [ref=e443]: ...
+        - treeitem "Selecionar nota QA cores multi 1780737044505" [ref=e444] [cursor=pointer]:
+          - generic [ref=e445]:
+            - checkbox "Selecionar nota" [ref=e446]
+            - generic [ref=e447]: 
+            - generic [ref=e448]: QA cores multi 1780737044505
+          - generic [ref=e450]: ...
+        - treeitem "Selecionar nota QA cores multi 1780737102557" [ref=e451] [cursor=pointer]:
+          - generic [ref=e452]:
+            - checkbox "Selecionar nota" [ref=e453]
+            - generic [ref=e454]: 
+            - generic [ref=e455]: QA cores multi 1780737102557
+          - generic [ref=e457]: ...
+        - treeitem "Selecionar nota QA cores multi 1780737109222" [ref=e458] [cursor=pointer]:
+          - generic [ref=e459]:
+            - checkbox "Selecionar nota" [ref=e460]
+            - generic [ref=e461]: 
+            - generic [ref=e462]: QA cores multi 1780737109222
+          - generic [ref=e464]: ...
+        - treeitem "Selecionar nota QA cores multi 1780737117032" [ref=e465] [cursor=pointer]:
+          - generic [ref=e466]:
+            - checkbox "Selecionar nota" [ref=e467]
+            - generic [ref=e468]: 
+            - generic [ref=e469]: QA cores multi 1780737117032
+          - generic [ref=e471]: ...
+        - treeitem "Selecionar nota QA cores multi 1780737158660" [ref=e472] [cursor=pointer]:
+          - generic [ref=e473]:
+            - checkbox "Selecionar nota" [ref=e474]
+            - generic [ref=e475]: 
+            - generic [ref=e476]: QA cores multi 1780737158660
+          - generic [ref=e478]: ...
+        - treeitem "Selecionar nota QA cores multi 1780737165324" [ref=e479] [cursor=pointer]:
+          - generic [ref=e480]:
+            - checkbox "Selecionar nota" [ref=e481]
+            - generic [ref=e482]: 
+            - generic [ref=e483]: QA cores multi 1780737165324
+          - generic [ref=e485]: ...
+        - treeitem "Selecionar nota QA cores multi 1780737172987" [ref=e486] [cursor=pointer]:
+          - generic [ref=e487]:
+            - checkbox "Selecionar nota" [ref=e488]
+            - generic [ref=e489]: 
+            - generic [ref=e490]: QA cores multi 1780737172987
+          - generic [ref=e492]: ...
+        - treeitem "Selecionar nota QA cores multi 1780737214657" [ref=e493] [cursor=pointer]:
+          - generic [ref=e494]:
+            - checkbox "Selecionar nota" [ref=e495]
+            - generic [ref=e496]: 
+            - generic [ref=e497]: QA cores multi 1780737214657
+          - generic [ref=e499]: ...
+        - treeitem "Selecionar nota QA cores multi 1780737221188" [ref=e500] [cursor=pointer]:
+          - generic [ref=e501]:
+            - checkbox "Selecionar nota" [ref=e502]
+            - generic [ref=e503]: 
+            - generic [ref=e504]: QA cores multi 1780737221188
+          - generic [ref=e506]: ...
+        - treeitem "Selecionar nota QA cores multi 1780737228536" [ref=e507] [cursor=pointer]:
+          - generic [ref=e508]:
+            - checkbox "Selecionar nota" [ref=e509]
+            - generic [ref=e510]: 
+            - generic [ref=e511]: QA cores multi 1780737228536
+          - generic [ref=e513]: ...
+        - treeitem "Selecionar nota QA cores multi 1780737284950" [ref=e514] [cursor=pointer]:
+          - generic [ref=e515]:
+            - checkbox "Selecionar nota" [ref=e516]
+            - generic [ref=e517]: 
+            - generic [ref=e518]: QA cores multi 1780737284950
+          - generic [ref=e520]: ...
+        - treeitem "Selecionar nota QA cores multi 1780737291978" [ref=e521] [cursor=pointer]:
+          - generic [ref=e522]:
+            - checkbox "Selecionar nota" [ref=e523]
+            - generic [ref=e524]: 
+            - generic [ref=e525]: QA cores multi 1780737291978
+          - generic [ref=e527]: ...
+        - treeitem "Selecionar nota QA cores multi 1780737298800" [ref=e528] [cursor=pointer]:
+          - generic [ref=e529]:
+            - checkbox "Selecionar nota" [ref=e530]
+            - generic [ref=e531]: 
+            - generic [ref=e532]: QA cores multi 1780737298800
+          - generic [ref=e534]: ...
+        - treeitem "Selecionar nota QA cores multi 1780737356367" [ref=e535] [cursor=pointer]:
+          - generic [ref=e536]:
+            - checkbox "Selecionar nota" [ref=e537]
+            - generic [ref=e538]: 
+            - generic [ref=e539]: QA cores multi 1780737356367
+          - generic [ref=e541]: ...
+        - treeitem "Selecionar nota QA cores multi 1780737363422" [ref=e542] [cursor=pointer]:
+          - generic [ref=e543]:
+            - checkbox "Selecionar nota" [ref=e544]
+            - generic [ref=e545]: 
+            - generic [ref=e546]: QA cores multi 1780737363422
+          - generic [ref=e548]: ...
+        - treeitem "Selecionar nota QA cores multi 1780737370388" [ref=e549] [cursor=pointer]:
+          - generic [ref=e550]:
+            - checkbox "Selecionar nota" [ref=e551]
+            - generic [ref=e552]: 
+            - generic [ref=e553]: QA cores multi 1780737370388
+          - generic [ref=e555]: ...
+        - treeitem "Selecionar nota QA cores multi 1780737444846" [ref=e556] [cursor=pointer]:
+          - generic [ref=e557]:
+            - checkbox "Selecionar nota" [ref=e558]
+            - generic [ref=e559]: 
+            - generic [ref=e560]: QA cores multi 1780737444846
+          - generic [ref=e562]: ...
+        - treeitem "Selecionar nota QA cores multi 1780737452092" [ref=e563] [cursor=pointer]:
+          - generic [ref=e564]:
+            - checkbox "Selecionar nota" [ref=e565]
+            - generic [ref=e566]: 
+            - generic [ref=e567]: QA cores multi 1780737452092
+          - generic [ref=e569]: ...
+        - treeitem "Selecionar nota QA cores multi 1780737458962" [ref=e570] [cursor=pointer]:
+          - generic [ref=e571]:
+            - checkbox "Selecionar nota" [ref=e572]
+            - generic [ref=e573]: 
+            - generic [ref=e574]: QA cores multi 1780737458962
+          - generic [ref=e576]: ...
+        - treeitem "Selecionar nota QA cores 1780836388211" [ref=e577] [cursor=pointer]:
+          - generic [ref=e578]:
+            - checkbox "Selecionar nota" [ref=e579]
+            - generic [ref=e580]: 
+            - generic [ref=e581]: QA cores 1780836388211
+          - generic [ref=e583]: ...
+        - treeitem "Selecionar nota QA popovers 1780836388211" [ref=e584] [cursor=pointer]:
+          - generic [ref=e585]:
+            - checkbox "Selecionar nota" [ref=e586]
+            - generic [ref=e587]: 
+            - generic [ref=e588]: QA popovers 1780836388211
+          - generic [ref=e590]: ...
+        - treeitem "Selecionar nota QA cores 1780836395375" [ref=e591] [cursor=pointer]:
+          - generic [ref=e592]:
+            - checkbox "Selecionar nota" [ref=e593]
+            - generic [ref=e594]: 
+            - generic [ref=e595]: QA cores 1780836395375
+          - generic [ref=e597]: ...
+        - treeitem "Selecionar nota QA cores 1780836460912" [ref=e598] [cursor=pointer]:
+          - generic [ref=e599]:
+            - checkbox "Selecionar nota" [ref=e600]
+            - generic [ref=e601]: 
+            - generic [ref=e602]: QA cores 1780836460912
+          - generic [ref=e604]: ...
+        - treeitem "Selecionar nota QA popovers 1780836460912" [ref=e605] [cursor=pointer]:
+          - generic [ref=e606]:
+            - checkbox "Selecionar nota" [ref=e607]
+            - generic [ref=e608]: 
+            - generic [ref=e609]: QA popovers 1780836460912
+          - generic [ref=e611]: ...
+        - treeitem "Selecionar nota QA cores 1780836467879" [ref=e612] [cursor=pointer]:
+          - generic [ref=e613]:
+            - checkbox "Selecionar nota" [ref=e614]
+            - generic [ref=e615]: 
+            - generic [ref=e616]: QA cores 1780836467879
+          - generic [ref=e618]: ...
+        - treeitem "Selecionar nota QA cores 1780836515966" [ref=e619] [cursor=pointer]:
+          - generic [ref=e620]:
+            - checkbox "Selecionar nota" [ref=e621]
+            - generic [ref=e622]: 
+            - generic [ref=e623]: QA cores 1780836515966
+          - generic [ref=e625]: ...
+        - treeitem "Selecionar nota QA cores 1780836591780" [ref=e626] [cursor=pointer]:
+          - generic [ref=e627]:
+            - checkbox "Selecionar nota" [ref=e628]
+            - generic [ref=e629]: 
+            - generic [ref=e630]: QA cores 1780836591780
+          - generic [ref=e632]: ...
+        - treeitem "Selecionar nota QA popovers 1780836591780" [ref=e633] [cursor=pointer]:
+          - generic [ref=e634]:
+            - checkbox "Selecionar nota" [ref=e635]
+            - generic [ref=e636]: 
+            - generic [ref=e637]: QA popovers 1780836591780
+          - generic [ref=e639]: ...
+        - treeitem "Selecionar nota QA cores 1780836598546" [ref=e640] [cursor=pointer]:
+          - generic [ref=e641]:
+            - checkbox "Selecionar nota" [ref=e642]
+            - generic [ref=e643]: 
+            - generic [ref=e644]: QA cores 1780836598546
+          - generic [ref=e646]: ...
+        - treeitem "Selecionar nota QA cores 1780836634836" [ref=e647] [cursor=pointer]:
+          - generic [ref=e648]:
+            - checkbox "Selecionar nota" [ref=e649]
+            - generic [ref=e650]: 
+            - generic [ref=e651]: QA cores 1780836634836
+          - generic [ref=e653]: ...
+        - treeitem "Selecionar nota QA popovers 1780836634836" [ref=e654] [cursor=pointer]:
+          - generic [ref=e655]:
+            - checkbox "Selecionar nota" [ref=e656]
+            - generic [ref=e657]: 
+            - generic [ref=e658]: QA popovers 1780836634836
+          - generic [ref=e660]: ...
+        - treeitem "Selecionar nota QA cores 1780836641488" [ref=e661] [cursor=pointer]:
+          - generic [ref=e662]:
+            - checkbox "Selecionar nota" [ref=e663]
+            - generic [ref=e664]: 
+            - generic [ref=e665]: QA cores 1780836641488
+          - generic [ref=e667]: ...
+        - treeitem "Selecionar nota QA cores 1780836669564" [ref=e668] [cursor=pointer]:
+          - generic [ref=e669]:
+            - checkbox "Selecionar nota" [ref=e670]
+            - generic [ref=e671]: 
+            - generic [ref=e672]: QA cores 1780836669564
+          - generic [ref=e674]: ...
+        - treeitem "Selecionar nota QA popovers 1780836669564" [ref=e675] [cursor=pointer]:
+          - generic [ref=e676]:
+            - checkbox "Selecionar nota" [ref=e677]
+            - generic [ref=e678]: 
+            - generic [ref=e679]: QA popovers 1780836669564
+          - generic [ref=e681]: ...
+        - treeitem "Selecionar nota QA cores 1780836676157" [ref=e682] [cursor=pointer]:
+          - generic [ref=e683]:
+            - checkbox "Selecionar nota" [ref=e684]
+            - generic [ref=e685]: 
+            - generic [ref=e686]: QA cores 1780836676157
+          - generic [ref=e688]: ...
+        - treeitem "Selecionar nota QA cores 1780836814384" [ref=e689] [cursor=pointer]:
+          - generic [ref=e690]:
+            - checkbox "Selecionar nota" [ref=e691]
+            - generic [ref=e692]: 
+            - generic [ref=e693]: QA cores 1780836814384
+          - generic [ref=e695]: ...
+        - treeitem "Selecionar nota QA popovers 1780836814385" [ref=e696] [cursor=pointer]:
+          - generic [ref=e697]:
+            - checkbox "Selecionar nota" [ref=e698]
+            - generic [ref=e699]: 
+            - generic [ref=e700]: QA popovers 1780836814385
+          - generic [ref=e702]: ...
+        - treeitem "Selecionar nota QA cores 1780836821238" [ref=e703] [cursor=pointer]:
+          - generic [ref=e704]:
+            - checkbox "Selecionar nota" [ref=e705]
+            - generic [ref=e706]: 
+            - generic [ref=e707]: QA cores 1780836821238
+          - generic [ref=e709]: ...
+        - treeitem "Selecionar nota QA cores 1780836851587" [ref=e710] [cursor=pointer]:
+          - generic [ref=e711]:
+            - checkbox "Selecionar nota" [ref=e712]
+            - generic [ref=e713]: 
+            - generic [ref=e714]: QA cores 1780836851587
+          - generic [ref=e716]: ...
+        - treeitem "Selecionar nota QA popovers 1780836851586" [ref=e717] [cursor=pointer]:
+          - generic [ref=e718]:
+            - checkbox "Selecionar nota" [ref=e719]
+            - generic [ref=e720]: 
+            - generic [ref=e721]: QA popovers 1780836851586
+          - generic [ref=e723]: ...
+        - treeitem "Selecionar nota QA cores 1780836858300" [ref=e724] [cursor=pointer]:
+          - generic [ref=e725]:
+            - checkbox "Selecionar nota" [ref=e726]
+            - generic [ref=e727]: 
+            - generic [ref=e728]: QA cores 1780836858300
+          - generic [ref=e730]: ...
+        - treeitem "Selecionar nota QA cores 1780836896371" [ref=e731] [cursor=pointer]:
+          - generic [ref=e732]:
+            - checkbox "Selecionar nota" [ref=e733]
+            - generic [ref=e734]: 
+            - generic [ref=e735]: QA cores 1780836896371
+          - generic [ref=e737]: ...
+        - treeitem "Selecionar nota QA popovers 1780836896371" [ref=e738] [cursor=pointer]:
+          - generic [ref=e739]:
+            - checkbox "Selecionar nota" [ref=e740]
+            - generic [ref=e741]: 
+            - generic [ref=e742]: QA popovers 1780836896371
+          - generic [ref=e744]: ...
+        - treeitem "Selecionar nota QA cores 1780836903663" [ref=e745] [cursor=pointer]:
+          - generic [ref=e746]:
+            - checkbox "Selecionar nota" [ref=e747]
+            - generic [ref=e748]: 
+            - generic [ref=e749]: QA cores 1780836903663
+          - generic [ref=e751]: ...
+        - treeitem "Selecionar nota QA cores 1780836952139" [ref=e752] [cursor=pointer]:
+          - generic [ref=e753]:
+            - checkbox "Selecionar nota" [ref=e754]
+            - generic [ref=e755]: 
+            - generic [ref=e756]: QA cores 1780836952139
+          - generic [ref=e758]: ...
+        - treeitem "Selecionar nota QA popovers 1780836952139" [ref=e759] [cursor=pointer]:
+          - generic [ref=e760]:
+            - checkbox "Selecionar nota" [ref=e761]
+            - generic [ref=e762]: 
+            - generic [ref=e763]: QA popovers 1780836952139
+          - generic [ref=e765]: ...
+        - treeitem "Selecionar nota QA cores 1780837125391" [ref=e766] [cursor=pointer]:
+          - generic [ref=e767]:
+            - checkbox "Selecionar nota" [ref=e768]
+            - generic [ref=e769]: 
+            - generic [ref=e770]: QA cores 1780837125391
+          - generic [ref=e772]: ...
+        - treeitem "Selecionar nota QA popovers 1780837125392" [ref=e773] [cursor=pointer]:
+          - generic [ref=e774]:
+            - checkbox "Selecionar nota" [ref=e775]
+            - generic [ref=e776]: 
+            - generic [ref=e777]: QA popovers 1780837125392
+          - generic [ref=e779]: ...
+        - treeitem "Selecionar nota QA icon regression 1780840546392" [ref=e780] [cursor=pointer]:
+          - generic [ref=e781]:
+            - checkbox "Selecionar nota" [ref=e782]
+            - generic [ref=e783]: 
+            - generic [ref=e784]: QA icon regression 1780840546392
+          - generic [ref=e786]: ...
+        - treeitem "Selecionar nota QA colon isolate 1780840575300" [ref=e787] [cursor=pointer]:
+          - generic [ref=e788]:
+            - checkbox "Selecionar nota" [ref=e789]
+            - generic [ref=e790]: 
+            - generic [ref=e791]: QA colon isolate 1780840575300
+          - generic [ref=e793]: ...
+        - treeitem "Selecionar nota QA colon insert 1780840600116" [ref=e794] [cursor=pointer]:
+          - generic [ref=e795]:
+            - checkbox "Selecionar nota" [ref=e796]
+            - generic [ref=e797]: 
+            - generic [ref=e798]: QA colon insert 1780840600116
+          - generic [ref=e800]: ...
+        - treeitem "Selecionar nota QA colon fast 1780840665360" [ref=e801] [cursor=pointer]:
+          - generic [ref=e802]:
+            - checkbox "Selecionar nota" [ref=e803]
+            - generic [ref=e804]: 
+            - generic [ref=e805]: QA colon fast 1780840665360
+          - generic [ref=e807]: ...
+        - treeitem "Selecionar nota QA colon fast 1780840717604" [ref=e808] [cursor=pointer]:
+          - generic [ref=e809]:
+            - checkbox "Selecionar nota" [ref=e810]
+            - generic [ref=e811]: 
+            - generic [ref=e812]: QA colon fast 1780840717604
+          - generic [ref=e814]: ...
+        - treeitem "Selecionar nota QA event trace 1780840744614" [ref=e815] [cursor=pointer]:
+          - generic [ref=e816]:
+            - checkbox "Selecionar nota" [ref=e817]
+            - generic [ref=e818]: 
+            - generic [ref=e819]: QA event trace 1780840744614
+          - generic [ref=e821]: ...
+        - treeitem "Selecionar nota QA colon fast 1780840808176" [ref=e822] [cursor=pointer]:
+          - generic [ref=e823]:
+            - checkbox "Selecionar nota" [ref=e824]
+            - generic [ref=e825]: 
+            - generic [ref=e826]: QA colon fast 1780840808176
+          - generic [ref=e828]: ...
+        - treeitem "Selecionar nota QA query inspect 1780840847438" [ref=e829] [cursor=pointer]:
+          - generic [ref=e830]:
+            - checkbox "Selecionar nota" [ref=e831]
+            - generic [ref=e832]: 
+            - generic [ref=e833]: QA query inspect 1780840847438
+          - generic [ref=e835]: ...
+        - treeitem "Selecionar nota QA mutation inspect 1780840882766" [ref=e836] [cursor=pointer]:
+          - generic [ref=e837]:
+            - checkbox "Selecionar nota" [ref=e838]
+            - generic [ref=e839]: 
+            - generic [ref=e840]: QA mutation inspect 1780840882766
+          - generic [ref=e842]: ...
+        - treeitem "Selecionar nota QA colon insert 1780840932872" [ref=e843] [cursor=pointer]:
+          - generic [ref=e844]:
+            - checkbox "Selecionar nota" [ref=e845]
+            - generic [ref=e846]: 
+            - generic [ref=e847]: QA colon insert 1780840932872
+          - generic [ref=e849]: ...
+        - treeitem "Selecionar nota QA close trace 1780840966290" [ref=e850] [cursor=pointer]:
+          - generic [ref=e851]:
+            - checkbox "Selecionar nota" [ref=e852]
+            - generic [ref=e853]: 
+            - generic [ref=e854]: QA close trace 1780840966290
+          - generic [ref=e856]: ...
+        - treeitem "Selecionar nota QA colon insert 1780841007203" [ref=e857] [cursor=pointer]:
+          - generic [ref=e858]:
+            - checkbox "Selecionar nota" [ref=e859]
+            - generic [ref=e860]: 
+            - generic [ref=e861]: QA colon insert 1780841007203
+          - generic [ref=e863]: ...
+        - treeitem "Selecionar nota QA colon insert 1780841047994" [ref=e864] [cursor=pointer]:
+          - generic [ref=e865]:
+            - checkbox "Selecionar nota" [ref=e866]
+            - generic [ref=e867]: 
+            - generic [ref=e868]: QA colon insert 1780841047994
+          - generic [ref=e870]: ...
+        - treeitem "Selecionar nota QA colon insert 1780841090964" [ref=e871] [cursor=pointer]:
+          - generic [ref=e872]:
+            - checkbox "Selecionar nota" [ref=e873]
+            - generic [ref=e874]: 
+            - generic [ref=e875]: QA colon insert 1780841090964
+          - generic [ref=e877]: ...
+        - treeitem "Selecionar nota QA close trace2 1780841116300" [ref=e878] [cursor=pointer]:
+          - generic [ref=e879]:
+            - checkbox "Selecionar nota" [ref=e880]
+            - generic [ref=e881]: 
+            - generic [ref=e882]: QA close trace2 1780841116300
+          - generic [ref=e884]: ...
+        - treeitem "Selecionar nota QA colon insert 1780841179469" [ref=e885] [cursor=pointer]:
+          - generic [ref=e886]:
+            - checkbox "Selecionar nota" [ref=e887]
+            - generic [ref=e888]: 
+            - generic [ref=e889]: QA colon insert 1780841179469
+          - generic [ref=e891]: ...
+        - treeitem "Selecionar nota QA cores 1780841213143" [ref=e892] [cursor=pointer]:
+          - generic [ref=e893]:
+            - checkbox "Selecionar nota" [ref=e894]
+            - generic [ref=e895]: 
+            - generic [ref=e896]: QA cores 1780841213143
+          - generic [ref=e898]: ...
+        - treeitem "Selecionar nota QA popovers 1780841213143" [ref=e899] [cursor=pointer]:
+          - generic [ref=e900]:
+            - checkbox "Selecionar nota" [ref=e901]
+            - generic [ref=e902]: 
+            - generic [ref=e903]: QA popovers 1780841213143
+          - generic [ref=e905]: ...
+        - treeitem "Selecionar nota QA cores 1780841219589" [ref=e906] [cursor=pointer]:
+          - generic [ref=e907]:
+            - checkbox "Selecionar nota" [ref=e908]
+            - generic [ref=e909]: 
+            - generic [ref=e910]: QA cores 1780841219589
+          - generic [ref=e912]: ...
+        - treeitem "Selecionar nota QA note icon 1780841255460" [ref=e913] [cursor=pointer]:
+          - generic [ref=e914]:
+            - checkbox "Selecionar nota" [ref=e915]
+            - generic [ref=e916]: 
+            - generic [ref=e917]: QA note icon 1780841255460
+          - generic [ref=e919]: ...
+        - treeitem "Selecionar nota QA arrows 1780842728289" [ref=e920] [cursor=pointer]:
+          - generic [ref=e921]:
+            - checkbox "Selecionar nota" [ref=e922]
+            - generic [ref=e923]: 
+            - generic [ref=e924]: QA arrows 1780842728289
+          - generic [ref=e926]: ...
+        - treeitem "Selecionar nota QA cores 1780842864626" [ref=e927] [cursor=pointer]:
+          - generic [ref=e928]:
+            - checkbox "Selecionar nota" [ref=e929]
+            - generic [ref=e930]: 
+            - generic [ref=e931]: QA cores 1780842864626
+          - generic [ref=e933]: ...
+        - treeitem "Selecionar nota QA popovers 1780842864626" [ref=e934] [cursor=pointer]:
+          - generic [ref=e935]:
+            - checkbox "Selecionar nota" [ref=e936]
+            - generic [ref=e937]: 
+            - generic [ref=e938]: QA popovers 1780842864626
+          - generic [ref=e940]: ...
+        - treeitem "Selecionar nota QA cores 1780842871245" [ref=e941] [cursor=pointer]:
+          - generic [ref=e942]:
+            - checkbox "Selecionar nota" [ref=e943]
+            - generic [ref=e944]: 
+            - generic [ref=e945]: QA cores 1780842871245
+          - generic [ref=e947]: ...
+        - treeitem "Selecionar nota QA cores 1780842877989" [ref=e948] [cursor=pointer]:
+          - generic [ref=e949]:
+            - checkbox "Selecionar nota" [ref=e950]
+            - generic [ref=e951]: 
+            - generic [ref=e952]: QA cores 1780842877989
+          - generic [ref=e954]: ...
+        - treeitem "Selecionar nota QA cores 1780842885135" [ref=e955] [cursor=pointer]:
+          - generic [ref=e956]:
+            - checkbox "Selecionar nota" [ref=e957]
+            - generic [ref=e958]: 
+            - generic [ref=e959]: QA cores 1780842885135
+          - generic [ref=e961]: ...
+        - treeitem "Selecionar nota QA cores 1780842940726" [ref=e962] [cursor=pointer]:
+          - generic [ref=e963]:
+            - checkbox "Selecionar nota" [ref=e964]
+            - generic [ref=e965]: 
+            - generic [ref=e966]: QA cores 1780842940726
+          - generic [ref=e968]: ...
+        - treeitem "Selecionar nota QA cores 1780842970250" [ref=e969] [cursor=pointer]:
+          - generic [ref=e970]:
+            - checkbox "Selecionar nota" [ref=e971]
+            - generic [ref=e972]: 
+            - generic [ref=e973]: QA cores 1780842970250
+          - generic [ref=e975]: ...
+        - treeitem "Selecionar nota QA dump controls 1780843003913" [ref=e976] [cursor=pointer]:
+          - generic [ref=e977]:
+            - checkbox "Selecionar nota" [ref=e978]
+            - generic [ref=e979]: 
+            - generic [ref=e980]: QA dump controls 1780843003913
+          - generic [ref=e982]: ...
+        - treeitem "Selecionar nota QA dump controls 1780843032863" [ref=e983] [cursor=pointer]:
+          - generic [ref=e984]:
+            - checkbox "Selecionar nota" [ref=e985]
+            - generic [ref=e986]: 
+            - generic [ref=e987]: QA dump controls 1780843032863
+          - generic [ref=e989]: ...
+        - treeitem "Selecionar nota QA compare 1780843055085" [ref=e990] [cursor=pointer]:
+          - generic [ref=e991]:
+            - checkbox "Selecionar nota" [ref=e992]
+            - generic [ref=e993]: 
+            - generic [ref=e994]: QA compare 1780843055085
+          - generic [ref=e996]: ...
+        - treeitem "Selecionar nota QA hover 1780843092760" [ref=e997] [cursor=pointer]:
+          - generic [ref=e998]:
+            - checkbox "Selecionar nota" [ref=e999]
+            - generic [ref=e1000]: 
+            - generic [ref=e1001]: QA hover 1780843092760
+          - generic [ref=e1003]: ...
+        - treeitem "Selecionar nota QA api 1780843157362" [ref=e1004] [cursor=pointer]:
+          - generic [ref=e1005]:
+            - checkbox "Selecionar nota" [ref=e1006]
+            - generic [ref=e1007]: 
+            - generic [ref=e1008]: QA api 1780843157362
+          - generic [ref=e1010]: ...
+        - treeitem "Selecionar nota QA api 1780843177429" [ref=e1011] [cursor=pointer]:
+          - generic [ref=e1012]:
+            - checkbox "Selecionar nota" [ref=e1013]
+            - generic [ref=e1014]: 
+            - generic [ref=e1015]: QA api 1780843177429
+          - generic [ref=e1017]: ...
+        - treeitem "Selecionar nota QA open toolbar 1780843202106" [ref=e1018] [cursor=pointer]:
+          - generic [ref=e1019]:
+            - checkbox "Selecionar nota" [ref=e1020]
+            - generic [ref=e1021]: 
+            - generic [ref=e1022]: QA open toolbar 1780843202106
+          - generic [ref=e1024]: ...
+        - treeitem "Selecionar nota QA current 1780843229478" [ref=e1025] [cursor=pointer]:
+          - generic [ref=e1026]:
+            - checkbox "Selecionar nota" [ref=e1027]
+            - generic [ref=e1028]: 
+            - generic [ref=e1029]: QA current 1780843229478
+          - generic [ref=e1031]: ...
+        - treeitem "Selecionar nota QA cores 1780843279416" [ref=e1032] [cursor=pointer]:
+          - generic [ref=e1033]:
+            - checkbox "Selecionar nota" [ref=e1034]
+            - generic [ref=e1035]: 
+            - generic [ref=e1036]: QA cores 1780843279416
+          - generic [ref=e1038]: ...
+        - treeitem "Selecionar nota QA plus after emoji 1780843312710" [ref=e1039] [cursor=pointer]:
+          - generic [ref=e1040]:
+            - checkbox "Selecionar nota" [ref=e1041]
+            - generic [ref=e1042]: 
+            - generic [ref=e1043]: QA plus after emoji 1780843312710
+          - generic [ref=e1045]: ...
+        - treeitem "Selecionar nota QA plus after emoji 1780843393609" [ref=e1046] [cursor=pointer]:
+          - generic [ref=e1047]:
+            - checkbox "Selecionar nota" [ref=e1048]
+            - generic [ref=e1049]: 
+            - generic [ref=e1050]: QA plus after emoji 1780843393609
+          - generic [ref=e1052]: ...
+        - treeitem "Selecionar nota QA plus after emoji 1780843418302" [ref=e1053] [cursor=pointer]:
+          - generic [ref=e1054]:
+            - checkbox "Selecionar nota" [ref=e1055]
+            - generic [ref=e1056]: 
+            - generic [ref=e1057]: QA plus after emoji 1780843418302
+          - generic [ref=e1059]: ...
+        - treeitem "Selecionar nota QA cores 1780843434677" [ref=e1060] [cursor=pointer]:
+          - generic [ref=e1061]:
+            - checkbox "Selecionar nota" [ref=e1062]
+            - generic [ref=e1063]: 
+            - generic [ref=e1064]: QA cores 1780843434677
+          - generic [ref=e1066]: ...
+        - treeitem "Selecionar nota QA cores 1780843455779" [ref=e1067] [cursor=pointer]:
+          - generic [ref=e1068]:
+            - checkbox "Selecionar nota" [ref=e1069]
+            - generic [ref=e1070]: 
+            - generic [ref=e1071]: QA cores 1780843455779
+          - generic [ref=e1073]: ...
+        - treeitem "Selecionar nota QA popovers 1780843455779" [ref=e1074] [cursor=pointer]:
+          - generic [ref=e1075]:
+            - checkbox "Selecionar nota" [ref=e1076]
+            - generic [ref=e1077]: 
+            - generic [ref=e1078]: QA popovers 1780843455779
+          - generic [ref=e1080]: ...
+        - treeitem "Selecionar nota QA cores 1780843462250" [ref=e1081] [cursor=pointer]:
+          - generic [ref=e1082]:
+            - checkbox "Selecionar nota" [ref=e1083]
+            - generic [ref=e1084]: 
+            - generic [ref=e1085]: QA cores 1780843462250
+          - generic [ref=e1087]: ...
+        - treeitem "Selecionar nota QA cores 1780843468892" [ref=e1088] [cursor=pointer]:
+          - generic [ref=e1089]:
+            - checkbox "Selecionar nota" [ref=e1090]
+            - generic [ref=e1091]: 
+            - generic [ref=e1092]: QA cores 1780843468892
+          - generic [ref=e1094]: ...
+        - treeitem "Selecionar nota QA cores 1780843475568" [ref=e1095] [cursor=pointer]:
+          - generic [ref=e1096]:
+            - checkbox "Selecionar nota" [ref=e1097]
+            - generic [ref=e1098]: 
+            - generic [ref=e1099]: QA cores 1780843475568
+          - generic [ref=e1101]: ...
+        - treeitem "Selecionar nota QA mandatory icon menu 1780843579376" [ref=e1102] [cursor=pointer]:
+          - generic [ref=e1103]:
+            - checkbox "Selecionar nota" [ref=e1104]
+            - generic [ref=e1105]: 
+            - generic [ref=e1106]: QA mandatory icon menu 1780843579376
+          - generic [ref=e1108]: ...
+        - treeitem "Selecionar nota QA cores multi 1780861870485" [ref=e1109] [cursor=pointer]:
+          - generic [ref=e1110]:
+            - checkbox "Selecionar nota" [ref=e1111]
+            - generic [ref=e1112]: 
+            - generic [ref=e1113]: QA cores multi 1780861870485
+          - generic [ref=e1115]: ...
+        - treeitem "Selecionar nota QA cores multi 1780861877502" [ref=e1116] [cursor=pointer]:
+          - generic [ref=e1117]:
+            - checkbox "Selecionar nota" [ref=e1118]
+            - generic [ref=e1119]: 
+            - generic [ref=e1120]: QA cores multi 1780861877502
+          - generic [ref=e1122]: ...
+        - treeitem "Selecionar nota QA cores multi 1780861884431" [ref=e1123] [cursor=pointer]:
+          - generic [ref=e1124]:
+            - checkbox "Selecionar nota" [ref=e1125]
+            - generic [ref=e1126]: 
+            - generic [ref=e1127]: QA cores multi 1780861884431
+          - generic [ref=e1129]: ...
+        - treeitem "Selecionar nota QA toolbar drag 1780861891147" [ref=e1130] [cursor=pointer]:
+          - generic [ref=e1131]:
+            - checkbox "Selecionar nota" [ref=e1132]
+            - generic [ref=e1133]: 
+            - generic [ref=e1134]: QA toolbar drag 1780861891147
+          - generic [ref=e1136]: ...
+        - treeitem "Selecionar nota QA cores multi 1780861943858" [ref=e1137] [cursor=pointer]:
+          - generic [ref=e1138]:
+            - checkbox "Selecionar nota" [ref=e1139]
+            - generic [ref=e1140]: 
+            - generic [ref=e1141]: QA cores multi 1780861943858
+          - generic [ref=e1143]: ...
+        - treeitem "Selecionar nota QA cores multi 1780861950575" [ref=e1144] [cursor=pointer]:
+          - generic [ref=e1145]:
+            - checkbox "Selecionar nota" [ref=e1146]
+            - generic [ref=e1147]: 
+            - generic [ref=e1148]: QA cores multi 1780861950575
+          - generic [ref=e1150]: ...
+        - treeitem "Selecionar nota QA cores multi 1780861957697" [ref=e1151] [cursor=pointer]:
+          - generic [ref=e1152]:
+            - checkbox "Selecionar nota" [ref=e1153]
+            - generic [ref=e1154]: 
+            - generic [ref=e1155]: QA cores multi 1780861957697
+          - generic [ref=e1157]: ...
+        - treeitem "Selecionar nota QA toolbar drag 1780861964505" [ref=e1158] [cursor=pointer]:
+          - generic [ref=e1159]:
+            - checkbox "Selecionar nota" [ref=e1160]
+            - generic [ref=e1161]: 
+            - generic [ref=e1162]: QA toolbar drag 1780861964505
+          - generic [ref=e1164]: ...
+        - treeitem "Selecionar nota QA toolbar drag 1780861998731" [ref=e1165] [cursor=pointer]:
+          - generic [ref=e1166]:
+            - checkbox "Selecionar nota" [ref=e1167]
+            - generic [ref=e1168]: 
+            - generic [ref=e1169]: QA toolbar drag 1780861998731
+          - generic [ref=e1171]: ...
+        - treeitem "Selecionar nota QA toolbar inline drag manual 20260607" [ref=e1172] [cursor=pointer]:
+          - generic [ref=e1173]:
+            - checkbox "Selecionar nota" [ref=e1174]
+            - generic [ref=e1175]: 
+            - generic [ref=e1176]: QA toolbar inline drag manual 20260607
+          - generic [ref=e1178]: ...
+        - treeitem "Selecionar nota QA toolbar drag 1780862312390" [ref=e1179] [cursor=pointer]:
+          - generic [ref=e1180]:
+            - checkbox "Selecionar nota" [ref=e1181]
+            - generic [ref=e1182]: 
+            - generic [ref=e1183]: QA toolbar drag 1780862312390
+          - generic [ref=e1185]: ...
+        - treeitem "Selecionar nota QA cores multi 1780862328244" [ref=e1186] [cursor=pointer]:
+          - generic [ref=e1187]:
+            - checkbox "Selecionar nota" [ref=e1188]
+            - generic [ref=e1189]: 
+            - generic [ref=e1190]: QA cores multi 1780862328244
+          - generic [ref=e1192]: ...
+        - treeitem "Selecionar nota QA cores multi 1780862335044" [ref=e1193] [cursor=pointer]:
+          - generic [ref=e1194]:
+            - checkbox "Selecionar nota" [ref=e1195]
+            - generic [ref=e1196]: 
+            - generic [ref=e1197]: QA cores multi 1780862335044
+          - generic [ref=e1199]: ...
+        - treeitem "Selecionar nota QA cores multi 1780862342138" [ref=e1200] [cursor=pointer]:
+          - generic [ref=e1201]:
+            - checkbox "Selecionar nota" [ref=e1202]
+            - generic [ref=e1203]: 
+            - generic [ref=e1204]: QA cores multi 1780862342138
+          - generic [ref=e1206]: ...
+        - treeitem "Selecionar nota QA toolbar drag 1780862348981" [ref=e1207] [cursor=pointer]:
+          - generic [ref=e1208]:
+            - checkbox "Selecionar nota" [ref=e1209]
+            - generic [ref=e1210]: 
+            - generic [ref=e1211]: QA toolbar drag 1780862348981
+          - generic [ref=e1213]: ...
+        - treeitem "Selecionar nota QA toolbar actions 1780862813397" [ref=e1214] [cursor=pointer]:
+          - generic [ref=e1215]:
+            - checkbox "Selecionar nota" [ref=e1216]
+            - generic [ref=e1217]: 
+            - generic [ref=e1218]: QA toolbar actions 1780862813397
+          - generic [ref=e1220]: ...
+        - treeitem "Selecionar nota QA cores multi 1780863244579" [ref=e1221] [cursor=pointer]:
+          - generic [ref=e1222]:
+            - checkbox "Selecionar nota" [ref=e1223]
+            - generic [ref=e1224]: 
+            - generic [ref=e1225]: QA cores multi 1780863244579
+          - generic [ref=e1227]: ...
+        - treeitem "Selecionar nota QA cores multi 1780863251526" [ref=e1228] [cursor=pointer]:
+          - generic [ref=e1229]:
+            - checkbox "Selecionar nota" [ref=e1230]
+            - generic [ref=e1231]: 
+            - generic [ref=e1232]: QA cores multi 1780863251526
+          - generic [ref=e1234]: ...
+        - treeitem "Selecionar nota QA cores multi 1780863258503" [ref=e1235] [cursor=pointer]:
+          - generic [ref=e1236]:
+            - checkbox "Selecionar nota" [ref=e1237]
+            - generic [ref=e1238]: 
+            - generic [ref=e1239]: QA cores multi 1780863258503
+          - generic [ref=e1241]: ...
+        - treeitem "Selecionar nota QA toolbar drag 1780863265404" [ref=e1242] [cursor=pointer]:
+          - generic [ref=e1243]:
+            - checkbox "Selecionar nota" [ref=e1244]
+            - generic [ref=e1245]: 
+            - generic [ref=e1246]: QA toolbar drag 1780863265404
+          - generic [ref=e1248]: ...
+        - treeitem "Selecionar nota QA cores multi 1780863305621" [ref=e1249] [cursor=pointer]:
+          - generic [ref=e1250]:
+            - checkbox "Selecionar nota" [ref=e1251]
+            - generic [ref=e1252]: 
+            - generic [ref=e1253]: QA cores multi 1780863305621
+          - generic [ref=e1255]: ...
+        - treeitem "Selecionar nota QA cores multi 1780863312736" [ref=e1256] [cursor=pointer]:
+          - generic [ref=e1257]:
+            - checkbox "Selecionar nota" [ref=e1258]
+            - generic [ref=e1259]: 
+            - generic [ref=e1260]: QA cores multi 1780863312736
+          - generic [ref=e1262]: ...
+        - treeitem "Selecionar nota QA cores multi 1780863319739" [ref=e1263] [cursor=pointer]:
+          - generic [ref=e1264]:
+            - checkbox "Selecionar nota" [ref=e1265]
+            - generic [ref=e1266]: 
+            - generic [ref=e1267]: QA cores multi 1780863319739
+          - generic [ref=e1269]: ...
+        - treeitem "Selecionar nota QA toolbar drag 1780863326615" [ref=e1270] [cursor=pointer]:
+          - generic [ref=e1271]:
+            - checkbox "Selecionar nota" [ref=e1272]
+            - generic [ref=e1273]: 
+            - generic [ref=e1274]: QA toolbar drag 1780863326615
+          - generic [ref=e1276]: ...
+        - treeitem "Selecionar nota QA cores multi 1780863361852" [ref=e1277] [cursor=pointer]:
+          - generic [ref=e1278]:
+            - checkbox "Selecionar nota" [ref=e1279]
+            - generic [ref=e1280]: 
+            - generic [ref=e1281]: QA cores multi 1780863361852
+          - generic [ref=e1283]: ...
+        - treeitem "Selecionar nota QA toolbar close 1780863522775" [ref=e1284] [cursor=pointer]:
+          - generic [ref=e1285]:
+            - checkbox "Selecionar nota" [ref=e1286]
+            - generic [ref=e1287]: 
+            - generic [ref=e1288]: QA toolbar close 1780863522775
+          - generic [ref=e1290]: ...
+        - treeitem "Selecionar nota QA multiblocos 1780877824746" [ref=e1291] [cursor=pointer]:
+          - generic [ref=e1292]:
+            - checkbox "Selecionar nota" [ref=e1293]
+            - generic [ref=e1294]: 
+            - generic [ref=e1295]: QA multiblocos 1780877824746
+          - generic [ref=e1297]: ...
+        - treeitem "Selecionar nota QA multiblocos 1780877837150" [ref=e1298] [cursor=pointer]:
+          - generic [ref=e1299]:
+            - checkbox "Selecionar nota" [ref=e1300]
+            - generic [ref=e1301]: 
+            - generic [ref=e1302]: QA multiblocos 1780877837150
+          - generic [ref=e1304]: ...
+        - treeitem "Selecionar nota QA multiblocos 1780877844177" [ref=e1305] [cursor=pointer]:
+          - generic [ref=e1306]:
+            - checkbox "Selecionar nota" [ref=e1307]
+            - generic [ref=e1308]: 
+            - generic [ref=e1309]: QA multiblocos 1780877844177
+          - generic [ref=e1311]: ...
+        - treeitem "Selecionar nota QA multiblocos 1780877856055" [ref=e1312] [cursor=pointer]:
+          - generic [ref=e1313]:
+            - checkbox "Selecionar nota" [ref=e1314]
+            - generic [ref=e1315]: 
+            - generic [ref=e1316]: QA multiblocos 1780877856055
+          - generic [ref=e1318]: ...
+        - treeitem "Selecionar nota QA multiblocos 1780877958492" [ref=e1319] [cursor=pointer]:
+          - generic [ref=e1320]:
+            - checkbox "Selecionar nota" [ref=e1321]
+            - generic [ref=e1322]: 
+            - generic [ref=e1323]: QA multiblocos 1780877958492
+          - generic [ref=e1325]: ...
+        - treeitem "Selecionar nota QA multiblocos 1780877970486" [ref=e1326] [cursor=pointer]:
+          - generic [ref=e1327]:
+            - checkbox "Selecionar nota" [ref=e1328]
+            - generic [ref=e1329]: 
+            - generic [ref=e1330]: QA multiblocos 1780877970486
+          - generic [ref=e1332]: ...
+        - treeitem "Selecionar nota QA multiblocos 1780877977402" [ref=e1333] [cursor=pointer]:
+          - generic [ref=e1334]:
+            - checkbox "Selecionar nota" [ref=e1335]
+            - generic [ref=e1336]: 
+            - generic [ref=e1337]: QA multiblocos 1780877977402
+          - generic [ref=e1339]: ...
+        - treeitem "Selecionar nota QA multiblocos 1780878007804" [ref=e1340] [cursor=pointer]:
+          - generic [ref=e1341]:
+            - checkbox "Selecionar nota" [ref=e1342]
+            - generic [ref=e1343]: 
+            - generic [ref=e1344]: QA multiblocos 1780878007804
+          - generic [ref=e1346]: ...
+        - treeitem "Selecionar nota QA multiblocos 1780878122291" [ref=e1347] [cursor=pointer]:
+          - generic [ref=e1348]:
+            - checkbox "Selecionar nota" [ref=e1349]
+            - generic [ref=e1350]: 
+            - generic [ref=e1351]: QA multiblocos 1780878122291
+          - generic [ref=e1353]: ...
+        - treeitem "Selecionar nota QA multiblocos 1780878134330" [ref=e1354] [cursor=pointer]:
+          - generic [ref=e1355]:
+            - checkbox "Selecionar nota" [ref=e1356]
+            - generic [ref=e1357]: 
+            - generic [ref=e1358]: QA multiblocos 1780878134330
+          - generic [ref=e1360]: ...
+        - treeitem "Selecionar nota QA multiblocos 1780878141251" [ref=e1361] [cursor=pointer]:
+          - generic [ref=e1362]:
+            - checkbox "Selecionar nota" [ref=e1363]
+            - generic [ref=e1364]: 
+            - generic [ref=e1365]: QA multiblocos 1780878141251
+          - generic [ref=e1367]: ...
+        - treeitem "Selecionar nota QA multiblocos 1780878158997" [ref=e1368] [cursor=pointer]:
+          - generic [ref=e1369]:
+            - checkbox "Selecionar nota" [ref=e1370]
+            - generic [ref=e1371]: 
+            - generic [ref=e1372]: QA multiblocos 1780878158997
+          - generic [ref=e1374]: ...
+        - treeitem "Selecionar nota QA multiblocos 1780878238255" [ref=e1375] [cursor=pointer]:
+          - generic [ref=e1376]:
+            - checkbox "Selecionar nota" [ref=e1377]
+            - generic [ref=e1378]: 
+            - generic [ref=e1379]: QA multiblocos 1780878238255
+          - generic [ref=e1381]: ...
+        - treeitem "Selecionar nota QA multiblocos 1780878250437" [ref=e1382] [cursor=pointer]:
+          - generic [ref=e1383]:
+            - checkbox "Selecionar nota" [ref=e1384]
+            - generic [ref=e1385]: 
+            - generic [ref=e1386]: QA multiblocos 1780878250437
+          - generic [ref=e1388]: ...
+        - treeitem "Selecionar nota QA multiblocos 1780878257333" [ref=e1389] [cursor=pointer]:
+          - generic [ref=e1390]:
+            - checkbox "Selecionar nota" [ref=e1391]
+            - generic [ref=e1392]: 
+            - generic [ref=e1393]: QA multiblocos 1780878257333
+          - generic [ref=e1395]: ...
+        - treeitem "Selecionar nota QA multiblocos 1780878276794" [ref=e1396] [cursor=pointer]:
+          - generic [ref=e1397]:
+            - checkbox "Selecionar nota" [ref=e1398]
+            - generic [ref=e1399]: 
+            - generic [ref=e1400]: QA multiblocos 1780878276794
+          - generic [ref=e1402]: ...
+        - treeitem "Selecionar nota QA multiblocos 1780878304730" [ref=e1403] [cursor=pointer]:
+          - generic [ref=e1404]:
+            - checkbox "Selecionar nota" [ref=e1405]
+            - generic [ref=e1406]: 
+            - generic [ref=e1407]: QA multiblocos 1780878304730
+          - generic [ref=e1409]: ...
+        - treeitem "Selecionar nota QA multiblocos 1780878345736" [ref=e1410] [cursor=pointer]:
+          - generic [ref=e1411]:
+            - checkbox "Selecionar nota" [ref=e1412]
+            - generic [ref=e1413]: 
+            - generic [ref=e1414]: QA multiblocos 1780878345736
+          - generic [ref=e1416]: ...
+        - treeitem "Selecionar nota QA multiblocos 1780878392901" [ref=e1417] [cursor=pointer]:
+          - generic [ref=e1418]:
+            - checkbox "Selecionar nota" [ref=e1419]
+            - generic [ref=e1420]: 
+            - generic [ref=e1421]: QA multiblocos 1780878392901
+          - generic [ref=e1423]: ...
+        - treeitem "Selecionar nota QA multiblocos 1780878452623" [ref=e1424] [cursor=pointer]:
+          - generic [ref=e1425]:
+            - checkbox "Selecionar nota" [ref=e1426]
+            - generic [ref=e1427]: 
+            - generic [ref=e1428]: QA multiblocos 1780878452623
+          - generic [ref=e1430]: ...
+        - treeitem "Selecionar nota QA multiblocos 1780878459553" [ref=e1431] [cursor=pointer]:
+          - generic [ref=e1432]:
+            - checkbox "Selecionar nota" [ref=e1433]
+            - generic [ref=e1434]: 
+            - generic [ref=e1435]: QA multiblocos 1780878459553
+          - generic [ref=e1437]: ...
+        - treeitem "Selecionar nota QA multiblocos 1780878466210" [ref=e1438] [cursor=pointer]:
+          - generic [ref=e1439]:
+            - checkbox "Selecionar nota" [ref=e1440]
+            - generic [ref=e1441]: 
+            - generic [ref=e1442]: QA multiblocos 1780878466210
+          - generic [ref=e1444]: ...
+        - treeitem "Selecionar nota QA multiblocos 1780878482986" [ref=e1445] [cursor=pointer]:
+          - generic [ref=e1446]:
+            - checkbox "Selecionar nota" [ref=e1447]
+            - generic [ref=e1448]: 
+            - generic [ref=e1449]: QA multiblocos 1780878482986
+          - generic [ref=e1451]: ...
+        - treeitem "Selecionar nota QA cores 1780878496570" [ref=e1452] [cursor=pointer]:
+          - generic [ref=e1453]:
+            - checkbox "Selecionar nota" [ref=e1454]
+            - generic [ref=e1455]: 
+            - generic [ref=e1456]: QA cores 1780878496570
+          - generic [ref=e1458]: ...
+        - treeitem "Selecionar nota QA popovers 1780878496569" [ref=e1459] [cursor=pointer]:
+          - generic [ref=e1460]:
+            - checkbox "Selecionar nota" [ref=e1461]
+            - generic [ref=e1462]: 
+            - generic [ref=e1463]: QA popovers 1780878496569
+          - generic [ref=e1465]: ...
+        - treeitem "Selecionar nota QA cores multi 1780878496570" [ref=e1466] [cursor=pointer]:
+          - generic [ref=e1467]:
+            - checkbox "Selecionar nota" [ref=e1468]
+            - generic [ref=e1469]: 
+            - generic [ref=e1470]: QA cores multi 1780878496570
+          - generic [ref=e1472]: ...
+        - treeitem "Selecionar nota QA cores 1780878503236" [ref=e1473] [cursor=pointer]:
+          - generic [ref=e1474]:
+            - checkbox "Selecionar nota" [ref=e1475]
+            - generic [ref=e1476]: 
+            - generic [ref=e1477]: QA cores 1780878503236
+          - generic [ref=e1479]: ...
+        - treeitem "Selecionar nota QA cores multi 1780878504115" [ref=e1480] [cursor=pointer]:
+          - generic [ref=e1481]:
+            - checkbox "Selecionar nota" [ref=e1482]
+            - generic [ref=e1483]: 
+            - generic [ref=e1484]: QA cores multi 1780878504115
+          - generic [ref=e1486]: ...
+        - treeitem "Selecionar nota QA cores 1780878510437" [ref=e1487] [cursor=pointer]:
+          - generic [ref=e1488]:
+            - checkbox "Selecionar nota" [ref=e1489]
+            - generic [ref=e1490]: 
+            - generic [ref=e1491]: QA cores 1780878510437
+          - generic [ref=e1493]: ...
+        - treeitem "Selecionar nota QA cores multi 1780878510975" [ref=e1494] [cursor=pointer]:
+          - generic [ref=e1495]:
+            - checkbox "Selecionar nota" [ref=e1496]
+            - generic [ref=e1497]: 
+            - generic [ref=e1498]: QA cores multi 1780878510975
+          - generic [ref=e1500]: ...
+        - treeitem "Selecionar nota QA cores 1780878517589" [ref=e1501] [cursor=pointer]:
+          - generic [ref=e1502]:
+            - checkbox "Selecionar nota" [ref=e1503]
+            - generic [ref=e1504]: 
+            - generic [ref=e1505]: QA cores 1780878517589
+          - generic [ref=e1507]: ...
+        - treeitem "Selecionar nota QA toolbar drag 1780878517709" [ref=e1508] [cursor=pointer]:
+          - generic [ref=e1509]:
+            - checkbox "Selecionar nota" [ref=e1510]
+            - generic [ref=e1511]: 
+            - generic [ref=e1512]: QA toolbar drag 1780878517709
+          - generic [ref=e1514]: ...
+        - treeitem "Selecionar nota QA cores multi 1780878553042" [ref=e1515] [cursor=pointer]:
+          - generic [ref=e1516]:
+            - checkbox "Selecionar nota" [ref=e1517]
+            - generic [ref=e1518]: 
+            - generic [ref=e1519]: QA cores multi 1780878553042
+          - generic [ref=e1521]: ...
+        - treeitem "Selecionar nota QA multiblocos 1780878553042" [ref=e1522] [cursor=pointer]:
+          - generic [ref=e1523]:
+            - checkbox "Selecionar nota" [ref=e1524]
+            - generic [ref=e1525]: 
+            - generic [ref=e1526]: QA multiblocos 1780878553042
+          - generic [ref=e1528]: ...
+        - treeitem "Selecionar nota QA multiblocos 1780878559824" [ref=e1529] [cursor=pointer]:
+          - generic [ref=e1530]:
+            - checkbox "Selecionar nota" [ref=e1531]
+            - generic [ref=e1532]: 
+            - generic [ref=e1533]: QA multiblocos 1780878559824
+          - generic [ref=e1535]: ...
+        - treeitem "Selecionar nota QA cores multi 1780878559872" [ref=e1536] [cursor=pointer]:
+          - generic [ref=e1537]:
+            - checkbox "Selecionar nota" [ref=e1538]
+            - generic [ref=e1539]: 
+            - generic [ref=e1540]: QA cores multi 1780878559872
+          - generic [ref=e1542]: ...
+        - treeitem "Selecionar nota QA multiblocos 1780878566401" [ref=e1543] [cursor=pointer]:
+          - generic [ref=e1544]:
+            - checkbox "Selecionar nota" [ref=e1545]
+            - generic [ref=e1546]: 
+            - generic [ref=e1547]: QA multiblocos 1780878566401
+          - generic [ref=e1549]: ...
+        - treeitem "Selecionar nota QA cores multi 1780878566862" [ref=e1550] [cursor=pointer]:
+          - generic [ref=e1551]:
+            - checkbox "Selecionar nota" [ref=e1552]
+            - generic [ref=e1553]: 
+            - generic [ref=e1554]: QA cores multi 1780878566862
+          - generic [ref=e1556]: ...
+        - treeitem "Selecionar nota QA toolbar drag 1780878573651" [ref=e1557] [cursor=pointer]:
+          - generic [ref=e1558]:
+            - checkbox "Selecionar nota" [ref=e1559]
+            - generic [ref=e1560]: 
+            - generic [ref=e1561]: QA toolbar drag 1780878573651
+          - generic [ref=e1563]: ...
+        - treeitem "Selecionar nota QA multiblocos 1780878583166" [ref=e1564] [cursor=pointer]:
+          - generic [ref=e1565]:
+            - checkbox "Selecionar nota" [ref=e1566]
+            - generic [ref=e1567]: 
+            - generic [ref=e1568]: QA multiblocos 1780878583166
+          - generic [ref=e1570]: ...
+        - treeitem "Selecionar nota QA cores 1780878595808" [ref=e1571] [cursor=pointer]:
+          - generic [ref=e1572]:
+            - checkbox "Selecionar nota" [ref=e1573]
+            - generic [ref=e1574]: 
+            - generic [ref=e1575]: QA cores 1780878595808
+          - generic [ref=e1577]: ...
+        - treeitem "Selecionar nota QA popovers 1780878595808" [ref=e1578] [cursor=pointer]:
+          - generic [ref=e1579]:
+            - checkbox "Selecionar nota" [ref=e1580]
+            - generic [ref=e1581]: 
+            - generic [ref=e1582]: QA popovers 1780878595808
+          - generic [ref=e1584]: ...
+        - treeitem "Selecionar nota QA cores 1780878602417" [ref=e1585] [cursor=pointer]:
+          - generic [ref=e1586]:
+            - checkbox "Selecionar nota" [ref=e1587]
+            - generic [ref=e1588]: 
+            - generic [ref=e1589]: QA cores 1780878602417
+          - generic [ref=e1591]: ...
+        - treeitem "Selecionar nota QA cores 1780878609231" [ref=e1592] [cursor=pointer]:
+          - generic [ref=e1593]:
+            - checkbox "Selecionar nota" [ref=e1594]
+            - generic [ref=e1595]: 
+            - generic [ref=e1596]: QA cores 1780878609231
+          - generic [ref=e1598]: ...
+        - treeitem "Selecionar nota QA cores 1780878616073" [ref=e1599] [cursor=pointer]:
+          - generic [ref=e1600]:
+            - checkbox "Selecionar nota" [ref=e1601]
+            - generic [ref=e1602]: 
+            - generic [ref=e1603]: QA cores 1780878616073
+          - generic [ref=e1605]: ...
+        - treeitem "Selecionar nota QA cores multi 1781041887210" [ref=e1606] [cursor=pointer]:
+          - generic [ref=e1607]:
+            - checkbox "Selecionar nota" [ref=e1608]
+            - generic [ref=e1609]: 
+            - generic [ref=e1610]: QA cores multi 1781041887210
+          - generic [ref=e1612]: ...
+        - treeitem "Selecionar nota QA multiblocos 1781041887210" [ref=e1613] [cursor=pointer]:
+          - generic [ref=e1614]:
+            - checkbox "Selecionar nota" [ref=e1615]
+            - generic [ref=e1616]: 
+            - generic [ref=e1617]: QA multiblocos 1781041887210
+          - generic [ref=e1619]: ...
+        - treeitem "Selecionar nota QA cores multi 1781041894135" [ref=e1620] [cursor=pointer]:
+          - generic [ref=e1621]:
+            - checkbox "Selecionar nota" [ref=e1622]
+            - generic [ref=e1623]: 
+            - generic [ref=e1624]: QA cores multi 1781041894135
+          - generic [ref=e1626]: ...
+        - treeitem "Selecionar nota QA multiblocos 1781041894086" [ref=e1627] [cursor=pointer]:
+          - generic [ref=e1628]:
+            - checkbox "Selecionar nota" [ref=e1629]
+            - generic [ref=e1630]: 
+            - generic [ref=e1631]: QA multiblocos 1781041894086
+          - generic [ref=e1633]: ...
+        - treeitem "Selecionar nota QA multiblocos 1781041900703" [ref=e1634] [cursor=pointer]:
+          - generic [ref=e1635]:
+            - checkbox "Selecionar nota" [ref=e1636]
+            - generic [ref=e1637]: 
+            - generic [ref=e1638]: QA multiblocos 1781041900703
+          - generic [ref=e1640]: ...
+        - treeitem "Selecionar nota QA cores multi 1781041901033" [ref=e1641] [cursor=pointer]:
+          - generic [ref=e1642]:
+            - checkbox "Selecionar nota" [ref=e1643]
+            - generic [ref=e1644]: 
+            - generic [ref=e1645]: QA cores multi 1781041901033
+          - generic [ref=e1647]: ...
+        - treeitem "Selecionar nota QA toolbar drag 1781041908061" [ref=e1648] [cursor=pointer]:
+          - generic [ref=e1649]:
+            - checkbox "Selecionar nota" [ref=e1650]
+            - generic [ref=e1651]: 
+            - generic [ref=e1652]: QA toolbar drag 1781041908061
+          - generic [ref=e1654]: ...
+        - treeitem "Selecionar nota QA multiblocos 1781041917791" [ref=e1655] [cursor=pointer]:
+          - generic [ref=e1656]:
+            - checkbox "Selecionar nota" [ref=e1657]
+            - generic [ref=e1658]: 
+            - generic [ref=e1659]: QA multiblocos 1781041917791
+          - generic [ref=e1661]: ...
+        - treeitem "Selecionar nota QA multiblocos 1781041929507" [ref=e1662] [cursor=pointer]:
+          - generic [ref=e1663]:
+            - checkbox "Selecionar nota" [ref=e1664]
+            - generic [ref=e1665]: 
+            - generic [ref=e1666]: QA multiblocos 1781041929507
+          - generic [ref=e1668]: ...
+        - treeitem "Selecionar nota QA cores multi 1781042026251" [ref=e1669] [cursor=pointer]:
+          - generic [ref=e1670]:
+            - checkbox "Selecionar nota" [ref=e1671]
+            - generic [ref=e1672]: 
+            - generic [ref=e1673]: QA cores multi 1781042026251
+          - generic [ref=e1675]: ...
+        - treeitem "Selecionar nota QA multiblocos 1781042026251" [ref=e1676] [cursor=pointer]:
+          - generic [ref=e1677]:
+            - checkbox "Selecionar nota" [ref=e1678]
+            - generic [ref=e1679]: 
+            - generic [ref=e1680]: QA multiblocos 1781042026251
+          - generic [ref=e1682]: ...
+        - treeitem "Selecionar nota QA cores multi 1781042033457" [ref=e1683] [cursor=pointer]:
+          - generic [ref=e1684]:
+            - checkbox "Selecionar nota" [ref=e1685]
+            - generic [ref=e1686]: 
+            - generic [ref=e1687]: QA cores multi 1781042033457
+          - generic [ref=e1689]: ...
+        - treeitem "Selecionar nota QA multiblocos 1781042033425" [ref=e1690] [cursor=pointer]:
+          - generic [ref=e1691]:
+            - checkbox "Selecionar nota" [ref=e1692]
+            - generic [ref=e1693]: 
+            - generic [ref=e1694]: QA multiblocos 1781042033425
+          - generic [ref=e1696]: ...
+        - treeitem "Selecionar nota QA multiblocos 1781042041268" [ref=e1697] [cursor=pointer]:
+          - generic [ref=e1698]:
+            - checkbox "Selecionar nota" [ref=e1699]
+            - generic [ref=e1700]: 
+            - generic [ref=e1701]: QA multiblocos 1781042041268
+          - generic [ref=e1703]: ...
+        - treeitem "Selecionar nota QA cores multi 1781042041617" [ref=e1704] [cursor=pointer]:
+          - generic [ref=e1705]:
+            - checkbox "Selecionar nota" [ref=e1706]
+            - generic [ref=e1707]: 
+            - generic [ref=e1708]: QA cores multi 1781042041617
+          - generic [ref=e1710]: ...
+        - treeitem "Selecionar nota QA toolbar drag 1781042050175" [ref=e1711] [cursor=pointer]:
+          - generic [ref=e1712]:
+            - checkbox "Selecionar nota" [ref=e1713]
+            - generic [ref=e1714]: 
+            - generic [ref=e1715]: QA toolbar drag 1781042050175
+          - generic [ref=e1717]: ...
+        - treeitem "Selecionar nota QA multiblocos 1781042059837" [ref=e1718] [cursor=pointer]:
+          - generic [ref=e1719]:
+            - checkbox "Selecionar nota" [ref=e1720]
+            - generic [ref=e1721]: 
+            - generic [ref=e1722]: QA multiblocos 1781042059837
+          - generic [ref=e1724]: ...
+        - treeitem "Selecionar nota QA multiblocos 1781042066979" [ref=e1725] [cursor=pointer]:
+          - generic [ref=e1726]:
+            - checkbox "Selecionar nota" [ref=e1727]
+            - generic [ref=e1728]: 
+            - generic [ref=e1729]: QA multiblocos 1781042066979
+          - generic [ref=e1731]: ...
+        - treeitem "Selecionar nota QA cores multi 1781042110984" [ref=e1732] [cursor=pointer]:
+          - generic [ref=e1733]:
+            - checkbox "Selecionar nota" [ref=e1734]
+            - generic [ref=e1735]: 
+            - generic [ref=e1736]: QA cores multi 1781042110984
+          - generic [ref=e1738]: ...
+        - treeitem "Selecionar nota QA multiblocos 1781042110990" [ref=e1739] [cursor=pointer]:
+          - generic [ref=e1740]:
+            - checkbox "Selecionar nota" [ref=e1741]
+            - generic [ref=e1742]: 
+            - generic [ref=e1743]: QA multiblocos 1781042110990
+          - generic [ref=e1745]: ...
+        - treeitem "Selecionar nota QA cores multi 1781042117859" [ref=e1746] [cursor=pointer]:
+          - generic [ref=e1747]:
+            - checkbox "Selecionar nota" [ref=e1748]
+            - generic [ref=e1749]: 
+            - generic [ref=e1750]: QA cores multi 1781042117859
+          - generic [ref=e1752]: ...
+        - treeitem "Selecionar nota QA multiblocos 1781042117861" [ref=e1753] [cursor=pointer]:
+          - generic [ref=e1754]:
+            - checkbox "Selecionar nota" [ref=e1755]
+            - generic [ref=e1756]: 
+            - generic [ref=e1757]: QA multiblocos 1781042117861
+          - generic [ref=e1759]: ...
+        - treeitem "Selecionar nota QA multiblocos 1781042124516" [ref=e1760] [cursor=pointer]:
+          - generic [ref=e1761]:
+            - checkbox "Selecionar nota" [ref=e1762]
+            - generic [ref=e1763]: 
+            - generic [ref=e1764]: QA multiblocos 1781042124516
+          - generic [ref=e1766]: ...
+        - treeitem "Selecionar nota QA cores multi 1781042124856" [ref=e1767] [cursor=pointer]:
+          - generic [ref=e1768]:
+            - checkbox "Selecionar nota" [ref=e1769]
+            - generic [ref=e1770]: 
+            - generic [ref=e1771]: QA cores multi 1781042124856
+          - generic [ref=e1773]: ...
+        - treeitem "Selecionar nota QA toolbar drag 1781042131575" [ref=e1774] [cursor=pointer]:
+          - generic [ref=e1775]:
+            - checkbox "Selecionar nota" [ref=e1776]
+            - generic [ref=e1777]: 
+            - generic [ref=e1778]: QA toolbar drag 1781042131575
+          - generic [ref=e1780]: ...
+        - treeitem "Selecionar nota QA multiblocos 1781042141207" [ref=e1781] [cursor=pointer]:
+          - generic [ref=e1782]:
+            - checkbox "Selecionar nota" [ref=e1783]
+            - generic [ref=e1784]: 
+            - generic [ref=e1785]: QA multiblocos 1781042141207
+          - generic [ref=e1787]: ...
+        - treeitem "Selecionar nota QA multiblocos 1781042147805" [ref=e1788] [cursor=pointer]:
+          - generic [ref=e1789]:
+            - checkbox "Selecionar nota" [ref=e1790]
+            - generic [ref=e1791]: 
+            - generic [ref=e1792]: QA multiblocos 1781042147805
+          - generic [ref=e1794]: ...
+        - treeitem "Selecionar nota QA cores 1781042160874" [ref=e1795] [cursor=pointer]:
+          - generic [ref=e1796]:
+            - checkbox "Selecionar nota" [ref=e1797]
+            - generic [ref=e1798]: 
+            - generic [ref=e1799]: QA cores 1781042160874
+          - generic [ref=e1801]: ...
+        - treeitem "Selecionar nota QA popovers 1781042160874" [ref=e1802] [cursor=pointer]:
+          - generic [ref=e1803]:
+            - checkbox "Selecionar nota" [ref=e1804]
+            - generic [ref=e1805]: 
+            - generic [ref=e1806]: QA popovers 1781042160874
+          - generic [ref=e1808]: ...
+        - treeitem "Selecionar nota QA cores 1781042167946" [ref=e1809] [cursor=pointer]:
+          - generic [ref=e1810]:
+            - checkbox "Selecionar nota" [ref=e1811]
+            - generic [ref=e1812]: 
+            - generic [ref=e1813]: QA cores 1781042167946
+          - generic [ref=e1815]: ...
+        - treeitem "Selecionar nota QA cores 1781042175294" [ref=e1816] [cursor=pointer]:
+          - generic [ref=e1817]:
+            - checkbox "Selecionar nota" [ref=e1818]
+            - generic [ref=e1819]: 
+            - generic [ref=e1820]: QA cores 1781042175294
+          - generic [ref=e1822]: ...
+        - treeitem "Selecionar nota QA cores 1781042182053" [ref=e1823] [cursor=pointer]:
+          - generic [ref=e1824]:
+            - checkbox "Selecionar nota" [ref=e1825]
+            - generic [ref=e1826]: 
+            - generic [ref=e1827]: QA cores 1781042182053
+          - generic [ref=e1829]: ...
+        - treeitem "Selecionar nota QA cores multi 1781963821601" [ref=e1830] [cursor=pointer]:
+          - generic [ref=e1831]:
+            - checkbox "Selecionar nota" [ref=e1832]
+            - generic [ref=e1833]: 
+            - generic [ref=e1834]: QA cores multi 1781963821601
+          - generic [ref=e1836]: ...
+        - treeitem "Selecionar nota QA cores multi 1781963851907" [ref=e1837] [cursor=pointer]:
+          - generic [ref=e1838]:
+            - checkbox "Selecionar nota" [ref=e1839]
+            - generic [ref=e1840]: 
+            - generic [ref=e1841]: QA cores multi 1781963851907
+          - generic [ref=e1843]: ...
+        - treeitem "Selecionar nota QA cores multi 1781963858807" [ref=e1844] [cursor=pointer]:
+          - generic [ref=e1845]:
+            - checkbox "Selecionar nota" [ref=e1846]
+            - generic [ref=e1847]: 
+            - generic [ref=e1848]: QA cores multi 1781963858807
+          - generic [ref=e1850]: ...
+        - treeitem "Selecionar nota QA toolbar drag 1781963865491" [ref=e1851] [cursor=pointer]:
+          - generic [ref=e1852]:
+            - checkbox "Selecionar nota" [ref=e1853]
+            - generic [ref=e1854]: 
+            - generic [ref=e1855]: QA toolbar drag 1781963865491
+          - generic [ref=e1857]: ...
+        - treeitem "Selecionar nota QA multiblocos 1781963873354" [ref=e1858] [cursor=pointer]:
+          - generic [ref=e1859]:
+            - checkbox "Selecionar nota" [ref=e1860]
+            - generic [ref=e1861]: 
+            - generic [ref=e1862]: QA multiblocos 1781963873354
+          - generic [ref=e1864]: ...
+        - treeitem "Selecionar nota QA multiblocos 1781963879939" [ref=e1865] [cursor=pointer]:
+          - generic [ref=e1866]:
+            - checkbox "Selecionar nota" [ref=e1867]
+            - generic [ref=e1868]: 
+            - generic [ref=e1869]: QA multiblocos 1781963879939
+          - generic [ref=e1871]: ...
+        - treeitem "Selecionar nota QA multiblocos 1781963886535" [ref=e1872] [cursor=pointer]:
+          - generic [ref=e1873]:
+            - checkbox "Selecionar nota" [ref=e1874]
+            - generic [ref=e1875]: 
+            - generic [ref=e1876]: QA multiblocos 1781963886535
+          - generic [ref=e1878]: ...
+        - treeitem "Selecionar nota QA multiblocos 1781963903154" [ref=e1879] [cursor=pointer]:
+          - generic [ref=e1880]:
+            - checkbox "Selecionar nota" [ref=e1881]
+            - generic [ref=e1882]: 
+            - generic [ref=e1883]: QA multiblocos 1781963903154
+          - generic [ref=e1885]: ...
+        - treeitem "Selecionar nota QA multiblocos 1781963922729" [ref=e1886] [cursor=pointer]:
+          - generic [ref=e1887]:
+            - checkbox "Selecionar nota" [ref=e1888]
+            - generic [ref=e1889]: 
+            - generic [ref=e1890]: QA multiblocos 1781963922729
+          - generic [ref=e1892]: ...
+        - treeitem "Selecionar nota QA cores multi 1781963935880" [ref=e1893] [cursor=pointer]:
+          - generic [ref=e1894]:
+            - checkbox "Selecionar nota" [ref=e1895]
+            - generic [ref=e1896]: 
+            - generic [ref=e1897]: QA cores multi 1781963935880
+          - generic [ref=e1899]: ...
+        - treeitem "Selecionar nota QA cores multi 1781963942535" [ref=e1900] [cursor=pointer]:
+          - generic [ref=e1901]:
+            - checkbox "Selecionar nota" [ref=e1902]
+            - generic [ref=e1903]: 
+            - generic [ref=e1904]: QA cores multi 1781963942535
+          - generic [ref=e1906]: ...
+        - treeitem "Selecionar nota QA cores multi 1781963949416" [ref=e1907] [cursor=pointer]:
+          - generic [ref=e1908]:
+            - checkbox "Selecionar nota" [ref=e1909]
+            - generic [ref=e1910]: 
+            - generic [ref=e1911]: QA cores multi 1781963949416
+          - generic [ref=e1913]: ...
+        - treeitem "Selecionar nota QA toolbar drag 1781963956110" [ref=e1914] [cursor=pointer]:
+          - generic [ref=e1915]:
+            - checkbox "Selecionar nota" [ref=e1916]
+            - generic [ref=e1917]: 
+            - generic [ref=e1918]: QA toolbar drag 1781963956110
+          - generic [ref=e1920]: ...
+        - treeitem "Selecionar nota QA multiblocos 1781963963397" [ref=e1921] [cursor=pointer]:
+          - generic [ref=e1922]:
+            - checkbox "Selecionar nota" [ref=e1923]
+            - generic [ref=e1924]: 
+            - generic [ref=e1925]: QA multiblocos 1781963963397
+          - generic [ref=e1927]: ...
+        - treeitem "Selecionar nota QA multiblocos 1781963969975" [ref=e1928] [cursor=pointer]:
+          - generic [ref=e1929]:
+            - checkbox "Selecionar nota" [ref=e1930]
+            - generic [ref=e1931]: 
+            - generic [ref=e1932]: QA multiblocos 1781963969975
+          - generic [ref=e1934]: ...
+        - treeitem "Selecionar nota QA multiblocos 1781964082297" [ref=e1935] [cursor=pointer]:
+          - generic [ref=e1936]:
+            - checkbox "Selecionar nota" [ref=e1937]
+            - generic [ref=e1938]: 
+            - generic [ref=e1939]: QA multiblocos 1781964082297
+          - generic [ref=e1941]: ...
+        - treeitem "Selecionar nota QA multiblocos 1781964099630" [ref=e1942] [cursor=pointer]:
+          - generic [ref=e1943]:
+            - checkbox "Selecionar nota" [ref=e1944]
+            - generic [ref=e1945]: 
+            - generic [ref=e1946]: QA multiblocos 1781964099630
+          - generic [ref=e1948]: ...
+        - treeitem "Selecionar nota QA multiblocos 1781964106558" [ref=e1949] [cursor=pointer]:
+          - generic [ref=e1950]:
+            - checkbox "Selecionar nota" [ref=e1951]
+            - generic [ref=e1952]: 
+            - generic [ref=e1953]: QA multiblocos 1781964106558
+          - generic [ref=e1955]: ...
+        - treeitem "Selecionar nota QA multiblocos 1781964113984" [ref=e1956] [cursor=pointer]:
+          - generic [ref=e1957]:
+            - checkbox "Selecionar nota" [ref=e1958]
+            - generic [ref=e1959]: 
+            - generic [ref=e1960]: QA multiblocos 1781964113984
+          - generic [ref=e1962]: ...
+        - treeitem "Selecionar nota QA multiblocos 1781964166875" [ref=e1963] [cursor=pointer]:
+          - generic [ref=e1964]:
+            - checkbox "Selecionar nota" [ref=e1965]
+            - generic [ref=e1966]: 
+            - generic [ref=e1967]: QA multiblocos 1781964166875
+          - generic [ref=e1969]: ...
+        - treeitem "Selecionar nota QA toolbar drag 1781964184957" [ref=e1970] [cursor=pointer]:
+          - generic [ref=e1971]:
+            - checkbox "Selecionar nota" [ref=e1972]
+            - generic [ref=e1973]: 
+            - generic [ref=e1974]: QA toolbar drag 1781964184957
+          - generic [ref=e1976]: ...
+        - treeitem "Selecionar nota QA toolbar drag 1781964248656" [ref=e1977] [cursor=pointer]:
+          - generic [ref=e1978]:
+            - checkbox "Selecionar nota" [ref=e1979]
+            - generic [ref=e1980]: 
+            - generic [ref=e1981]: QA toolbar drag 1781964248656
+          - generic [ref=e1983]: ...
+        - treeitem "Selecionar nota QA toolbar drag 1781964311711" [ref=e1984] [cursor=pointer]:
+          - generic [ref=e1985]:
+            - checkbox "Selecionar nota" [ref=e1986]
+            - generic [ref=e1987]: 
+            - generic [ref=e1988]: QA toolbar drag 1781964311711
+          - generic [ref=e1990]: ...
+        - treeitem "Selecionar nota QA toolbar drag 1781964361699" [ref=e1991] [cursor=pointer]:
+          - generic [ref=e1992]:
+            - checkbox "Selecionar nota" [ref=e1993]
+            - generic [ref=e1994]: 
+            - generic [ref=e1995]: QA toolbar drag 1781964361699
+          - generic [ref=e1997]: ...
+        - treeitem "Selecionar nota QA toolbar drag 1781964663297" [ref=e1998] [cursor=pointer]:
+          - generic [ref=e1999]:
+            - checkbox "Selecionar nota" [ref=e2000]
+            - generic [ref=e2001]: 
+            - generic [ref=e2002]: QA toolbar drag 1781964663297
+          - generic [ref=e2004]: ...
+        - treeitem "Selecionar nota QA cores multi 1781964675590" [ref=e2005] [cursor=pointer]:
+          - generic [ref=e2006]:
+            - checkbox "Selecionar nota" [ref=e2007]
+            - generic [ref=e2008]: 
+            - generic [ref=e2009]: QA cores multi 1781964675590
+          - generic [ref=e2011]: ...
+        - treeitem "Selecionar nota QA cores multi 1781964682296" [ref=e2012] [cursor=pointer]:
+          - generic [ref=e2013]:
+            - checkbox "Selecionar nota" [ref=e2014]
+            - generic [ref=e2015]: 
+            - generic [ref=e2016]: QA cores multi 1781964682296
+          - generic [ref=e2018]: ...
+        - treeitem "Selecionar nota QA cores multi 1781964689211" [ref=e2019] [cursor=pointer]:
+          - generic [ref=e2020]:
+            - checkbox "Selecionar nota" [ref=e2021]
+            - generic [ref=e2022]: 
+            - generic [ref=e2023]: QA cores multi 1781964689211
+          - generic [ref=e2025]: ...
+        - treeitem "Selecionar nota QA toolbar drag 1781964695950" [ref=e2026] [cursor=pointer]:
+          - generic [ref=e2027]:
+            - checkbox "Selecionar nota" [ref=e2028]
+            - generic [ref=e2029]: 
+            - generic [ref=e2030]: QA toolbar drag 1781964695950
+          - generic [ref=e2032]: ...
+        - treeitem "Selecionar nota QA multiblocos 1781964703044" [ref=e2033] [cursor=pointer]:
+          - generic [ref=e2034]:
+            - checkbox "Selecionar nota" [ref=e2035]
+            - generic [ref=e2036]: 
+            - generic [ref=e2037]: QA multiblocos 1781964703044
+          - generic [ref=e2039]: ...
+        - treeitem "Selecionar nota QA multiblocos 1781964710043" [ref=e2040] [cursor=pointer]:
+          - generic [ref=e2041]:
+            - checkbox "Selecionar nota" [ref=e2042]
+            - generic [ref=e2043]: 
+            - generic [ref=e2044]: QA multiblocos 1781964710043
+          - generic [ref=e2046]: ...
+        - treeitem "Selecionar nota QA multiblocos 1781964716586" [ref=e2047] [cursor=pointer]:
+          - generic [ref=e2048]:
+            - checkbox "Selecionar nota" [ref=e2049]
+            - generic [ref=e2050]: 
+            - generic [ref=e2051]: QA multiblocos 1781964716586
+          - generic [ref=e2053]: ...
+        - treeitem "Selecionar nota QA multiblocos 1781964733272" [ref=e2054] [cursor=pointer]:
+          - generic [ref=e2055]:
+            - checkbox "Selecionar nota" [ref=e2056]
+            - generic [ref=e2057]: 
+            - generic [ref=e2058]: QA multiblocos 1781964733272
+          - generic [ref=e2060]: ...
+        - treeitem "Selecionar nota QA multiblocos 1781964739748" [ref=e2061] [cursor=pointer]:
+          - generic [ref=e2062]:
+            - checkbox "Selecionar nota" [ref=e2063]
+            - generic [ref=e2064]: 
+            - generic [ref=e2065]: QA multiblocos 1781964739748
+          - generic [ref=e2067]: ...
+        - treeitem "Selecionar nota QA multiblocos 1781964746219" [ref=e2068] [cursor=pointer]:
+          - generic [ref=e2069]:
+            - checkbox "Selecionar nota" [ref=e2070]
+            - generic [ref=e2071]: 
+            - generic [ref=e2072]: QA multiblocos 1781964746219
+          - generic [ref=e2074]: ...
+        - treeitem "Selecionar nota QA cores 1781964757858" [ref=e2075] [cursor=pointer]:
+          - generic [ref=e2076]:
+            - checkbox "Selecionar nota" [ref=e2077]
+            - generic [ref=e2078]: 
+            - generic [ref=e2079]: QA cores 1781964757858
+          - generic [ref=e2081]: ...
+        - treeitem "Selecionar nota QA cores 1781964764475" [ref=e2082] [cursor=pointer]:
+          - generic [ref=e2083]:
+            - checkbox "Selecionar nota" [ref=e2084]
+            - generic [ref=e2085]: 
+            - generic [ref=e2086]: QA cores 1781964764475
+          - generic [ref=e2088]: ...
+        - treeitem "Selecionar nota QA cores 1781964771296" [ref=e2089] [cursor=pointer]:
+          - generic [ref=e2090]:
+            - checkbox "Selecionar nota" [ref=e2091]
+            - generic [ref=e2092]: 
+            - generic [ref=e2093]: QA cores 1781964771296
+          - generic [ref=e2095]: ...
+        - treeitem "Selecionar nota QA cores 1781964778486" [ref=e2096] [cursor=pointer]:
+          - generic [ref=e2097]:
+            - checkbox "Selecionar nota" [ref=e2098]
+            - generic [ref=e2099]: 
+            - generic [ref=e2100]: QA cores 1781964778486
+          - generic [ref=e2102]: ...
+        - treeitem "Selecionar nota QA popovers 1781964785040" [ref=e2103] [cursor=pointer]:
+          - generic [ref=e2104]:
+            - checkbox "Selecionar nota" [ref=e2105]
+            - generic [ref=e2106]: 
+            - generic [ref=e2107]: QA popovers 1781964785040
+          - generic [ref=e2109]: ...
+        - treeitem "Selecionar nota QA multiblocos 1781965131398" [ref=e2110] [cursor=pointer]:
+          - generic [ref=e2111]:
+            - checkbox "Selecionar nota" [ref=e2112]
+            - generic [ref=e2113]: 
+            - generic [ref=e2114]: QA multiblocos 1781965131398
+          - generic [ref=e2116]: ...
+        - treeitem "Selecionar nota QA nav focus 1781967951446" [ref=e2117] [cursor=pointer]:
+          - generic [ref=e2118]:
+            - checkbox "Selecionar nota" [ref=e2119]
+            - generic [ref=e2120]: 
+            - generic [ref=e2121]: QA nav focus 1781967951446
+          - generic [ref=e2123]: ...
+        - treeitem "Selecionar nota QA nav A 1781967958522" [ref=e2124] [cursor=pointer]:
+          - generic [ref=e2125]:
+            - checkbox "Selecionar nota" [ref=e2126]
+            - generic [ref=e2127]: 
+            - generic [ref=e2128]: QA nav A 1781967958522
+          - generic [ref=e2130]: ...
+        - treeitem "Selecionar nota QA nav B 1781967959029" [ref=e2131] [cursor=pointer]:
+          - generic [ref=e2132]:
+            - checkbox "Selecionar nota" [ref=e2133]
+            - generic [ref=e2134]: 
+            - generic [ref=e2135]: QA nav B 1781967959029
+          - generic [ref=e2137]: ...
+        - treeitem "Selecionar nota Wiki Target 1781968048991" [ref=e2138] [cursor=pointer]:
+          - generic [ref=e2139]:
+            - checkbox "Selecionar nota" [ref=e2140]
+            - generic [ref=e2141]: 
+            - generic [ref=e2142]: Wiki Target 1781968048991
+          - generic [ref=e2144]: ...
+        - treeitem "Selecionar nota Wiki Source 1781968049469" [ref=e2145] [cursor=pointer]:
+          - generic [ref=e2146]:
+            - checkbox "Selecionar nota" [ref=e2147]
+            - generic [ref=e2148]: 
+            - generic [ref=e2149]: Wiki Source 1781968049469
+          - generic [ref=e2151]: ...
+        - treeitem "Selecionar nota QA nav focus 1781968092132" [ref=e2152] [cursor=pointer]:
+          - generic [ref=e2153]:
+            - checkbox "Selecionar nota" [ref=e2154]
+            - generic [ref=e2155]: 
+            - generic [ref=e2156]: QA nav focus 1781968092132
+          - generic [ref=e2158]: ...
+        - treeitem "Selecionar nota QA nav A 1781968098643" [ref=e2159] [cursor=pointer]:
+          - generic [ref=e2160]:
+            - checkbox "Selecionar nota" [ref=e2161]
+            - generic [ref=e2162]: 
+            - generic [ref=e2163]: QA nav A 1781968098643
+          - generic [ref=e2165]: ...
+        - treeitem "Selecionar nota QA nav B 1781968099170" [ref=e2166] [cursor=pointer]:
+          - generic [ref=e2167]:
+            - checkbox "Selecionar nota" [ref=e2168]
+            - generic [ref=e2169]: 
+            - generic [ref=e2170]: QA nav B 1781968099170
+          - generic [ref=e2172]: ...
+        - treeitem "Selecionar nota Wiki Target 1781968111030" [ref=e2173] [cursor=pointer]:
+          - generic [ref=e2174]:
+            - checkbox "Selecionar nota" [ref=e2175]
+            - generic [ref=e2176]: 
+            - generic [ref=e2177]: Wiki Target 1781968111030
+          - generic [ref=e2179]: ...
+        - treeitem "Selecionar nota Wiki Source 1781968111531" [ref=e2180] [cursor=pointer]:
+          - generic [ref=e2181]:
+            - checkbox "Selecionar nota" [ref=e2182]
+            - generic [ref=e2183]: 
+            - generic [ref=e2184]: Wiki Source 1781968111531
+          - generic [ref=e2186]: ...
+        - treeitem "Selecionar nota QA nav focus 1781968161720" [ref=e2187] [cursor=pointer]:
+          - generic [ref=e2188]:
+            - checkbox "Selecionar nota" [ref=e2189]
+            - generic [ref=e2190]: 
+            - generic [ref=e2191]: QA nav focus 1781968161720
+          - generic [ref=e2193]: ...
+        - treeitem "Selecionar nota QA nav A 1781968168723" [ref=e2194] [cursor=pointer]:
+          - generic [ref=e2195]:
+            - checkbox "Selecionar nota" [ref=e2196]
+            - generic [ref=e2197]: 
+            - generic [ref=e2198]: QA nav A 1781968168723
+          - generic [ref=e2200]: ...
+        - treeitem "Selecionar nota QA nav B 1781968169210" [ref=e2201] [cursor=pointer]:
+          - generic [ref=e2202]:
+            - checkbox "Selecionar nota" [ref=e2203]
+            - generic [ref=e2204]: 
+            - generic [ref=e2205]: QA nav B 1781968169210
+          - generic [ref=e2207]: ...
+        - treeitem "Selecionar nota Wiki Target 1781968181394" [ref=e2208] [cursor=pointer]:
+          - generic [ref=e2209]:
+            - checkbox "Selecionar nota" [ref=e2210]
+            - generic [ref=e2211]: 
+            - generic [ref=e2212]: Wiki Target 1781968181394
+          - generic [ref=e2214]: ...
+        - treeitem "Selecionar nota Wiki Source 1781968181892" [ref=e2215] [cursor=pointer]:
+          - generic [ref=e2216]:
+            - checkbox "Selecionar nota" [ref=e2217]
+            - generic [ref=e2218]: 
+            - generic [ref=e2219]: Wiki Source 1781968181892
+          - generic [ref=e2221]: ...
+        - treeitem "Selecionar nota QA nav A 1781968216774" [ref=e2222] [cursor=pointer]:
+          - generic [ref=e2223]:
+            - checkbox "Selecionar nota" [ref=e2224]
+            - generic [ref=e2225]: 
+            - generic [ref=e2226]: QA nav A 1781968216774
+          - generic [ref=e2228]: ...
+        - treeitem "Selecionar nota QA nav B 1781968217292" [ref=e2229] [cursor=pointer]:
+          - generic [ref=e2230]:
+            - checkbox "Selecionar nota" [ref=e2231]
+            - generic [ref=e2232]: 
+            - generic [ref=e2233]: QA nav B 1781968217292
+          - generic [ref=e2235]: ...
+        - treeitem "Selecionar nota Wiki Target 1781968230009" [ref=e2236] [cursor=pointer]:
+          - generic [ref=e2237]:
+            - checkbox "Selecionar nota" [ref=e2238]
+            - generic [ref=e2239]: 
+            - generic [ref=e2240]: Wiki Target 1781968230009
+          - generic [ref=e2242]: ...
+        - treeitem "Selecionar nota Wiki Source 1781968230514" [ref=e2243] [cursor=pointer]:
+          - generic [ref=e2244]:
+            - checkbox "Selecionar nota" [ref=e2245]
+            - generic [ref=e2246]: 
+            - generic [ref=e2247]: Wiki Source 1781968230514
+          - generic [ref=e2249]: ...
+        - treeitem "Selecionar nota Debug nav" [ref=e2250] [cursor=pointer]:
+          - generic [ref=e2251]:
+            - checkbox "Selecionar nota" [ref=e2252]
+            - generic [ref=e2253]: 
+            - generic [ref=e2254]: Debug nav
+          - generic [ref=e2256]: ...
+        - treeitem "Selecionar nota QA nav A 1781968339497" [ref=e2257] [cursor=pointer]:
+          - generic [ref=e2258]:
+            - checkbox "Selecionar nota" [ref=e2259]
+            - generic [ref=e2260]: 
+            - generic [ref=e2261]: QA nav A 1781968339497
+          - generic [ref=e2263]: ...
+        - treeitem "Selecionar nota QA nav B 1781968339986" [ref=e2264] [cursor=pointer]:
+          - generic [ref=e2265]:
+            - checkbox "Selecionar nota" [ref=e2266]
+            - generic [ref=e2267]: 
+            - generic [ref=e2268]: QA nav B 1781968339986
+          - generic [ref=e2270]: ...
+        - treeitem "Selecionar nota Debug nav" [ref=e2271] [cursor=pointer]:
+          - generic [ref=e2272]:
+            - checkbox "Selecionar nota" [ref=e2273]
+            - generic [ref=e2274]: 
+            - generic [ref=e2275]: Debug nav
+          - generic [ref=e2277]: ...
+        - treeitem "Selecionar nota QA nav A 1781970435271" [ref=e2278] [cursor=pointer]:
+          - generic [ref=e2279]:
+            - checkbox "Selecionar nota" [ref=e2280]
+            - generic [ref=e2281]: 
+            - generic [ref=e2282]: QA nav A 1781970435271
+          - generic [ref=e2284]: ...
+        - treeitem "Selecionar nota QA nav B 1781970436140" [ref=e2285] [cursor=pointer]:
+          - generic [ref=e2286]:
+            - checkbox "Selecionar nota" [ref=e2287]
+            - generic [ref=e2288]: 
+            - generic [ref=e2289]: QA nav B 1781970436140
+          - generic [ref=e2291]: ...
+        - treeitem "Selecionar nota Debug nav" [ref=e2292] [cursor=pointer]:
+          - generic [ref=e2293]:
+            - checkbox "Selecionar nota" [ref=e2294]
+            - generic [ref=e2295]: 
+            - generic [ref=e2296]: Debug nav
+          - generic [ref=e2298]: ...
+        - treeitem "Selecionar nota QA nav A 1781970496628" [ref=e2299] [cursor=pointer]:
+          - generic [ref=e2300]:
+            - checkbox "Selecionar nota" [ref=e2301]
+            - generic [ref=e2302]: 
+            - generic [ref=e2303]: QA nav A 1781970496628
+          - generic [ref=e2305]: ...
+        - treeitem "Selecionar nota QA nav B 1781970497075" [ref=e2306] [cursor=pointer]:
+          - generic [ref=e2307]:
+            - checkbox "Selecionar nota" [ref=e2308]
+            - generic [ref=e2309]: 
+            - generic [ref=e2310]: QA nav B 1781970497075
+          - generic [ref=e2312]: ...
+        - treeitem "Selecionar nota Debug nav" [ref=e2313] [cursor=pointer]:
+          - generic [ref=e2314]:
+            - checkbox "Selecionar nota" [ref=e2315]
+            - generic [ref=e2316]: 
+            - generic [ref=e2317]: Debug nav
+          - generic [ref=e2319]: ...
+        - treeitem "Selecionar nota Debug" [ref=e2320] [cursor=pointer]:
+          - generic [ref=e2321]:
+            - checkbox "Selecionar nota" [ref=e2322]
+            - generic [ref=e2323]: 
+            - generic [ref=e2324]: Debug
+          - generic [ref=e2326]: ...
+        - treeitem "Selecionar nota Debug" [ref=e2327] [cursor=pointer]:
+          - generic [ref=e2328]:
+            - checkbox "Selecionar nota" [ref=e2329]
+            - generic [ref=e2330]: 
+            - generic [ref=e2331]: Debug
+          - generic [ref=e2333]: ...
+        - treeitem "Selecionar nota Debug Visible" [ref=e2334] [cursor=pointer]:
+          - generic [ref=e2335]:
+            - checkbox "Selecionar nota" [ref=e2336]
+            - generic [ref=e2337]: 
+            - generic [ref=e2338]: Debug Visible
+          - generic [ref=e2340]: ...
+        - treeitem "Selecionar nota QA nav A 1781970658010" [ref=e2341] [cursor=pointer]:
+          - generic [ref=e2342]:
+            - checkbox "Selecionar nota" [ref=e2343]
+            - generic [ref=e2344]: 
+            - generic [ref=e2345]: QA nav A 1781970658010
+          - generic [ref=e2347]: ...
+        - treeitem "Selecionar nota QA nav B 1781970658465" [ref=e2348] [cursor=pointer]:
+          - generic [ref=e2349]:
+            - checkbox "Selecionar nota" [ref=e2350]
+            - generic [ref=e2351]: 
+            - generic [ref=e2352]: QA nav B 1781970658465
+          - generic [ref=e2354]: ...
+        - treeitem "Selecionar nota Wiki Target 1781970671977" [ref=e2355] [cursor=pointer]:
+          - generic [ref=e2356]:
+            - checkbox "Selecionar nota" [ref=e2357]
+            - generic [ref=e2358]: 
+            - generic [ref=e2359]: Wiki Target 1781970671977
+          - generic [ref=e2361]: ...
+        - treeitem "Selecionar nota Wiki Source 1781970672434" [ref=e2362] [cursor=pointer]:
+          - generic [ref=e2363]:
+            - checkbox "Selecionar nota" [ref=e2364]
+            - generic [ref=e2365]: 
+            - generic [ref=e2366]: Wiki Source 1781970672434
+          - generic [ref=e2368]: ...
+        - treeitem "Selecionar nota Wiki Target 1781970711221" [ref=e2369] [cursor=pointer]:
+          - generic [ref=e2370]:
+            - checkbox "Selecionar nota" [ref=e2371]
+            - generic [ref=e2372]: 
+            - generic [ref=e2373]: Wiki Target 1781970711221
+          - generic [ref=e2375]: ...
+        - treeitem "Selecionar nota Wiki Source" [ref=e2376] [cursor=pointer]:
+          - generic [ref=e2377]:
+            - checkbox "Selecionar nota" [ref=e2378]
+            - generic [ref=e2379]: 
+            - generic [ref=e2380]: Wiki Source
+          - generic [ref=e2382]: ...
+        - treeitem "Selecionar nota Wiki Target 1781970740394" [ref=e2383] [cursor=pointer]:
+          - generic [ref=e2384]:
+            - checkbox "Selecionar nota" [ref=e2385]
+            - generic [ref=e2386]: 
+            - generic [ref=e2387]: Wiki Target 1781970740394
+          - generic [ref=e2389]: ...
+        - treeitem "Selecionar nota Wiki Source" [ref=e2390] [cursor=pointer]:
+          - generic [ref=e2391]:
+            - checkbox "Selecionar nota" [ref=e2392]
+            - generic [ref=e2393]: 
+            - generic [ref=e2394]: Wiki Source
+          - generic [ref=e2396]: ...
+        - treeitem "Selecionar nota Wiki Target 1781970769094" [ref=e2397] [cursor=pointer]:
+          - generic [ref=e2398]:
+            - checkbox "Selecionar nota" [ref=e2399]
+            - generic [ref=e2400]: 
+            - generic [ref=e2401]: Wiki Target 1781970769094
+          - generic [ref=e2403]: ...
+        - treeitem "Selecionar nota Wiki Source" [ref=e2404] [cursor=pointer]:
+          - generic [ref=e2405]:
+            - checkbox "Selecionar nota" [ref=e2406]
+            - generic [ref=e2407]: 
+            - generic [ref=e2408]: Wiki Source
+          - generic [ref=e2410]: ...
+        - treeitem "Selecionar nota Wiki Target 1781970807233" [ref=e2411] [cursor=pointer]:
+          - generic [ref=e2412]:
+            - checkbox "Selecionar nota" [ref=e2413]
+            - generic [ref=e2414]: 
+            - generic [ref=e2415]: Wiki Target 1781970807233
+          - generic [ref=e2417]: ...
+        - treeitem "Selecionar nota Wiki Source" [ref=e2418] [cursor=pointer]:
+          - generic [ref=e2419]:
+            - checkbox "Selecionar nota" [ref=e2420]
+            - generic [ref=e2421]: 
+            - generic [ref=e2422]: Wiki Source
+          - generic [ref=e2424]: ...
+        - treeitem "Selecionar nota Wiki Target 1781970847274" [ref=e2425] [cursor=pointer]:
+          - generic [ref=e2426]:
+            - checkbox "Selecionar nota" [ref=e2427]
+            - generic [ref=e2428]: 
+            - generic [ref=e2429]: Wiki Target 1781970847274
+          - generic [ref=e2431]: ...
+        - treeitem "Selecionar nota Wiki Source" [ref=e2432] [cursor=pointer]:
+          - generic [ref=e2433]:
+            - checkbox "Selecionar nota" [ref=e2434]
+            - generic [ref=e2435]: 
+            - generic [ref=e2436]: Wiki Source
+          - generic [ref=e2438]: ...
+        - treeitem "Selecionar nota Wiki Target 1781970889434" [ref=e2439] [cursor=pointer]:
+          - generic [ref=e2440]:
+            - checkbox "Selecionar nota" [ref=e2441]
+            - generic [ref=e2442]: 
+            - generic [ref=e2443]: Wiki Target 1781970889434
+          - generic [ref=e2445]: ...
+        - treeitem "Selecionar nota Wiki Source" [ref=e2446] [cursor=pointer]:
+          - generic [ref=e2447]:
+            - checkbox "Selecionar nota" [ref=e2448]
+            - generic [ref=e2449]: 
+            - generic [ref=e2450]: Wiki Source
+          - generic [ref=e2452]: ...
+        - treeitem "Selecionar nota Wiki Target 1781970920241" [ref=e2453] [cursor=pointer]:
+          - generic [ref=e2454]:
+            - checkbox "Selecionar nota" [ref=e2455]
+            - generic [ref=e2456]: 
+            - generic [ref=e2457]: Wiki Target 1781970920241
+          - generic [ref=e2459]: ...
+        - treeitem "Selecionar nota Wiki Source" [ref=e2460] [cursor=pointer]:
+          - generic [ref=e2461]:
+            - checkbox "Selecionar nota" [ref=e2462]
+            - generic [ref=e2463]: 
+            - generic [ref=e2464]: Wiki Source
+          - generic [ref=e2466]: ...
+        - treeitem "Selecionar nota Wiki Target 1781970968161" [ref=e2467] [cursor=pointer]:
+          - generic [ref=e2468]:
+            - checkbox "Selecionar nota" [ref=e2469]
+            - generic [ref=e2470]: 
+            - generic [ref=e2471]: Wiki Target 1781970968161
+          - generic [ref=e2473]: ...
+        - treeitem "Selecionar nota Wiki Source" [ref=e2474] [cursor=pointer]:
+          - generic [ref=e2475]:
+            - checkbox "Selecionar nota" [ref=e2476]
+            - generic [ref=e2477]: 
+            - generic [ref=e2478]: Wiki Source
+          - generic [ref=e2480]: ...
+        - treeitem "Selecionar nota QA nav focus 1781970995112" [ref=e2481] [cursor=pointer]:
+          - generic [ref=e2482]:
+            - checkbox "Selecionar nota" [ref=e2483]
+            - generic [ref=e2484]: 
+            - generic [ref=e2485]: QA nav focus 1781970995112
+          - generic [ref=e2487]: ...
+        - treeitem "Selecionar nota QA nav A 1781971001842" [ref=e2488] [cursor=pointer]:
+          - generic [ref=e2489]:
+            - checkbox "Selecionar nota" [ref=e2490]
+            - generic [ref=e2491]: 
+            - generic [ref=e2492]: QA nav A 1781971001842
+          - generic [ref=e2494]: ...
+        - treeitem "Selecionar nota QA nav B 1781971002327" [ref=e2495] [cursor=pointer]:
+          - generic [ref=e2496]:
+            - checkbox "Selecionar nota" [ref=e2497]
+            - generic [ref=e2498]: 
+            - generic [ref=e2499]: QA nav B 1781971002327
+          - generic [ref=e2501]: ...
+        - treeitem "Selecionar nota Wiki Target 1781971011694" [ref=e2502] [cursor=pointer]:
+          - generic [ref=e2503]:
+            - checkbox "Selecionar nota" [ref=e2504]
+            - generic [ref=e2505]: 
+            - generic [ref=e2506]: Wiki Target 1781971011694
+          - generic [ref=e2508]: ...
+        - treeitem "Selecionar nota Wiki Source 1781971012176" [ref=e2509] [cursor=pointer]:
+          - generic [ref=e2510]:
+            - checkbox "Selecionar nota" [ref=e2511]
+            - generic [ref=e2512]: 
+            - generic [ref=e2513]: Wiki Source 1781971012176
+          - generic [ref=e2515]: ...
+        - treeitem "Selecionar nota QA cores 1781971029436" [ref=e2516] [cursor=pointer]:
+          - generic [ref=e2517]:
+            - checkbox "Selecionar nota" [ref=e2518]
+            - generic [ref=e2519]: 
+            - generic [ref=e2520]: QA cores 1781971029436
+          - generic [ref=e2522]: ...
+        - treeitem "Selecionar nota QA cores 1781971036066" [ref=e2523] [cursor=pointer]:
+          - generic [ref=e2524]:
+            - checkbox "Selecionar nota" [ref=e2525]
+            - generic [ref=e2526]: 
+            - generic [ref=e2527]: QA cores 1781971036066
+          - generic [ref=e2529]: ...
+        - treeitem "Selecionar nota QA cores 1781971043119" [ref=e2530] [cursor=pointer]:
+          - generic [ref=e2531]:
+            - checkbox "Selecionar nota" [ref=e2532]
+            - generic [ref=e2533]: 
+            - generic [ref=e2534]: QA cores 1781971043119
+          - generic [ref=e2536]: ...
+        - treeitem "Selecionar nota QA cores 1781971049863" [ref=e2537] [cursor=pointer]:
+          - generic [ref=e2538]:
+            - checkbox "Selecionar nota" [ref=e2539]
+            - generic [ref=e2540]: 
+            - generic [ref=e2541]: QA cores 1781971049863
+          - generic [ref=e2543]: ...
+        - treeitem "Selecionar nota QA cores multi 1781971056390" [ref=e2544] [cursor=pointer]:
+          - generic [ref=e2545]:
+            - checkbox "Selecionar nota" [ref=e2546]
+            - generic [ref=e2547]: 
+            - generic [ref=e2548]: QA cores multi 1781971056390
+          - generic [ref=e2550]: ...
+        - treeitem "Selecionar nota QA cores multi 1781971063457" [ref=e2551] [cursor=pointer]:
+          - generic [ref=e2552]:
+            - checkbox "Selecionar nota" [ref=e2553]
+            - generic [ref=e2554]: 
+            - generic [ref=e2555]: QA cores multi 1781971063457
+          - generic [ref=e2557]: ...
+        - treeitem "Selecionar nota QA cores multi 1781971070841" [ref=e2558] [cursor=pointer]:
+          - generic [ref=e2559]:
+            - checkbox "Selecionar nota" [ref=e2560]
+            - generic [ref=e2561]: 
+            - generic [ref=e2562]: QA cores multi 1781971070841
+          - generic [ref=e2564]: ...
+        - treeitem "Selecionar nota QA toolbar drag 1781971077635" [ref=e2565] [cursor=pointer]:
+          - generic [ref=e2566]:
+            - checkbox "Selecionar nota" [ref=e2567]
+            - generic [ref=e2568]: 
+            - generic [ref=e2569]: QA toolbar drag 1781971077635
+          - generic [ref=e2571]: ...
+        - treeitem "Selecionar nota QA multiblocos 1781971084667" [ref=e2572] [cursor=pointer]:
+          - generic [ref=e2573]:
+            - checkbox "Selecionar nota" [ref=e2574]
+            - generic [ref=e2575]: 
+            - generic [ref=e2576]: QA multiblocos 1781971084667
+          - generic [ref=e2578]: ...
+        - treeitem "Selecionar nota QA multiblocos 1781971091213" [ref=e2579] [cursor=pointer]:
+          - generic [ref=e2580]:
+            - checkbox "Selecionar nota" [ref=e2581]
+            - generic [ref=e2582]: 
+            - generic [ref=e2583]: QA multiblocos 1781971091213
+          - generic [ref=e2585]: ...
+        - treeitem "Selecionar nota QA multiblocos 1781971098122" [ref=e2586] [cursor=pointer]:
+          - generic [ref=e2587]:
+            - checkbox "Selecionar nota" [ref=e2588]
+            - generic [ref=e2589]: 
+            - generic [ref=e2590]: QA multiblocos 1781971098122
+          - generic [ref=e2592]: ...
+        - treeitem "Selecionar nota QA multiblocos 1781971114806" [ref=e2593] [cursor=pointer]:
+          - generic [ref=e2594]:
+            - checkbox "Selecionar nota" [ref=e2595]
+            - generic [ref=e2596]: 
+            - generic [ref=e2597]: QA multiblocos 1781971114806
+          - generic [ref=e2599]: ...
+        - treeitem "Selecionar nota QA multiblocos 1781971121306" [ref=e2600] [cursor=pointer]:
+          - generic [ref=e2601]:
+            - checkbox "Selecionar nota" [ref=e2602]
+            - generic [ref=e2603]: 
+            - generic [ref=e2604]: QA multiblocos 1781971121306
+          - generic [ref=e2606]: ...
+        - treeitem "Selecionar nota QA multiblocos 1781971127668" [ref=e2607] [cursor=pointer]:
+          - generic [ref=e2608]:
+            - checkbox "Selecionar nota" [ref=e2609]
+            - generic [ref=e2610]: 
+            - generic [ref=e2611]: QA multiblocos 1781971127668
+          - generic [ref=e2613]: ...
+        - treeitem "Selecionar nota QA multiblocos 1781971135042" [ref=e2614] [cursor=pointer]:
+          - generic [ref=e2615]:
+            - checkbox "Selecionar nota" [ref=e2616]
+            - generic [ref=e2617]: 
+            - generic [ref=e2618]: QA multiblocos 1781971135042
+          - generic [ref=e2620]: ...
+        - treeitem "Selecionar nota QA nav focus 1781971142014" [ref=e2621] [cursor=pointer]:
+          - generic [ref=e2622]:
+            - checkbox "Selecionar nota" [ref=e2623]
+            - generic [ref=e2624]: 
+            - generic [ref=e2625]: QA nav focus 1781971142014
+          - generic [ref=e2627]: ...
+        - treeitem "Selecionar nota QA nav A 1781971148462" [ref=e2628] [cursor=pointer]:
+          - generic [ref=e2629]:
+            - checkbox "Selecionar nota" [ref=e2630]
+            - generic [ref=e2631]: 
+            - generic [ref=e2632]: QA nav A 1781971148462
+          - generic [ref=e2634]: ...
+        - treeitem "Selecionar nota QA nav B 1781971148927" [ref=e2635] [cursor=pointer]:
+          - generic [ref=e2636]:
+            - checkbox "Selecionar nota" [ref=e2637]
+            - generic [ref=e2638]: 
+            - generic [ref=e2639]: QA nav B 1781971148927
+          - generic [ref=e2641]: ...
+        - treeitem "Selecionar nota Wiki Target 1781971157879" [ref=e2642] [cursor=pointer]:
+          - generic [ref=e2643]:
+            - checkbox "Selecionar nota" [ref=e2644]
+            - generic [ref=e2645]: 
+            - generic [ref=e2646]: Wiki Target 1781971157879
+          - generic [ref=e2648]: ...
+        - treeitem "Selecionar nota Wiki Source 1781971158327" [ref=e2649] [cursor=pointer]:
+          - generic [ref=e2650]:
+            - checkbox "Selecionar nota" [ref=e2651]
+            - generic [ref=e2652]: 
+            - generic [ref=e2653]: Wiki Source 1781971158327
+          - generic [ref=e2655]: ...
+        - treeitem "Selecionar nota QA popovers 1781971167936" [ref=e2656] [cursor=pointer]:
+          - generic [ref=e2657]:
+            - checkbox "Selecionar nota" [ref=e2658]
+            - generic [ref=e2659]: 
+            - generic [ref=e2660]: QA popovers 1781971167936
+          - generic [ref=e2662]: ...
+        - treeitem "Selecionar nota QA cores multi 1781971180999" [ref=e2663] [cursor=pointer]:
+          - generic [ref=e2664]:
+            - checkbox "Selecionar nota" [ref=e2665]
+            - generic [ref=e2666]: 
+            - generic [ref=e2667]: QA cores multi 1781971180999
+          - generic [ref=e2669]: ...
+        - treeitem "Selecionar nota QA cores multi 1781971212203" [ref=e2670] [cursor=pointer]:
+          - generic [ref=e2671]:
+            - checkbox "Selecionar nota" [ref=e2672]
+            - generic [ref=e2673]: 
+            - generic [ref=e2674]: QA cores multi 1781971212203
+          - generic [ref=e2676]: ...
+        - treeitem "Selecionar nota QA cores 1781971223429" [ref=e2677] [cursor=pointer]:
+          - generic [ref=e2678]:
+            - checkbox "Selecionar nota" [ref=e2679]
+            - generic [ref=e2680]: 
+            - generic [ref=e2681]: QA cores 1781971223429
+          - generic [ref=e2683]: ...
+        - treeitem "Selecionar nota QA cores 1781971230264" [ref=e2684] [cursor=pointer]:
+          - generic [ref=e2685]:
+            - checkbox "Selecionar nota" [ref=e2686]
+            - generic [ref=e2687]: 
+            - generic [ref=e2688]: QA cores 1781971230264
+          - generic [ref=e2690]: ...
+        - treeitem "Selecionar nota QA cores 1781971237426" [ref=e2691] [cursor=pointer]:
+          - generic [ref=e2692]:
+            - checkbox "Selecionar nota" [ref=e2693]
+            - generic [ref=e2694]: 
+            - generic [ref=e2695]: QA cores 1781971237426
+          - generic [ref=e2697]: ...
+        - treeitem "Selecionar nota QA cores 1781971244585" [ref=e2698] [cursor=pointer]:
+          - generic [ref=e2699]:
+            - checkbox "Selecionar nota" [ref=e2700]
+            - generic [ref=e2701]: 
+            - generic [ref=e2702]: QA cores 1781971244585
+          - generic [ref=e2704]: ...
+        - treeitem "Selecionar nota QA cores multi 1781971251635" [ref=e2705] [cursor=pointer]:
+          - generic [ref=e2706]:
+            - checkbox "Selecionar nota" [ref=e2707]
+            - generic [ref=e2708]: 
+            - generic [ref=e2709]: QA cores multi 1781971251635
+          - generic [ref=e2711]: ...
+        - treeitem "Selecionar nota QA cores multi 1781971258283" [ref=e2712] [cursor=pointer]:
+          - generic [ref=e2713]:
+            - checkbox "Selecionar nota" [ref=e2714]
+            - generic [ref=e2715]: 
+            - generic [ref=e2716]: QA cores multi 1781971258283
+          - generic [ref=e2718]: ...
+        - treeitem "Selecionar nota QA cores multi 1781971265195" [ref=e2719] [cursor=pointer]:
+          - generic [ref=e2720]:
+            - checkbox "Selecionar nota" [ref=e2721]
+            - generic [ref=e2722]: 
+            - generic [ref=e2723]: QA cores multi 1781971265195
+          - generic [ref=e2725]: ...
+        - treeitem "Selecionar nota QA toolbar drag 1781971271919" [ref=e2726] [cursor=pointer]:
+          - generic [ref=e2727]:
+            - checkbox "Selecionar nota" [ref=e2728]
+            - generic [ref=e2729]: 
+            - generic [ref=e2730]: QA toolbar drag 1781971271919
+          - generic [ref=e2732]: ...
+        - treeitem "Selecionar nota QA multiblocos 1781971278988" [ref=e2733] [cursor=pointer]:
+          - generic [ref=e2734]:
+            - checkbox "Selecionar nota" [ref=e2735]
+            - generic [ref=e2736]: 
+            - generic [ref=e2737]: QA multiblocos 1781971278988
+          - generic [ref=e2739]: ...
+        - treeitem "Selecionar nota QA multiblocos 1781971285602" [ref=e2740] [cursor=pointer]:
+          - generic [ref=e2741]:
+            - checkbox "Selecionar nota" [ref=e2742]
+            - generic [ref=e2743]: 
+            - generic [ref=e2744]: QA multiblocos 1781971285602
+          - generic [ref=e2746]: ...
+        - treeitem "Selecionar nota QA multiblocos 1781971292217" [ref=e2747] [cursor=pointer]:
+          - generic [ref=e2748]:
+            - checkbox "Selecionar nota" [ref=e2749]
+            - generic [ref=e2750]: 
+            - generic [ref=e2751]: QA multiblocos 1781971292217
+          - generic [ref=e2753]: ...
+        - treeitem "Selecionar nota QA multiblocos 1781971309280" [ref=e2754] [cursor=pointer]:
+          - generic [ref=e2755]:
+            - checkbox "Selecionar nota" [ref=e2756]
+            - generic [ref=e2757]: 
+            - generic [ref=e2758]: QA multiblocos 1781971309280
+          - generic [ref=e2760]: ...
+        - treeitem "Selecionar nota QA multiblocos 1781971316204" [ref=e2761] [cursor=pointer]:
+          - generic [ref=e2762]:
+            - checkbox "Selecionar nota" [ref=e2763]
+            - generic [ref=e2764]: 
+            - generic [ref=e2765]: QA multiblocos 1781971316204
+          - generic [ref=e2767]: ...
+        - treeitem "Selecionar nota QA multiblocos 1781971323005" [ref=e2768] [cursor=pointer]:
+          - generic [ref=e2769]:
+            - checkbox "Selecionar nota" [ref=e2770]
+            - generic [ref=e2771]: 
+            - generic [ref=e2772]: QA multiblocos 1781971323005
+          - generic [ref=e2774]: ...
+        - treeitem "Selecionar nota QA multiblocos 1781971330332" [ref=e2775] [cursor=pointer]:
+          - generic [ref=e2776]:
+            - checkbox "Selecionar nota" [ref=e2777]
+            - generic [ref=e2778]: 
+            - generic [ref=e2779]: QA multiblocos 1781971330332
+          - generic [ref=e2781]: ...
+        - treeitem "Selecionar nota QA nav focus 1781971337316" [ref=e2782] [cursor=pointer]:
+          - generic [ref=e2783]:
+            - checkbox "Selecionar nota" [ref=e2784]
+            - generic [ref=e2785]: 
+            - generic [ref=e2786]: QA nav focus 1781971337316
+          - generic [ref=e2788]: ...
+        - treeitem "Selecionar nota QA nav A 1781971343735" [ref=e2789] [cursor=pointer]:
+          - generic [ref=e2790]:
+            - checkbox "Selecionar nota" [ref=e2791]
+            - generic [ref=e2792]: 
+            - generic [ref=e2793]: QA nav A 1781971343735
+          - generic [ref=e2795]: ...
+        - treeitem "Selecionar nota QA nav B 1781971344179" [ref=e2796] [cursor=pointer]:
+          - generic [ref=e2797]:
+            - checkbox "Selecionar nota" [ref=e2798]
+            - generic [ref=e2799]: 
+            - generic [ref=e2800]: QA nav B 1781971344179
+          - generic [ref=e2802]: ...
+        - treeitem "Selecionar nota Wiki Target 1781971353103" [ref=e2803] [cursor=pointer]:
+          - generic [ref=e2804]:
+            - checkbox "Selecionar nota" [ref=e2805]
+            - generic [ref=e2806]: 
+            - generic [ref=e2807]: Wiki Target 1781971353103
+          - generic [ref=e2809]: ...
+        - treeitem "Selecionar nota Wiki Source 1781971353558" [ref=e2810] [cursor=pointer]:
+          - generic [ref=e2811]:
+            - checkbox "Selecionar nota" [ref=e2812]
+            - generic [ref=e2813]: 
+            - generic [ref=e2814]: Wiki Source 1781971353558
+          - generic [ref=e2816]: ...
+        - treeitem "Selecionar nota QA popovers 1781971363174" [ref=e2817] [cursor=pointer]:
+          - generic [ref=e2818]:
+            - checkbox "Selecionar nota" [ref=e2819]
+            - generic [ref=e2820]: 
+            - generic [ref=e2821]: QA popovers 1781971363174
+          - generic [ref=e2823]: ...
+        - treeitem "Selecionar nota QA multiblocos 1782077426739" [ref=e2824] [cursor=pointer]:
+          - generic [ref=e2825]:
+            - checkbox "Selecionar nota" [ref=e2826]
+            - generic [ref=e2827]: 
+            - generic [ref=e2828]: QA multiblocos 1782077426739
+          - generic [ref=e2830]: ...
+        - treeitem "Selecionar nota QA multiblocos 1782077434030" [ref=e2831] [cursor=pointer]:
+          - generic [ref=e2832]:
+            - checkbox "Selecionar nota" [ref=e2833]
+            - generic [ref=e2834]: 
+            - generic [ref=e2835]: QA multiblocos 1782077434030
+          - generic [ref=e2837]: ...
+        - treeitem "Selecionar nota QA multiblocos 1782077440652" [ref=e2838] [cursor=pointer]:
+          - generic [ref=e2839]:
+            - checkbox "Selecionar nota" [ref=e2840]
+            - generic [ref=e2841]: 
+            - generic [ref=e2842]: QA multiblocos 1782077440652
+          - generic [ref=e2844]: ...
+        - treeitem "Selecionar nota QA multiblocos 1782077457290" [ref=e2845] [cursor=pointer]:
+          - generic [ref=e2846]:
+            - checkbox "Selecionar nota" [ref=e2847]
+            - generic [ref=e2848]: 
+            - generic [ref=e2849]: QA multiblocos 1782077457290
+          - generic [ref=e2851]: ...
+        - treeitem "Selecionar nota QA multiblocos 1782077464299" [ref=e2852] [cursor=pointer]:
+          - generic [ref=e2853]:
+            - checkbox "Selecionar nota" [ref=e2854]
+            - generic [ref=e2855]: 
+            - generic [ref=e2856]: QA multiblocos 1782077464299
+          - generic [ref=e2858]: ...
+        - treeitem "Selecionar nota QA multiblocos 1782077470778" [ref=e2859] [cursor=pointer]:
+          - generic [ref=e2860]:
+            - checkbox "Selecionar nota" [ref=e2861]
+            - generic [ref=e2862]: 
+            - generic [ref=e2863]: QA multiblocos 1782077470778
+          - generic [ref=e2865]: ...
+        - treeitem "Selecionar nota QA multiblocos 1782077477794" [ref=e2866] [cursor=pointer]:
+          - generic [ref=e2867]:
+            - checkbox "Selecionar nota" [ref=e2868]
+            - generic [ref=e2869]: 
+            - generic [ref=e2870]: QA multiblocos 1782077477794
+          - generic [ref=e2872]: ...
+        - treeitem "Selecionar nota QA multiblocos 1782077484698" [ref=e2873] [cursor=pointer]:
+          - generic [ref=e2874]:
+            - checkbox "Selecionar nota" [ref=e2875]
+            - generic [ref=e2876]: 
+            - generic [ref=e2877]: QA multiblocos 1782077484698
+          - generic [ref=e2879]: ...
+        - treeitem "Selecionar nota QA multiblocos 1782077491695" [ref=e2880] [cursor=pointer]:
+          - generic [ref=e2881]:
+            - checkbox "Selecionar nota" [ref=e2882]
+            - generic [ref=e2883]: 
+            - generic [ref=e2884]: QA multiblocos 1782077491695
+          - generic [ref=e2886]: ...
+        - treeitem "Selecionar nota QA multiblocos 1782077498723" [ref=e2887] [cursor=pointer]:
+          - generic [ref=e2888]:
+            - checkbox "Selecionar nota" [ref=e2889]
+            - generic [ref=e2890]: 
+            - generic [ref=e2891]: QA multiblocos 1782077498723
+          - generic [ref=e2893]: ...
+        - treeitem "Selecionar nota QA cores 1782077512304" [ref=e2894] [cursor=pointer]:
+          - generic [ref=e2895]:
+            - checkbox "Selecionar nota" [ref=e2896]
+            - generic [ref=e2897]: 
+            - generic [ref=e2898]: QA cores 1782077512304
+          - generic [ref=e2900]: ...
+        - treeitem "Selecionar nota QA cores multi 1782077512305" [ref=e2901] [cursor=pointer]:
+          - generic [ref=e2902]:
+            - checkbox "Selecionar nota" [ref=e2903]
+            - generic [ref=e2904]: 
+            - generic [ref=e2905]: QA cores multi 1782077512305
+          - generic [ref=e2907]: ...
+        - treeitem "Selecionar nota QA multiblocos 1782077512306" [ref=e2908] [cursor=pointer]:
+          - generic [ref=e2909]:
+            - checkbox "Selecionar nota" [ref=e2910]
+            - generic [ref=e2911]: 
+            - generic [ref=e2912]: QA multiblocos 1782077512306
+          - generic [ref=e2914]: ...
+        - treeitem "Selecionar nota QA nav focus 1782077512306" [ref=e2915] [cursor=pointer]:
+          - generic [ref=e2916]:
+            - checkbox "Selecionar nota" [ref=e2917]
+            - generic [ref=e2918]: 
+            - generic [ref=e2919]: QA nav focus 1782077512306
+          - generic [ref=e2921]: ...
+        - treeitem "Selecionar nota QA popovers 1782077512303" [ref=e2922] [cursor=pointer]:
+          - generic [ref=e2923]:
+            - checkbox "Selecionar nota" [ref=e2924]
+            - generic [ref=e2925]: 
+            - generic [ref=e2926]: QA popovers 1782077512303
+          - generic [ref=e2928]: ...
+        - treeitem "Selecionar nota QA nav A 1782077518841" [ref=e2929] [cursor=pointer]:
+          - generic [ref=e2930]:
+            - checkbox "Selecionar nota" [ref=e2931]
+            - generic [ref=e2932]: 
+            - generic [ref=e2933]: QA nav A 1782077518841
+          - generic [ref=e2935]: ...
+        - treeitem "Selecionar nota QA multiblocos 1782077519378" [ref=e2936] [cursor=pointer]:
+          - generic [ref=e2937]:
+            - checkbox "Selecionar nota" [ref=e2938]
+            - generic [ref=e2939]: 
+            - generic [ref=e2940]: QA multiblocos 1782077519378
+          - generic [ref=e2942]: ...
+        - treeitem "Selecionar nota QA nav B 1782077519337" [ref=e2943] [cursor=pointer]:
+          - generic [ref=e2944]:
+            - checkbox "Selecionar nota" [ref=e2945]
+            - generic [ref=e2946]: 
+            - generic [ref=e2947]: QA nav B 1782077519337
+          - generic [ref=e2949]: ...
+        - treeitem "Selecionar nota QA cores 1782077519421" [ref=e2950] [cursor=pointer]:
+          - generic [ref=e2951]:
+            - checkbox "Selecionar nota" [ref=e2952]
+            - generic [ref=e2953]: 
+            - generic [ref=e2954]: QA cores 1782077519421
+          - generic [ref=e2956]: ...
+        - treeitem "Selecionar nota QA cores multi 1782077519471" [ref=e2957] [cursor=pointer]:
+          - generic [ref=e2958]:
+            - checkbox "Selecionar nota" [ref=e2959]
+            - generic [ref=e2960]: 
+            - generic [ref=e2961]: QA cores multi 1782077519471
+          - generic [ref=e2963]: ...
+        - treeitem "Selecionar nota QA multiblocos 1782077525973" [ref=e2964] [cursor=pointer]:
+          - generic [ref=e2965]:
+            - checkbox "Selecionar nota" [ref=e2966]
+            - generic [ref=e2967]: 
+            - generic [ref=e2968]: QA multiblocos 1782077525973
+          - generic [ref=e2970]: ...
+        - treeitem "Selecionar nota QA cores 1782077526380" [ref=e2971] [cursor=pointer]:
+          - generic [ref=e2972]:
+            - checkbox "Selecionar nota" [ref=e2973]
+            - generic [ref=e2974]: 
+            - generic [ref=e2975]: QA cores 1782077526380
+          - generic [ref=e2977]: ...
+        - treeitem "Selecionar nota QA cores multi 1782077526442" [ref=e2978] [cursor=pointer]:
+          - generic [ref=e2979]:
+            - checkbox "Selecionar nota" [ref=e2980]
+            - generic [ref=e2981]: 
+            - generic [ref=e2982]: QA cores multi 1782077526442
+          - generic [ref=e2984]: ...
+        - treeitem "Selecionar nota Wiki Target 1782077528425" [ref=e2985] [cursor=pointer]:
+          - generic [ref=e2986]:
+            - checkbox "Selecionar nota" [ref=e2987]
+            - generic [ref=e2988]: 
+            - generic [ref=e2989]: Wiki Target 1782077528425
+          - generic [ref=e2991]: ...
+        - treeitem "Selecionar nota Wiki Source 1782077528855" [ref=e2992] [cursor=pointer]:
+          - generic [ref=e2993]:
+            - checkbox "Selecionar nota" [checked] [ref=e2994]
+            - generic [ref=e2995]: 
+            - generic [ref=e2996]: Wiki Source 1782077528855
+          - generic [ref=e2998]: ...
+      - generic [ref=e3000]: Minhas Notas • 431 notas
+    - main [ref=e3001]:
+      - generic [ref=e3002]:
+        - text: 
+        - navigation "Localização da nota" [ref=e3003]:
+          - button "Minhas notas" [ref=e3004] [cursor=pointer]
+          - generic [ref=e3005]: /
+          - generic "Wiki Source 1782077528855" [ref=e3006]
+        - generic "Ações locais da nota" [ref=e3007]:
+          - button "Templates" [ref=e3008] [cursor=pointer]:
+            - generic [ref=e3009]: 
+          - button "Importar" [ref=e3010] [cursor=pointer]:
+            - generic [ref=e3011]: 
+          - button "Exportar" [ref=e3012] [cursor=pointer]:
+            - generic [ref=e3013]: 
+          - button "Histórico" [ref=e3014] [cursor=pointer]:
+            - generic [ref=e3015]: 
+          - button "Arquivar" [ref=e3016] [cursor=pointer]:
+            - generic [ref=e3017]: 
+          - button "Mover para lixeira" [ref=e3018] [cursor=pointer]:
+            - generic [ref=e3019]: 
+          - text: 
+          - button "Mais ações" [ref=e3020] [cursor=pointer]:
+            - generic [ref=e3021]: 
+      - text:      
+      - region "Editor da nota" [ref=e3022]:
+        - generic [ref=e3024]:
+          - generic [ref=e3025]:
+            - generic [ref=e3026]:
+              - generic [ref=e3027]:
+                - button "Trocar ícone da nota" [ref=e3028] [cursor=pointer]: ▰
+                - text:    
+              - generic [ref=e3029]:
+                - button " Capa" [ref=e3030] [cursor=pointer]:
+                  - generic [ref=e3031]: 
+                  - text: Capa
+                - text:  
+            - generic [ref=e3032]:
+              - button "" [ref=e3033] [cursor=pointer]:
+                - generic [ref=e3034]: 
+              - textbox "Sem título" [ref=e3035]: Wiki Source 1782077528855
+            - textbox "Adicionar tag" [ref=e3037]
+            - generic [ref=e3039]: v2 • Minhas notas • Sem tags
+          - generic [active] [ref=e3046]: Texto inicial [[
+  - text:                  
+  - text:           
+  - listbox [ref=e3047]:
+    - option "QA multiblocos 1782077525973" [ref=e3048] [cursor=pointer]
+    - option "QA cores 1782077533205" [selected] [ref=e3049] [cursor=pointer]
+    - option "QA toolbar drag 1782077533160" [ref=e3050] [cursor=pointer]
+    - option "Wiki Source 1782077528855" [ref=e3051] [cursor=pointer]
+    - option "Wiki Target 1782077528425" [ref=e3052] [cursor=pointer]
+    - option "QA cores multi 1782077526442" [ref=e3053] [cursor=pointer]
+    - option "QA cores 1782077526380" [ref=e3054] [cursor=pointer]
+    - option "QA cores multi 1782077519471" [ref=e3055] [cursor=pointer]
+```
+
+# Test source
+
+```ts
+  37  | async function openNote(page: Page, token: string, noteId: string, width = 1280, height = 900) {
+  38  |   await page.setViewportSize({ width, height });
+  39  |   await page.addInitScript((authToken) => {
+  40  |     window.localStorage.setItem("tcloud_token", authToken as string);
+  41  |   }, token);
+  42  |   await page.goto(`${BASE_URL}/apps/notes/index.html#note=${noteId}`);
+  43  |   await page.waitForSelector(".editorjs-host .codex-editor", { state: "visible" });
+  44  |   await page.waitForSelector(".ce-block", { state: "visible" });
+  45  | }
+  46  | 
+  47  | test.describe("TCloud Notes Navigation", () => {
+  48  |   test("focuses the first editor block after opening a note", async ({ page, request }) => {
+  49  |     const token = await login(request);
+  50  |     const noteId = await createNote(request, token, `QA nav focus ${Date.now()}`, [
+  51  |       { type: "paragraph", data: { text: "Primeiro bloco para foco" } },
+  52  |       { type: "paragraph", data: { text: "Segundo bloco" } },
+  53  |     ]);
+  54  |     await openNote(page, token, noteId);
+  55  | 
+  56  |     await expect.poll(async () => {
+  57  |       return page.evaluate(() => {
+  58  |         const active = document.activeElement;
+  59  |         return Boolean(active?.closest?.(".editorjs-host .codex-editor"));
+  60  |       });
+  61  |     }, { timeout: 5000 }).toBeTruthy();
+  62  |   });
+  63  | 
+  64  |   test("navigates the sidebar note list with ArrowDown and ArrowUp", async ({ page, request }) => {
+  65  |     const token = await login(request);
+  66  |     const note1Id = await createNote(request, token, `QA nav A ${Date.now()}`, [
+  67  |       { type: "paragraph", data: { text: "Nota A" } },
+  68  |     ]);
+  69  |     await createNote(request, token, `QA nav B ${Date.now() + 1}`, [
+  70  |       { type: "paragraph", data: { text: "Nota B" } },
+  71  |     ]);
+  72  |     await openNote(page, token, note1Id);
+  73  | 
+  74  |     await page.locator(".notes-list .note-card[data-id]").first().waitFor({ state: "attached" });
+  75  |     await page.waitForTimeout(2000);
+  76  | 
+  77  |     await page.evaluate(() => {
+  78  |       const cards = Array.from(document.querySelectorAll(".notes-list .note-card[data-id]"));
+  79  |       const visible = cards.filter((c) => c.offsetParent !== null && c.getClientRects().length > 0);
+  80  |       if (visible.length) visible[0].focus({ preventScroll: true });
+  81  |     });
+  82  |     await page.waitForTimeout(500);
+  83  | 
+  84  |     const beforeId = await page.evaluate(() => {
+  85  |       const active = document.activeElement;
+  86  |       return active?.dataset?.id || active?.className || "";
+  87  |     });
+  88  | 
+  89  |     await page.keyboard.press("ArrowDown");
+  90  |     await expect.poll(async () => {
+  91  |       return page.evaluate(() => {
+  92  |         const active = document.activeElement;
+  93  |         return active?.dataset?.id || active?.className || "";
+  94  |       });
+  95  |     }, { timeout: 5000 }).not.toBe(beforeId);
+  96  | 
+  97  |     const downId = await page.evaluate(() => {
+  98  |       const active = document.activeElement;
+  99  |       return active?.dataset?.id || active?.className || "";
+  100 |     });
+  101 | 
+  102 |     await page.keyboard.press("ArrowUp");
+  103 |     await expect.poll(async () => {
+  104 |       return page.evaluate(() => {
+  105 |         const active = document.activeElement;
+  106 |         return active?.dataset?.id || active?.className || "";
+  107 |       });
+  108 |     }, { timeout: 5000 }).not.toBe(downId);
+  109 |   });
+  110 | 
+  111 |   test("wiki-link autocomplete supports ArrowDown and Enter keyboard navigation", async ({ page, request }) => {
+  112 |     const token = await login(request);
+  113 |     const targetTitle = `Wiki Target ${Date.now()}`;
+  114 |     await createNote(request, token, targetTitle, [
+  115 |       { type: "paragraph", data: { text: "Conteudo alvo wiki" } },
+  116 |     ]);
+  117 |     const noteId = await createNote(request, token, `Wiki Source ${Date.now() + 1}`, [
+  118 |       { type: "paragraph", data: { text: "Texto inicial" } },
+  119 |     ]);
+  120 |     await openNote(page, token, noteId);
+  121 | 
+  122 |     const editable = page.locator(".editorjs-host .ce-block [contenteditable='true']").first();
+  123 |     await editable.click();
+  124 |     await editable.press("End");
+  125 |     await page.keyboard.type(" ", { delay: 50 });
+  126 |     await page.keyboard.type("[", { delay: 50 });
+  127 |     await page.keyboard.type("[", { delay: 50 });
+  128 | 
+  129 |     await expect(page.locator(".wiki-link-menu:not(.hidden)")).toBeVisible({ timeout: 8000 });
+  130 | 
+  131 |     await page.keyboard.press("ArrowDown");
+  132 |     await expect.poll(async () => {
+  133 |       return page.evaluate((title) => {
+  134 |         const active = document.querySelector(".wiki-link-menu button.is-active");
+  135 |         return active?.textContent || "";
+  136 |       }, targetTitle);
+> 137 |     }, { timeout: 5000 }).toContain(targetTitle);
+      |                           ^ Error: expect(received).toContain(expected) // indexOf
+  138 | 
+  139 |     await page.keyboard.press("Enter");
+  140 | 
+  141 |     await expect.poll(async () => {
+  142 |       return page.evaluate((title) => {
+  143 |         const text = document.querySelector(".editorjs-host .ce-block [contenteditable='true']")?.textContent || "";
+  144 |         return text.includes(`[[${title}]]`);
+  145 |       }, targetTitle);
+  146 |     }, { timeout: 5000 }).toBeTruthy();
+  147 |   });
+  148 | });
+  149 | 
+```

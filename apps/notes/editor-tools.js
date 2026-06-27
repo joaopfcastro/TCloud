@@ -108,6 +108,18 @@ function isRangeInsideEditor(range) {
 function restoreSelection(range) {
   if (!isRangeInsideEditor(range)) return false;
   const selection = window.getSelection();
+  
+  const common = range.commonAncestorContainer;
+  if (common) {
+    const editable = common.nodeType === Node.ELEMENT_NODE
+      ? common.closest?.("[contenteditable='true']")
+      : common.parentElement?.closest?.("[contenteditable='true']");
+    
+    if (editable && document.activeElement !== editable) {
+      editable.focus({ preventScroll: true });
+    }
+  }
+
   selection?.removeAllRanges();
   selection?.addRange(range);
   return true;
@@ -741,6 +753,10 @@ class ColorInlineTool {
     this.notifyEditorChanged();
     this.closePopover();
     this.api?.toolbar?.close?.();
+    
+    if (this.savedRange) {
+      restoreSelection(this.savedRange);
+    }
   }
 
   applyActiveColor(hex) {

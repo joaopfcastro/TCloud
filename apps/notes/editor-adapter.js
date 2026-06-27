@@ -316,6 +316,18 @@ function rangeInsideEditor(range, root) {
 function restoreRange(range, root, { allowCollapsed = false } = {}) {
   if (!range || (!allowCollapsed && range.collapsed) || !rangeInsideEditor(range, root)) return false;
   const selection = window.getSelection();
+  
+  const common = range.commonAncestorContainer;
+  if (common) {
+    const editable = common.nodeType === Node.ELEMENT_NODE
+      ? common.closest?.("[contenteditable='true']")
+      : common.parentElement?.closest?.("[contenteditable='true']");
+    
+    if (editable && document.activeElement !== editable) {
+      editable.focus({ preventScroll: true });
+    }
+  }
+
   selection?.removeAllRanges();
   selection?.addRange(range);
   return true;
@@ -1008,15 +1020,53 @@ class TCloudInlineToolbarController {
       this.hideInlineToolbar(`${reason}-single`, { suppressSelection: true });
       return;
     }
+
+    const savedScrollTop = this.root?.scrollTop;
+    const savedWindowScrollY = window.scrollY;
+
+    // Rebuild the DOM selection range across the selected blocks so
+    // anchor rect calculations use valid geometry instead of stale/zero rects
+    const blocks = ctrl.blocks?.() || [];
+    const firstBlock = blocks[indexes[0]];
+    const lastBlock = blocks[indexes[indexes.length - 1]];
+    let rebuiltRange = null;
+    if (firstBlock && lastBlock) {
+      try {
+        rebuiltRange = document.createRange();
+        rebuiltRange.setStartBefore(firstBlock);
+        rebuiltRange.setEndAfter(lastBlock);
+        const selection = window.getSelection();
+        selection?.removeAllRanges();
+        selection?.addRange(rebuiltRange);
+      } catch (rangeError) {
+        rebuiltRange = null;
+      }
+    }
+
     // Re-capture by indexes (IDs may have changed after conversion/render)
-    ctrl.captureFromIndexes(indexes, reason, null);
+    ctrl.captureFromIndexes(indexes, reason, rebuiltRange);
     ctrl.freeze(reason);
     // Reset closedSelectionSignature so the toolbar can re-open for the same blocks
     this.closedSelectionSignature = null;
+
+    // Restore editor focus to the last selected block's editable area
+    // without collapsing the multi-block selection
+    const focusTarget = lastBlock?.querySelector("[contenteditable='true']");
+    if (focusTarget && typeof focusTarget.focus === "function") {
+      focusTarget.focus({ preventScroll: true });
+    }
+
     // Re-show toolbar anchored to the still-selected blocks (skip re-capture;
     // we already set the snapshot above with fresh IDs after conversion)
     if (!this.showInlineToolbarForBlockSelection({ skipCapture: true })) {
       this.hideInlineToolbar(`${reason}-position`, { suppressSelection: true });
+    }
+
+    if (this.root && savedScrollTop !== undefined && this.root.scrollTop !== savedScrollTop) {
+      this.root.scrollTop = savedScrollTop;
+    }
+    if (savedWindowScrollY !== undefined && window.scrollY !== savedWindowScrollY) {
+      window.scrollTo(0, savedWindowScrollY);
     }
   }
 
@@ -1159,6 +1209,16 @@ class TCloudInlineToolbarController {
     if (range && range.collapsed && !explicit) return false;
     const anchor = explicit || rangeSelectionRect(range);
     if (!anchor) return false;
+    // Guard clause: reject zero-area anchor rects (indicates lost selection / blur)
+    if (anchor.width === 0 && anchor.height === 0) {
+      this.toolbar.hidden = true;
+      return false;
+    }
+    // Guard clause: reject anchor rects at exact origin (0,0) with no meaningful area
+    if (anchor.left === 0 && anchor.top === 0 && anchor.right === 0 && anchor.bottom === 0) {
+      this.toolbar.hidden = true;
+      return false;
+    }
     const viewportRect = this.viewportBounds();
     if (!viewportRect) return false;
     const usesBlockAvoidance = (explicit ? true : this.selectedBlockRects(range).length > 1);
@@ -1177,6 +1237,7 @@ class TCloudInlineToolbarController {
       .find((candidate) => !rectsIntersect(candidate.rect, avoidanceRect));
     if (!placement?.rect) {
       this.toolbar.style.visibility = "";
+      this.toolbar.hidden = true;
       return false;
     }
 
@@ -1423,7 +1484,10 @@ class TCloudInlineToolbarController {
     if (this.adapter.hasMultiBlockSelection(this.savedRange)) {
       this.refreshAfterBatchAction(action);
     } else {
-      this.hideInlineToolbar(action, { suppressSelection: true, clearSelection: true });
+      this.hideInlineToolbar(action, { suppressSelection: true, clearSelection: false });
+      if (this.savedRange) {
+        restoreRange(this.savedRange, this.root);
+      }
     }
   }
 
@@ -1443,7 +1507,10 @@ class TCloudInlineToolbarController {
     const nextRange = applyInlineStyle(this.savedRange, { [styleKey]: normalized || null });
     if (nextRange) this.savedRange = nextRange;
     await this.adapter.notifyManualChange();
-    this.hideInlineToolbar("color", { suppressSelection: true, clearSelection: true });
+    this.hideInlineToolbar("color", { suppressSelection: true, clearSelection: false });
+    if (this.savedRange) {
+      restoreRange(this.savedRange, this.root);
+    }
   }
 
   applyCustomColor(mode) {
@@ -3245,6 +3312,11 @@ export class EditorAdapter {
       await this.focus();
     }
 
+    if (holderEl && savedScrollTop !== undefined) {
+      holderEl.scrollTop = savedScrollTop;
+      if (savedWindowScrollY !== undefined) window.scrollTo(0, savedWindowScrollY);
+    }
+
     await this.notifyManualChange();
     this.refreshLayout(reason);
     return { changed: true, ...result };
@@ -3447,6 +3519,40 @@ export class EditorAdapter {
     });
 
     if (changedCount > 0) {
+      // Rebuild the selection range across the affected blocks so the
+      // block selection controller and inline toolbar can re-anchor
+      // correctly after the DOM mutations.
+      const updatedBlocks = Array.from(root.querySelectorAll(".ce-block"));
+      const firstBlock = updatedBlocks[safeIndexes[0]];
+      const lastBlock = updatedBlocks[safeIndexes[safeIndexes.length - 1]];
+      if (firstBlock && lastBlock) {
+        try {
+          const rebuiltRange = document.createRange();
+          rebuiltRange.setStartBefore(firstBlock);
+          rebuiltRange.setEndAfter(lastBlock);
+          const selection = window.getSelection();
+          selection?.removeAllRanges();
+          selection?.addRange(rebuiltRange);
+        } catch (rangeError) {
+          // Best-effort: if range rebuild fails, continue anyway
+        }
+      }
+
+      // Re-sync the block selection controller with the still-selected indexes
+      if (this.blockSelectionController) {
+        const currentRange = window.getSelection()?.rangeCount
+          ? window.getSelection().getRangeAt(0)
+          : null;
+        this.blockSelectionController.captureFromIndexes(safeIndexes, `inline-${action}`, currentRange);
+        this.blockSelectionController.freeze(`inline-${action}`);
+      }
+
+      // Restore editor focus without collapsing the selection
+      const focusTarget = updatedBlocks[safeIndexes[safeIndexes.length - 1]]?.querySelector("[contenteditable='true']");
+      if (focusTarget && typeof focusTarget.focus === "function") {
+        focusTarget.focus({ preventScroll: true });
+      }
+
       await this.notifyManualChange();
     }
 

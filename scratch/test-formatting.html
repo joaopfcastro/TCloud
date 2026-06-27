@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Test Editor</title>
+<link rel="stylesheet" href="/apps/notes/style.css">
+</head>
+<body>
+<div id="editorjs" class="editorjs-host" style="max-width:800px;margin:40px auto;"></div>
+
+<script src="/apps/notes/vendor/editorjs/core/editorjs.umd.js"></script>
+<script src="/apps/notes/vendor/editorjs/paragraph/paragraph.umd.js"></script>
+<script src="/apps/notes/vendor/editorjs/header/header.umd.js"></script>
+<script src="/apps/notes/vendor/editorjs/list/editorjs-list.umd.js"></script>
+
+<script type="module">
+  import { EditorAdapter } from "/apps/notes/editor-adapter.js?v=test1";
+
+  const adapter = new EditorAdapter({
+    holder: "editorjs",
+    onChange: async () => { console.log("[onChange]"); },
+    blockConfig: {},
+  });
+
+  window.__adapter = adapter;
+  window.__ready = adapter.init({
+    blocks: [
+      { type: "paragraph", data: { text: "def" } },
+      { type: "paragraph", data: { text: "ghj" } },
+      { type: "paragraph", data: { text: "ijk" } },
+    ],
+  }).then(() => {
+    console.log("[editor ready]");
+    window.__editorReady = true;
+  }).catch((err) => {
+    console.error("[editor init error]", err);
+    window.__editorError = err?.message || String(err);
+  });
+</script>
+</body>
+</html>
