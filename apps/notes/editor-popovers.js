@@ -6,6 +6,8 @@ const POPOVER_GAP = 8;
 const MIN_POPOVER_HEIGHT = 120;
 const DEFAULT_POPOVER_WIDTH = 260;
 const DEFAULT_POPOVER_HEIGHT = 240;
+const BATCH_SUPPRESS_WINDOW_MS = 160;
+const BATCH_SCROLL_TOLERANCE_PX = 2;
 
 function clamp(value, min, max) {
   if (max < min) return min;
@@ -57,6 +59,9 @@ export class EditorJsPopoverController {
     this.viewportListenersAttached = false;
     this.connected = false;
     this.portedInfo = null;
+    this.suppressViewportChangeUntil = 0;
+    this.lastObservedScrollY = 0;
+    this.isBatchAction = false;
 
     this.handlePointerDown = this.handlePointerDown.bind(this);
     this.handleClick = this.handleClick.bind(this);
@@ -131,8 +136,29 @@ export class EditorJsPopoverController {
     if (this.isOpen) this.scheduleVerify();
   }
 
+  markBatchAction(active = true) {
+    this.isBatchAction = Boolean(active);
+    if (active) {
+      this.suppressViewportChangeUntil = performance.now() + BATCH_SUPPRESS_WINDOW_MS;
+      this.lastObservedScrollY = Number.isFinite(window.scrollY) ? window.scrollY : 0;
+    }
+  }
+
+  viewportChangeSuppressed() {
+    if (!this.isBatchAction) return false;
+    if (performance.now() >= this.suppressViewportChangeUntil) return false;
+    const currentY = Number.isFinite(window.scrollY) ? window.scrollY : 0;
+    const delta = Math.abs(currentY - this.lastObservedScrollY);
+    this.lastObservedScrollY = currentY;
+    // Ignore only the corrective micro-displacement fired by post-formatting
+    // scroll restoration; a real user scroll (>2px) cancels the suppression
+    // and re-anchors the menu normally.
+    return delta < BATCH_SCROLL_TOLERANCE_PX;
+  }
+
   handleViewportChange() {
     if (!this.isOpen || this.positionFrame) return;
+    if (this.viewportChangeSuppressed()) return;
     this.positionFrame = requestAnimationFrame(() => {
       this.positionFrame = null;
       if (!this.ensureUsableAnchor() || !this.surface?.isConnected) {
@@ -291,8 +317,24 @@ export class EditorJsPopoverController {
 
     this.portElement(this.menu);
 
-    this.menu.classList.add(POSITIONED_CLASS);
+    // Se o menu tem sub-popovers aninhados (ex: "Converter para" dentro de "Ajustar bloco"),
+    // NÃO adicionar POSITIONED_CLASS no menu — o CSS dessa classe aplica
+    // `position: fixed !important` + `overflow: hidden !important`, o que CLIPA o
+    // sub-popover. Só aplicamos a classe no surface (container interno), que recebe
+    // o posicionamento correto.
+    // A checagem também é feita em positionActiveMenu para cobrir o caso em que o
+    // sub-popover é criado DEPOIS do attach (hover em "Converter para").
+    const hasNestedPopover = menu?.querySelector?.(".ce-popover--nested") != null;
+    if (!hasNestedPopover) {
+      this.menu.classList.add(POSITIONED_CLASS);
+    }
     this.surface.classList.add(POSITIONED_CLASS);
+
+    // Instalar observer para detectar quando sub-popovers aninhados são criados
+    // após o attach (caso típico: hover em "Converter para" cria um nested
+    // popover, que precisa que o menu NÃO tenha `overflow: hidden`).
+    this.disposeNestedObserver();
+    this.installNestedObserver();
     this.attachViewportListeners();
     this.setOpenState(true, "menu-attached");
   }
@@ -301,6 +343,17 @@ export class EditorJsPopoverController {
     if (!this.ensureUsableAnchor() || !this.surface?.isConnected) {
       this.clear("detached");
       return;
+    }
+
+    // Se o menu já tem sub-popovers aninhados (criados após o attach via hover em
+    // "Converter para"), REMOVER a POSITIONED_CLASS para que o `overflow: hidden`
+    // do CSS não CLIPE o sub-popover.
+    const hasNestedNow = this.menu?.querySelector?.(".ce-popover--nested") != null;
+    if (hasNestedNow && this.menu.classList.contains(POSITIONED_CLASS)) {
+      this.menu.classList.remove(POSITIONED_CLASS);
+    }
+    if (hasNestedNow && !this.nestedObserver) {
+      this.installNestedObserver();
     }
 
     const bounds = visualBounds(this.viewportRoot);
@@ -338,6 +391,25 @@ export class EditorJsPopoverController {
       list.style.setProperty("max-height", `calc(${Math.round(maxHeight)}px - 16px)`, "important");
       list.style.setProperty("overflow-y", "auto", "important");
     }
+
+    // Se há sub-popovers aninhados (ex: "Converter para"), eles têm max-height
+    // próprio (270px do Editor.js) que pode clipar os items. Aumentar para que
+    // o sub-popover consiga mostrar todos os items sem scroll agressivo.
+    if (hasNestedNow) {
+      const nestedContainer = this.menu.querySelector(".ce-popover--nested .ce-popover__container");
+      const nestedItems = this.menu.querySelector(".ce-popover--nested .ce-popover__items");
+      if (nestedContainer) {
+        nestedContainer.style.setProperty("max-height", "540px", "important");
+        nestedContainer.style.setProperty("overflow", "hidden", "important");
+      }
+      if (nestedItems) {
+        const itemsCount = nestedItems.querySelectorAll(".ce-popover-item").length;
+        const targetHeight = itemsCount * 40 + 20;
+        const bounded = Math.min(targetHeight, 540);
+        nestedItems.style.setProperty("max-height", `${bounded}px`, "important");
+        nestedItems.style.setProperty("overflow-y", "auto", "important");
+      }
+    }
   }
 
   applyPosition(left, top, maxHeight, width) {
@@ -354,6 +426,12 @@ export class EditorJsPopoverController {
     this.surface.style.setProperty("max-width", `${Math.round(width)}px`, "important");
     this.surface.style.setProperty("--tcloud-editor-popover-max-height", `${Math.round(maxHeight)}px`);
     this.menu?.style?.setProperty("--tcloud-editor-popover-max-height", `${Math.round(maxHeight)}px`);
+    if (this.menu && this.menu !== this.surface) {
+      this.menu.style.setProperty("--tcloud-editor-popover-host-left", `${roundedLeft}px`);
+      this.menu.style.setProperty("--tcloud-editor-popover-host-top", `${roundedTop}px`);
+      this.menu.style.setProperty("--tcloud-editor-popover-host-width", `${Math.round(width)}px`);
+      this.menu.style.setProperty("--tcloud-editor-popover-host-height", `${Math.round(maxHeight)}px`);
+    }
   }
 
   clear(reason = "clear") {
@@ -362,6 +440,9 @@ export class EditorJsPopoverController {
     this.clearPositionTimers();
     this.positionFrame = null;
     this.verifyFrame = null;
+    this.isBatchAction = false;
+    this.suppressViewportChangeUntil = 0;
+    this.disposeNestedObserver();
 
     this.restorePortedElement();
 
@@ -415,6 +496,10 @@ export class EditorJsPopoverController {
       "max-height",
       "max-width",
       "--tcloud-editor-popover-max-height",
+      "--tcloud-editor-popover-host-left",
+      "--tcloud-editor-popover-host-top",
+      "--tcloud-editor-popover-host-width",
+      "--tcloud-editor-popover-host-height",
     ].forEach((property) => element.style.removeProperty(property));
 
     const list = element.querySelector?.(".ce-popover__items, .ce-settings__items, .ce-settings, .ce-conversion-toolbar");
@@ -428,6 +513,31 @@ export class EditorJsPopoverController {
     return menu?.matches?.(".ce-popover")
       ? (menu.querySelector(":scope > .ce-popover__container") || menu)
       : menu;
+  }
+
+  installNestedObserver() {
+    if (this.nestedObserver || !this.menu) return;
+    this.nestedObserver = new MutationObserver((mutations) => {
+      for (const m of mutations) {
+        for (const node of m.addedNodes) {
+          if (!(node instanceof HTMLElement)) continue;
+          const isNested = node.matches?.(".ce-popover--nested")
+            || node.querySelector?.(".ce-popover--nested");
+          if (isNested && this.menu?.classList.contains(POSITIONED_CLASS)) {
+            this.menu.classList.remove(POSITIONED_CLASS);
+            this.positionActiveMenu();
+          }
+        }
+      }
+    });
+    this.nestedObserver.observe(this.menu, { childList: true, subtree: true });
+  }
+
+  disposeNestedObserver() {
+    if (this.nestedObserver) {
+      this.nestedObserver.disconnect();
+      this.nestedObserver = null;
+    }
   }
 
   rootContains(node) {

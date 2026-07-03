@@ -13,6 +13,7 @@
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <link href="https://vjs.zencdn.net/8.10.0/video-js.css" rel="stylesheet" />
     <link href="https://unpkg.com/@videojs/themes@1/dist/fantasy/index.css" rel="stylesheet">
+    <link rel="stylesheet" href="/static/tcloud-player.css">
     <style>
         :root {
             --bg-app: #1e1e1e;
@@ -2092,52 +2093,6 @@
             background-color: var(--accent) !important;
         }
 
-        .tcloud-player-loading-overlay,
-        .tcloud-player-error-overlay {
-            position: absolute;
-            inset: 0;
-            z-index: 20;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 14px;
-            background: radial-gradient(circle at center, rgba(10, 132, 255, 0.12), transparent 38%), rgba(0, 0, 0, 0.68);
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.2s ease;
-            text-align: center;
-        }
-
-        .tcloud-player-loading-overlay.is-visible,
-        .tcloud-player-error-overlay.is-visible {
-            opacity: 1;
-            pointer-events: auto;
-        }
-
-        .video-js.vjs-tcloud-loading .vjs-big-play-button {
-            display: none !important;
-        }
-
-        .video-js.vjs-tcloud-loading .vjs-tech {
-            opacity: 0 !important;
-            visibility: hidden !important;
-            transition: opacity 0.12s ease;
-        }
-
-        .tcloud-player-loading-spinner-ring {
-            width: 46px;
-            height: 46px;
-            border: 3px solid rgba(255, 255, 255, 0.14);
-            border-top-color: var(--accent);
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
         .tcloud-player-loading-text,
         .tcloud-player-error-text {
             max-width: 360px;
@@ -2149,57 +2104,6 @@
         .tcloud-player-error-icon {
             color: #FFB44C;
             font-size: 36px;
-        }
-
-        .tcloud-player-resume-chip {
-            position: absolute;
-            right: 18px;
-            bottom: clamp(76px, 9vh, 104px);
-            z-index: 58;
-            display: inline-flex;
-            align-items: center;
-            max-width: min(42vw, 320px);
-            padding: 12px 16px;
-            border: 1px solid rgba(255, 255, 255, 0.14);
-            border-radius: 18px;
-            background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02)), rgba(15, 15, 18, 0.68);
-            color: rgba(255, 255, 255, 0.96);
-            box-shadow: 0 18px 40px rgba(0, 0, 0, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.06);
-            backdrop-filter: blur(20px) saturate(160%);
-            -webkit-backdrop-filter: blur(20px) saturate(160%);
-            opacity: 0;
-            pointer-events: none;
-            cursor: pointer;
-            transform: translateY(10px);
-            transition: opacity 0.22s ease, transform 0.22s ease, border-color 0.22s ease, background 0.22s ease;
-        }
-
-        .tcloud-player-resume-chip.is-visible {
-            opacity: 1;
-            pointer-events: auto;
-            transform: translateY(0);
-        }
-
-        .tcloud-player-resume-chip-content {
-            display: inline-flex;
-            align-items: center;
-            min-width: 0;
-            gap: 10px;
-        }
-
-        .tcloud-player-resume-chip i {
-            color: var(--accent);
-            font-size: 20px;
-            flex: 0 0 auto;
-        }
-
-        .tcloud-player-resume-chip-text {
-            min-width: 0;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            font-size: 13px;
-            font-weight: 650;
         }
 
         .vjs-audio-track-button .vjs-icon-placeholder::before,

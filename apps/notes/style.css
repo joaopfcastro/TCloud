@@ -5583,6 +5583,19 @@ body,
   margin: 5px 0 !important;
 }
 
+/* TCloud popover portal: nested submenus (e.g. "Converter para" inside Block
+   Settings) are positioned by EditorJS relative to the .ce-popover wrapper.
+   The wrapper is ported to the popover portal at (0,0), but the visible
+   popover container sits at the host's real position. To keep the nested
+   submenu adjacent to the visible popover (instead of overlapping it), shift
+   the nested popover's horizontal offset by the host popover's left. */
+#tcloud-notes-editor-popover-portal .ce-popover .ce-popover--nested .ce-popover__container {
+  --popover-left: calc(
+    var(--tcloud-editor-popover-host-left, 0px) +
+    var(--nesting-level) * (var(--width) - var(--nested-popover-overlap))
+  );
+}
+
 .editorjs-host .ce-inline-tool,
 .editorjs-host .ce-conversion-tool,
 .editorjs-host .ce-settings__button,
@@ -6586,10 +6599,12 @@ body,
 }
 
 .tcloud-inline-toolbar__hex-row {
-  display: grid;
-  grid-template-columns: 34px minmax(0, 1fr) auto auto;
-  gap: 6px;
+  display: flex;
   align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .tcloud-inline-toolbar__hex-row input[type="color"],
@@ -6600,13 +6615,37 @@ body,
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.07);
   color: #f8fafc;
+  box-sizing: border-box;
 }
 
 .tcloud-inline-toolbar__hex-row input[type="color"] {
+  flex: 0 0 auto;
+  width: 32px;
+  padding: 0;
+  cursor: pointer;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  overflow: hidden;
+}
+
+.tcloud-inline-toolbar__hex-row input[type="color"]::-webkit-color-swatch-wrapper {
   padding: 2px;
 }
 
+.tcloud-inline-toolbar__hex-row input[type="color"]::-webkit-color-swatch {
+  border: none;
+  border-radius: 4px;
+}
+
+.tcloud-inline-toolbar__hex-row input[type="color"]::-moz-color-swatch {
+  border: none;
+  border-radius: 4px;
+}
+
 .tcloud-inline-toolbar__hex-row input[type="text"] {
+  flex: 1 1 0;
+  width: 0;
   padding: 0 8px;
   font-size: 12px;
   font-weight: 650;
@@ -6619,12 +6658,14 @@ body,
 }
 
 .tcloud-inline-toolbar__hex-row button {
+  flex: 0 0 auto;
   display: inline-grid;
   grid-template-columns: 1fr;
   min-height: 32px;
   padding: 0 9px;
   border: 1px solid rgba(255, 255, 255, 0.13);
   background: rgba(255, 255, 255, 0.07);
+  box-sizing: border-box;
 }
 
 .tcloud-inline-toolbar__color-error {
@@ -8031,15 +8072,18 @@ body,
 
 /* TCloud Notes — final block focus and side toolbar alignment */
 :root {
-  --tcloud-block-active-bg: rgba(82, 103, 216, 0.095);
-  --tcloud-block-active-border: rgba(82, 103, 216, 0.24);
-  --tcloud-block-active-rail: rgba(82, 103, 216, 0.80);
+  --tcloud-block-active-bg: transparent;
+  --tcloud-block-active-border: transparent;
+  --tcloud-block-active-rail: transparent;
 
   --tcloud-block-selected-bg: rgba(82, 103, 216, 0.13);
   --tcloud-block-selected-border: rgba(82, 103, 216, 0.30);
 
-  --tcloud-block-multi-bg: rgba(46, 170, 220, 0.20);
-  --tcloud-block-multi-rail: rgba(46, 170, 220, 0.90);
+  --tcloud-block-multi-bg: rgba(52, 120, 246, 0.15);
+  --tcloud-block-multi-rail: rgba(52, 120, 246, 0.70);
+
+  --tcloud-block-hover-bg: var(--hover);
+  --tcloud-block-hover-radius: 4px;
 
   --tcloud-block-focus-radius: 8px;
   --tcloud-block-rail-width: 3px;
@@ -8054,27 +8098,12 @@ body,
     box-shadow 120ms ease;
 }
 
-/* Bloco único com cursor/foco */
-.editorjs-host.has-tcloud-active-block
-  .ce-block.is-tcloud-active-block
-  .ce-block__content {
-  background: var(--tcloud-block-active-bg) !important;
-  box-shadow: none !important;
-}
+/* Bloco ativo (caret): SEM background. Apenas o cursor de texto indica posição. */
 
-.editorjs-host.has-tcloud-active-block
-  .ce-block.is-tcloud-active-block
-  .ce-block__content::before {
-  content: "";
-  position: absolute;
-  left: -13px;
-  top: 50%;
-  width: var(--tcloud-block-rail-width);
-  height: 22px;
-  border-radius: 999px;
-  background: var(--tcloud-block-active-rail);
-  transform: translateY(-50%);
-  pointer-events: none;
+/* Hover do bloco: cinza leve, bordas arredondadas (Notion-style) */
+.editorjs-host .ce-block:hover .ce-block__content {
+  background: var(--tcloud-block-hover-bg);
+  border-radius: var(--tcloud-block-hover-radius);
 }
 
 /* Bloco selecionado nativamente pelo Editor.js (single) */
@@ -8255,6 +8284,24 @@ body,
   padding: 0 !important;
   transform: translateY(3px) !important;
   pointer-events: auto !important;
+}
+
+/* Handles (⋮⋮ e +): ocultos por padrão, visíveis no hover ou foco.
+   pointer-events stays auto so the buttons can receive hover themselves. */
+.editorjs-host .ce-toolbar__actions {
+  opacity: 0;
+  transition: opacity 120ms ease;
+  pointer-events: auto;
+}
+.editorjs-host .ce-block:hover .ce-toolbar__actions,
+.editorjs-host .ce-block--selected .ce-toolbar__actions,
+.editorjs-host .ce-block.is-tcloud-active-block .ce-toolbar__actions,
+.editorjs-host .ce-toolbar--opened .ce-toolbar__actions,
+.editorjs-host .ce-toolbar__plus:hover,
+.editorjs-host .ce-toolbar__settings-btn:hover,
+.editorjs-host.has-tcloud-multiblock-selection .ce-toolbar__actions {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .editorjs-host .ce-toolbar__plus,
@@ -9004,4 +9051,16 @@ body,
   background: var(--notes-editor-menu-bg-strong) !important;
   color: var(--notes-editor-menu-text) !important;
   border-color: var(--notes-editor-menu-border) !important;
+}
+
+/* =========================================================
+   Dark mode — ajustes de hover/seleção de blocos
+   ========================================================= */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --tcloud-block-hover-bg: rgba(255, 255, 255, 0.06);
+    --tcloud-block-multi-bg: rgba(52, 120, 246, 0.25);
+    --tcloud-block-multi-rail: rgba(52, 120, 246, 0.80);
+    --tcloud-block-selected-bg: rgba(52, 120, 246, 0.22);
+  }
 }

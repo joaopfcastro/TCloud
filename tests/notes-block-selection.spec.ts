@@ -93,7 +93,7 @@ async function openNote(page: Page, token: string, noteId: string, width: number
 }
 
 test.describe("TCloud Notes Block Selection and Highlighting", () => {
-  test("single active block has visible active class", async ({ page, request }) => {
+  test("active caret block does not apply visual active classes", async ({ page, request }) => {
     const token = await login(request);
     const noteId = await createMultiBlockNote(request, token);
     await openNote(page, token, noteId, 1024, 768);
@@ -103,11 +103,12 @@ test.describe("TCloud Notes Block Selection and Highlighting", () => {
     await paragraph.click();
     await page.waitForTimeout(200);
 
+    // After refactor: caret position must NOT paint any background
     const activeBlockCount = await page.locator(".ce-block.is-tcloud-active-block").count();
-    expect(activeBlockCount).toBe(1);
+    expect(activeBlockCount).toBe(0);
 
     const activeContainerCount = await page.locator(".editorjs-host.has-tcloud-active-block").count();
-    expect(activeContainerCount).toBe(1);
+    expect(activeContainerCount).toBe(0);
   });
 
   test("multi-block selection marks every intersected block and forms group", async ({ page, request }) => {

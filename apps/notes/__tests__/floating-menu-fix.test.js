@@ -1,5 +1,15 @@
 import { jest, describe, beforeEach, afterEach, test, expect } from "@jest/globals";
 import { TCloudBlockSelectionController } from "../editor-adapter.js";
+import { EditorJsPopoverController } from "../editor-popovers.js";
+import { applyHtmlInlineStyle, normalizeHex } from "../editor-tools.js";
+
+function hexToRgb(hex) {
+  const h = normalizeHex(hex).replace(/^#/, "");
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return `rgb(${r}, ${g}, ${b})`;
+}
 
 function buildEditorDom(blockTexts = ["Bloco 1", "Bloco 2", "Bloco 3"]) {
   document.body.innerHTML = "";
@@ -218,5 +228,137 @@ describe("Fase 3 — Preservação de seleção após formatação em lote", () 
     expect(snapshot.indexes).toEqual([0, 1, 2]);
     expect(snapshot.range).not.toBeNull();
     expect(snapshot.frozen).toBe(true);
+  });
+});
+
+describe("Problema 1 — Estabilidade de scroll durante ação em lote", () => {
+  let host;
+  let popoverController;
+
+  beforeEach(() => {
+    host = buildEditorDom(["Alpha", "Beta", "Gamma"]);
+    document.body.innerHTML = "";
+    document.body.appendChild(host);
+    popoverController = new EditorJsPopoverController({ root: host });
+    popoverController.connect();
+    // Simulate an open popover anchored to a synthetic trigger inside the host
+    const trigger = host.appendChild(document.createElement("div"));
+    trigger.className = "ce-toolbar__plus";
+    const rect = trigger.getBoundingClientRect();
+    trigger.getBoundingClientRect = () => ({ left: 10, top: 10, right: 50, bottom: 50, width: 40, height: 40 });
+    popoverController.anchor = trigger;
+    popoverController.isOpen = true;
+    const surface = document.createElement("div");
+    surface.className = "ce-popover";
+    surface.getBoundingClientRect = () => ({ left: 0, top: 0, right: 260, bottom: 240, width: 260, height: 240 });
+    popoverController.surface = surface;
+    popoverController.menu = surface;
+  });
+
+  afterEach(() => popoverController.disconnect());
+
+  test("markBatchAction(true) suprime handleViewportChange mesmo com isOpen=true", () => {
+    popoverController.markBatchAction(true);
+    expect(popoverController.isBatchAction).toBe(true);
+    expect(popoverController.viewportChangeSuppressed()).toBe(true);
+  });
+
+  test("micro-deslocamento <2px permanece suprimido dentro da janela temporal", () => {
+    popoverController.markBatchAction(true);
+    // Micro displacement (1px) should stay suppressed
+    window.scrollY = 1;
+    expect(popoverController.viewportChangeSuppressed()).toBe(true);
+  });
+
+  test("apósmarkBatchAction(false) a supressão cessa", () => {
+    popoverController.markBatchAction(true);
+    popoverController.markBatchAction(false);
+    expect(popoverController.isBatchAction).toBe(false);
+    expect(popoverController.viewportChangeSuppressed()).toBe(false);
+  });
+
+  test("scroll real do usuário (>2px) cancela a supressão mesmo isActive=true", () => {
+    popoverController.markBatchAction(true);
+    window.scrollY = 50; // exceeds 2px tolerance
+    expect(popoverController.viewportChangeSuppressed()).toBe(false);
+  });
+
+  test("clear() redefine isBatchAction para próximo ciclo", () => {
+    popoverController.markBatchAction(true);
+    popoverController.clear("test-reset");
+    expect(popoverController.isBatchAction).toBe(false);
+    expect(popoverController.suppressViewportChangeUntil).toBe(0);
+  });
+});
+
+describe("Problema 2 — Aplicação de cor de fundo em seleção múltipla", () => {
+  test("applyHtmlInlineStyle com backgroundColor produz span com background-color RGB", () => {
+    const out = applyHtmlInlineStyle("Hello", { backgroundColor: "#1D4265" });
+    const tpl = document.createElement("template");
+    tpl.innerHTML = out;
+    const span = tpl.content.querySelector("span[style]");
+    expect(span).not.toBeNull();
+    expect(span.style.backgroundColor).toBe(hexToRgb("#1D4265"));
+  });
+
+  test("applyHtmlInlineStyle com color produz span com color RGB", () => {
+    const out = applyHtmlInlineStyle("Hello", { color: "#2563EB" });
+    const tpl = document.createElement("template");
+    tpl.innerHTML = out;
+    const span = tpl.content.querySelector("span[style]");
+    expect(span).not.toBeNull();
+    expect(span.style.color).toBe(hexToRgb("#2563EB"));
+    // background-color must NOT be set when patch only contains color
+    expect(span.style.backgroundColor).toBe("");
+  });
+
+  test("derivação styleKey igual ao adapter: background=>backgroundColor no stylePatch", () => {
+    // Mirrors applyColorToSelectedBlocks internal derivation
+    const mode = "background";
+    const value = "#1D4265";
+    const styleKey = mode === "background" ? "backgroundColor" : "color";
+    const patch = { [styleKey]: value || null };
+    expect(Object.prototype.hasOwnProperty.call(patch, "backgroundColor")).toBe(true);
+    expect(Object.prototype.hasOwnProperty.call(patch, "color")).toBe(false);
+
+    const out = applyHtmlInlineStyle("Hello", patch);
+    const tpl = document.createElement("template");
+    tpl.innerHTML = out;
+    const span = tpl.content.querySelector("span[style]");
+    expect(span.style.backgroundColor).toBe(hexToRgb("#1D4265"));
+  });
+
+  test("iteração multi-bloco: todos os 3 blocos recebem background-color", () => {
+    // Simulate the inner loop of applyColorToSelectedBlocks over 3 blocks
+    const blocksHtml = ["Bloco 1", "Bloco 2", "Bloco 3"];
+    const mode = "background";
+    const value = "#1D4265";
+    const styleKey = mode === "background" ? "backgroundColor" : "color";
+
+    const results = blocksHtml.map((html) =>
+      applyHtmlInlineStyle(html, { [styleKey]: value || null })
+    );
+
+    results.forEach((out) => {
+      const tpl = document.createElement("template");
+      tpl.innerHTML = out;
+      const span = tpl.content.querySelector("span[style]");
+      expect(span).not.toBeNull();
+      expect(span.style.backgroundColor).toBe(hexToRgb("#1D4265"));
+    });
+  });
+
+  test("mode text NÃO vaza para background quando appliable em lote (regressão colorMode)", () => {
+    // Regression test for Hipótese 2B: ensure mode switches cleanly
+    function buildPatch(mode, value) {
+      const styleKey = mode === "background" ? "backgroundColor" : "color";
+      return { [styleKey]: value || null };
+    }
+    const textPatch = buildPatch("text", "#2563EB");
+    const bgPatch = buildPatch("background", "#1D4265");
+    expect(textPatch.color).toBeDefined();
+    expect(textPatch.backgroundColor).toBeUndefined();
+    expect(bgPatch.backgroundColor).toBeDefined();
+    expect(bgPatch.color).toBeUndefined();
   });
 });

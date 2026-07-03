@@ -269,22 +269,6 @@ function isBlockedInlineToolbarTarget(element) {
   ));
 }
 
-const PROTECTED_POPOVER_TARGETS = [
-  ".ce-toolbar__plus",
-  ".ce-toolbar__settings-btn",
-  ".ce-popover",
-  ".ce-settings",
-  ".ce-conversion-toolbar",
-  ".ce-settings__button",
-  ".ce-conversion-tool",
-  ".ce-popover-item",
-  "#slash-menu",
-  "#colon-icon-menu",
-  ".colon-icon-menu",
-  ".tcloud-context-menu",
-  ".modal",
-].join(", ");
-
 function editorEditableForNode(node, root) {
   const element = nodeToElement(node);
   if (isBlockedInlineToolbarTarget(element)) return null;
@@ -665,7 +649,6 @@ export class TCloudInlineToolbarController {
     window.addEventListener("scroll", this.onViewportChange, true);
     window.visualViewport?.addEventListener("resize", this.onViewportChange, { passive: true });
     window.visualViewport?.addEventListener("scroll", this.onViewportChange, { passive: true });
-    this.installPopoverDelegation();
     this.hideNativeInlineToolbar();
   }
 
@@ -683,90 +666,11 @@ export class TCloudInlineToolbarController {
     window.removeEventListener("scroll", this.onViewportChange, true);
     window.visualViewport?.removeEventListener("resize", this.onViewportChange);
     window.visualViewport?.removeEventListener("scroll", this.onViewportChange);
-    if (this.popoverDelegationInstalled && this.popoverDelegateClick) {
-      document.removeEventListener("click", this.popoverDelegateClick, true);
-      this.popoverDelegationInstalled = false;
-      this.popoverDelegateClick = null;
-    }
     if (this.selectionFrame) cancelAnimationFrame(this.selectionFrame);
     if (this.pendingPointerSelectionFrame) cancelAnimationFrame(this.pendingPointerSelectionFrame);
     this.isExecutingCommand = false;
     this.closeAllInlineSubmenus();
     this.toolbar.remove();
-  }
-
-  installPopoverDelegation() {
-    if (this.popoverDelegationInstalled) return;
-    this.popoverDelegationInstalled = true;
-
-    // Mapeamento data-item-name → ação do tune (Editor.js v2.31.6)
-    const TUNE_NAMES = new Set(["move-up", "move-down", "delete"]);
-    // Mapeamento data-name → tipo de conversão (submenu "Converter para")
-    // O vendor popula data-item-name com o nome da tool (header, list, todo, etc.)
-    const CONVERSION_NAMES = new Set([
-      "paragraph", "header", "list", "todo", "quote", "codeBlock", "divider",
-      "tcloudFile", "tcloudImage", "tcloudVideo", "tcloudAudio", "tcloudPdf", "tcloudFolder",
-    ]);
-
-    this.popoverDelegateClick = (event) => {
-      // Editor.js v2.31.6 usa .ce-popover-item para TODOS os items (tunes e conversões)
-      const item = event.target?.closest?.(".ce-popover-item");
-      if (!item) return;
-
-      const dataName = item.dataset?.itemName || item.dataset?.name || "";
-      const title = (item.querySelector?.(".ce-popover-item__title")?.textContent || item.textContent || "").trim();
-
-      // 1) Tune "delete" com confirmação de 2 cliques
-      //    Vendor mostra "Clique para excluir" no 2º clique. Só disparamos no estado confirmado.
-      if (dataName === "delete" || title === "Excluir") {
-        const isConfirming = item.classList.contains("ce-popover-item--confirmation")
-          || title === "Clique para excluir"
-          || item.getAttribute("data-confirmed") === "true";
-        if (!isConfirming) return; // vendor cuida do primeiro clique (mostra confirmação)
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        this.adapter.runBlockTune?.("delete", { preferredRange: this.savedRange })
-          ?.catch((error) => console.warn("[TCloud Notes] runBlockTune delete falhou", error));
-        return;
-      }
-
-      // 2) Tunes move-up / move-down (sem confirmação)
-      if (dataName === "move-up" || title === "Mover para cima") {
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        this.adapter.runBlockTune?.("moveUp", { preferredRange: this.savedRange })
-          ?.catch((error) => console.warn("[TCloud Notes] runBlockTune moveUp falhou", error));
-        return;
-      }
-      if (dataName === "move-down" || title === "Mover para baixo") {
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        this.adapter.runBlockTune?.("moveDown", { preferredRange: this.savedRange })
-          ?.catch((error) => console.warn("[TCloud Notes] runBlockTune moveDown falhou", error));
-        return;
-      }
-
-      // 3) Conversão (submenu "Converter para") — data-item-name contém o nome da tool
-      if (CONVERSION_NAMES.has(dataName)) {
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        const range = this.savedRange;
-        if (this.adapter.hasMultiBlockSelection?.(range) && typeof this.adapter.convertSelectedBlocks === "function") {
-          this.adapter.convertSelectedBlocks?.(dataName, {}, range)
-            ?.catch((error) => console.warn("[TCloud Notes] convertSelectedBlocks falhou", error));
-        } else {
-          this.adapter.convertCurrentBlock?.(dataName)
-            ?.catch((error) => console.warn("[TCloud Notes] convertCurrentBlock falhou", error));
-        }
-        return;
-      }
-
-      // 4) Outros tunes (ex.: "convert-to" que abre submenu, future "duplicate", etc.)
-      //    Deixamos o vendor agir normalmente.
-      // Se não é tune nem conversão, return (vendor pode capturar).
-    };
-
-    document.addEventListener("click", this.popoverDelegateClick, true);
   }
 
   buildToolbar() {
@@ -1363,18 +1267,13 @@ export class TCloudInlineToolbarController {
   handlePointerDown(event) {
     const target = event.target;
     if (this.isToolbarTarget(target)) return;
-    // Whitelist: alvos internos do popover (tunes, conversão) não devem fechar
-    // a barra inline nem disparar o fluxo de "pointer-outside". Sem isso, o
-    // `EditorJsPopoverController` porta os popovers para `document.body` e o
-    // capture global deste listener consome o clique antes do `onActivate` do
-    // vendor rodar, quebrando Mover/Excluir/Converter.
-    if (target?.closest?.(PROTECTED_POPOVER_TARGETS)) {
-      this.pointerSelectionRange = null;
-      this.setExternalEditorMenuOpen(true, "popover-item");
-      return;
-    }
     this.closeAllInlineSubmenus();
     if (target?.closest?.(".ce-toolbar__plus, .ce-toolbar__settings-btn")) {
+      this.pointerSelectionRange = null;
+      this.setExternalEditorMenuOpen(true, "external-menu");
+      return;
+    }
+    if (target?.closest?.(".ce-toolbar__plus, .ce-toolbar__settings-btn, .ce-popover, .ce-settings, .ce-conversion-toolbar, #slash-menu, #colon-icon-menu, .colon-icon-menu, .tcloud-context-menu, .modal")) {
       this.pointerSelectionRange = null;
       this.setExternalEditorMenuOpen(true, "external-menu");
       return;
@@ -2300,10 +2199,6 @@ export class TCloudBlockSelectionController {
 
   handlePointerDown(event) {
     const target = event.target;
-    if (target?.closest?.(PROTECTED_POPOVER_TARGETS)) {
-      this.freeze("popover-pointerdown");
-      return;
-    }
     if (target?.closest?.(".tcloud-inline-toolbar--custom, .tcloud-inline-toolbar__menu, .tcloud-context-menu")) {
       this.freeze("toolbar-pointerdown");
       return;
@@ -2574,7 +2469,6 @@ export class EditorAdapter {
             Checklist: "Checklist",
             Quote: "Citação",
             Code: "Código",
-            Divider: "Divisor",
             Bold: "Negrito",
             Italic: "Itálico",
             Link: "Link",
@@ -3192,78 +3086,6 @@ export class EditorAdapter {
 
   async deleteBlock() {
     await this.deleteBlockAtIndex(await this.currentBlockIndex());
-  }
-
-  async runBlockTune(tuneName, options = {}) {
-    await this.init();
-    const preferredRange = options.preferredRange || null;
-
-    if (tuneName === "delete") {
-      if (this.blockSelectionController?.hasMultiBlockSelection?.(preferredRange)) {
-        return this.deleteSelectedBlocks(preferredRange);
-      }
-      return this.deleteBlock();
-    }
-
-    if (tuneName === "moveUp" || tuneName === "moveDown") {
-      const direction = tuneName === "moveUp" ? -1 : 1;
-      const indexes = this.getSelectedBlockIndexes(preferredRange);
-      if (indexes.length > 1) {
-        return this.shiftSelectedBlocks(direction, preferredRange);
-      }
-      const index = await this.currentBlockIndex();
-      if (!Number.isInteger(index) || index < 0) return { changed: false, reason: "no-current-block" };
-      const total = this.lastSavedContent?.blocks?.length || 0;
-      if (!total) return { changed: false, reason: "empty-editor" };
-      const target = index + direction;
-      if (target < 0) return { changed: false, reason: "first-block" };
-      if (target >= total) return { changed: false, reason: "last-block" };
-      return this.swapBlocks(index, target);
-    }
-
-    return { changed: false, reason: "unknown-tune" };
-  }
-
-  async swapBlocks(fromIndex, toIndex) {
-    await this.init();
-    if (fromIndex === toIndex) return { changed: false, reason: "same-index" };
-    return this.mutateBlocksTransaction((content) => {
-      const [moved] = content.blocks.splice(fromIndex, 1);
-      if (!moved) return { changedCount: 0, skippedCount: 1, lastChangedIndex: fromIndex };
-      content.blocks.splice(toIndex, 0, moved);
-      return { changedCount: 1, skippedCount: 0, lastChangedIndex: toIndex };
-    }, {
-      focusIndex: toIndex,
-      reason: "swap-blocks",
-    });
-  }
-
-  async shiftSelectedBlocks(direction, preferredRange = null) {
-    await this.init();
-    const indexes = this.getSelectedBlockIndexes(preferredRange);
-    if (indexes.length <= 1) return { changed: false, reason: "single-or-none" };
-    // Para moveUp, mover do maior índice para o menor evita colisão.
-    // Para moveDown, do menor para o maior.
-    const ordered = (direction < 0)
-      ? [...indexes].sort((a, b) => b - a)
-      : [...indexes].sort((a, b) => a - b);
-    return this.mutateBlocksTransaction((content) => {
-      let changedCount = 0;
-      let lastChangedIndex = ordered[ordered.length - 1];
-      ordered.forEach((index) => {
-        const target = index + direction;
-        if (target < 0 || target >= content.blocks.length) return;
-        const [moved] = content.blocks.splice(index, 1);
-        if (!moved) return;
-        content.blocks.splice(target, 0, moved);
-        changedCount++;
-        lastChangedIndex = target;
-      });
-      return { changedCount, skippedCount: indexes.length - changedCount, lastChangedIndex };
-    }, {
-      focusIndex: ordered[0] + direction,
-      reason: `shift-selected-blocks-${direction < 0 ? "up" : "down"}`,
-    });
   }
 
   applyIndentAttributes(content = this.lastSavedContent) {

@@ -837,18 +837,11 @@ export const TextColorTool = ColorInlineTool;
 
 export class TodoTool {
   static get toolbox() {
-    return {
-      icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" view="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12.5l5 5L21 4"/></svg>',
-      title: "Checklist"
-    };
+    return { title: "Checklist" };
   }
 
   static get sanitize() {
     return { text: INLINE_SANITIZER_RULES, checked: false };
-  }
-
-  static get conversionConfig() {
-    return { export: "text", import: "text" };
   }
 
   constructor({ data = {} }) {
@@ -884,25 +877,11 @@ export class TodoTool {
 
 export class QuoteTool {
   static get toolbox() {
-    return {
-      icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h3v3H7v3a3 3 0 0 0 3 3M14 7h3v3h-3v3a3 3 0 0 0 3 3"/></svg>',
-      title: "Citação"
-    };
+    return { title: "Citação" };
   }
 
   static get sanitize() {
     return { text: INLINE_SANITIZER_RULES, caption: INLINE_SANITIZER_RULES };
-  }
-
-  static get conversionConfig() {
-    return { export: "text", import: "text" };
-  }
-
-  static get toolbox() {
-    return {
-      icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h3v3H7v3a3 3 0 0 0 3 3M14 7h3v3h-3v3a3 3 0 0 0 3 3"/></svg>',
-      title: "Quote"
-    };
   }
 
   constructor({ data = {} }) {
@@ -935,21 +914,7 @@ export class QuoteTool {
 
 export class CodeBlockTool {
   static get toolbox() {
-    return {
-      icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7l-5 5 5 5M15 7l5 5-5 5"/></svg>',
-      title: "Código"
-    };
-  }
-
-  static get conversionConfig() {
-    return { export: "code", import: "code" };
-  }
-
-  static get toolbox() {
-    return {
-      icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 18l6-6-6-6M8 6l-6 6 6 6"/></svg>',
-      title: "Code"
-    };
+    return { title: "Código" };
   }
 
   constructor({ data = {} }) {
@@ -980,21 +945,7 @@ export class CodeBlockTool {
 
 export class DividerTool {
   static get toolbox() {
-    return {
-      icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><line x1="5" x2="19" y1="12" y2="12" stroke="currentColor" stroke-linecap="round" stroke-width="2"/></svg>',
-      title: "Divisor"
-    };
-  }
-
-  static get conversionConfig() {
-    return { export: "text", import: "text" };
-  }
-
-  static get toolbox() {
-    return {
-      icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><line x1="5" x2="19" y1="12" y2="12" stroke="currentColor" stroke-linecap="round" stroke-width="2"/></svg>',
-      title: "Divider"
-    };
+    return { title: "Divisor" };
   }
 
   render() {
