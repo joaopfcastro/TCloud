@@ -138,43 +138,83 @@ describe("Stream C — installPopoverDelegation do TCloudInlineToolbarController
     if (controller) controller.destroy();
   });
 
-  test("clique em .ce-settings__button[data-item-name='delete'] confirmado chama runBlockTune('delete') e previne default", () => {
-    const button = document.createElement("button");
-    button.className = "ce-settings__button ce-settings__button--confirm";
-    button.setAttribute("data-item-name", "delete");
-    button.title = "Clique para excluir";
-    document.body.appendChild(button);
+  function makePopoverItem(name, label, { confirmation = false } = {}) {
+    const item = document.createElement("div");
+    item.className = "ce-popover-item";
+    if (confirmation) item.classList.add("ce-popover-item--confirmation");
+    if (name) item.dataset.itemName = name;
+    const title = document.createElement("div");
+    title.className = "ce-popover-item__title";
+    title.textContent = label;
+    item.appendChild(title);
+    document.body.appendChild(item);
+    return item;
+  }
+
+  test("clique em .ce-popover-item[data-item-name='delete'] confirmado chama runBlockTune('delete') e previne default", () => {
+    const item = makePopoverItem("delete", "Clique para excluir", { confirmation: true });
 
     const event = new MouseEvent("click", { bubbles: true, cancelable: true });
-    button.dispatchEvent(event);
+    item.dispatchEvent(event);
 
     expect(adapter.runBlockTune).toHaveBeenCalledTimes(1);
     expect(adapter.runBlockTune).toHaveBeenCalledWith("delete", { preferredRange: null });
     expect(event.defaultPrevented).toBe(true);
   });
 
-  test("clique em .ce-conversion-tool[data-item-name='quote'] chama convertCurrentBlock('quote') e previne default", () => {
-    const tool = document.createElement("div");
-    tool.className = "ce-conversion-tool";
-    tool.setAttribute("data-item-name", "quote");
-    document.body.appendChild(tool);
-
+  test("1o clique em .ce-popover-item[data-item-name='delete'] (sem confirmação) NÃO dispara runBlockTune", () => {
+    const item = makePopoverItem("delete", "Excluir");
     const event = new MouseEvent("click", { bubbles: true, cancelable: true });
-    tool.dispatchEvent(event);
+    item.dispatchEvent(event);
+    expect(adapter.runBlockTune).not.toHaveBeenCalled();
+  });
+
+  test("clique em .ce-popover-item[data-item-name='quote'] chama convertCurrentBlock('quote', {}) e previne default", () => {
+    const item = makePopoverItem("quote", "Citação");
+    const event = new MouseEvent("click", { bubbles: true, cancelable: true });
+    item.dispatchEvent(event);
 
     expect(adapter.convertCurrentBlock).toHaveBeenCalledTimes(1);
-    expect(adapter.convertCurrentBlock).toHaveBeenCalledWith("quote");
+    expect(adapter.convertCurrentBlock).toHaveBeenCalledWith("quote", {});
     expect(event.defaultPrevented).toBe(true);
   });
 
-  test("clique em .ce-settings__button sem data-item-name e sem title reconhecido NÃO chama runBlockTune", () => {
-    const button = document.createElement("button");
-    button.className = "ce-settings__button";
-    button.title = "Duplicar";
-    document.body.appendChild(button);
-
+  test("clique em 'Lista numerada' (data-item-name='list') converte para list style='ordered'", () => {
+    const item = makePopoverItem("list", "Lista numerada");
     const event = new MouseEvent("click", { bubbles: true, cancelable: true });
-    button.dispatchEvent(event);
+    item.dispatchEvent(event);
+
+    expect(adapter.convertCurrentBlock).toHaveBeenCalledWith("list", { style: "ordered" });
+  });
+
+  test("clique em 'Checklist' (data-item-name='list') converte para tool 'todo' (nao list)", () => {
+    const item = makePopoverItem("list", "Checklist");
+    const event = new MouseEvent("click", { bubbles: true, cancelable: true });
+    item.dispatchEvent(event);
+
+    expect(adapter.convertCurrentBlock).toHaveBeenCalledWith("todo", {});
+  });
+
+  test("clique em 'Lista' (data-item-name='list') converte para list style='unordered'", () => {
+    const item = makePopoverItem("list", "Lista");
+    const event = new MouseEvent("click", { bubbles: true, cancelable: true });
+    item.dispatchEvent(event);
+
+    expect(adapter.convertCurrentBlock).toHaveBeenCalledWith("list", { style: "unordered" });
+  });
+
+  test("clique em 'Título 1' (data-item-name='header') converte para header level=1", () => {
+    const item = makePopoverItem("header", "Título 1");
+    const event = new MouseEvent("click", { bubbles: true, cancelable: true });
+    item.dispatchEvent(event);
+
+    expect(adapter.convertCurrentBlock).toHaveBeenCalledWith("header", { level: 1 });
+  });
+
+  test("clique em .ce-popover-item sem data-item-name e com título desconhecido NÃO chama runBlockTune/convertCurrentBlock", () => {
+    const item = makePopoverItem("", "Duplicar");
+    const event = new MouseEvent("click", { bubbles: true, cancelable: true });
+    item.dispatchEvent(event);
 
     expect(adapter.runBlockTune).not.toHaveBeenCalled();
     expect(adapter.convertCurrentBlock).not.toHaveBeenCalled();
@@ -192,5 +232,36 @@ describe("Stream C — conversionConfig das tools de bloco", () => {
 
   test("DividerTool.conversionConfig === { export: 'text', import: 'text' }", () => {
     expect(DividerTool.conversionConfig).toEqual({ export: "text", import: "text" });
+  });
+});
+
+describe("Regressão — currentBlockIndex com fallback quando popover rouba o foco", () => {
+  let host;
+  let adapter;
+
+  beforeEach(() => {
+    host = buildEditorDom(["Alpha", "Beta", "Gamma"]);
+    adapter = {
+      holder: host,
+      editor: { blocks: { getCurrentBlockIndex: () => -1 } },
+      root: host,
+      init: jest.fn(async () => {}),
+    };
+    adapter.currentBlockIndex = EditorAdapter.prototype.currentBlockIndex.bind(adapter);
+  });
+
+  test("retorna índice do bloco .is-tcloud-active-block quando seleção e API falham", async () => {
+    const blocks = host.querySelectorAll(".ce-block");
+    blocks[1].classList.add("is-tcloud-active-block");
+    // Sem seleção no editor e API retornando -1 (popover aberto roubou foco)
+    const index = await adapter.currentBlockIndex();
+    expect(index).toBe(1);
+  });
+
+  test("retorna índice do bloco .ce-block--selected quando não há active-block", async () => {
+    const blocks = host.querySelectorAll(".ce-block");
+    blocks[2].classList.add("ce-block--selected");
+    const index = await adapter.currentBlockIndex();
+    expect(index).toBe(2);
   });
 });

@@ -21,7 +21,7 @@ import {
   buildTCloudBlock,
   isTCloudBlockType,
 } from "./tcloud-blocks.js";
-import { EditorJsPopoverController } from "./editor-popovers.js?v=notes-menu-system-clear-20260606-2";
+import { EditorJsPopoverController } from "./editor-popovers.js?v=notes-menu-system-clear-20260704-3";
 
 const TCLOUD_INDENT_MAX = 6;
 const CONVERTIBLE_BLOCK_TYPES = new Set(["paragraph", "header", "list", "todo", "quote", "codeBlock"]);
@@ -95,6 +95,25 @@ function normalizeBlockIndent(data = {}) {
 
 function copyIndentData(data = {}) {
   return normalizeBlockIndent(data);
+}
+
+// Mapeia um item do popover "Converter para" (Editor.js v2.31) para
+// (type, data). O vendor popula o MESMO data-item-name="list" para os tres
+// estilos (marcadores/numerada/checklist) e "header" para todos os niveis;
+// a distincao so esta no titulo localizado. Sem este mapeamento,
+// convertCurrentBlock("list") sem style sempre vira "marcadores".
+function resolveConversionPayload(dataName, title = "") {
+  const t = String(title || "").trim();
+  if (dataName === "header") {
+    const m = t.match(/(\d+)/);
+    return { type: "header", data: { level: m ? Number(m[1]) : 2 } };
+  }
+  if (dataName === "list") {
+    if (/numerada/i.test(t)) return { type: "list", data: { style: "ordered" } };
+    if (/checklist/i.test(t)) return { type: "todo", data: {} };
+    return { type: "list", data: { style: "unordered" } };
+  }
+  return { type: dataName, data: {} };
 }
 
 export function buildBlock(type, data = {}) {
@@ -709,7 +728,7 @@ export class TCloudInlineToolbarController {
     ]);
 
     this.popoverDelegateClick = (event) => {
-      // Editor.js v2.31.6 usa .ce-popover-item para TODOS os items (tunes e conversões)
+      // Editor.js v2.31 usa .ce-popover-item para TODOS os items (tunes e conversões)
       const item = event.target?.closest?.(".ce-popover-item");
       if (!item) return;
 
@@ -722,7 +741,7 @@ export class TCloudInlineToolbarController {
         const isConfirming = item.classList.contains("ce-popover-item--confirmation")
           || title === "Clique para excluir"
           || item.getAttribute("data-confirmed") === "true";
-        if (!isConfirming) return; // vendor cuida do primeiro clique (mostra confirmação)
+        if (!isConfirming) return;
         event.preventDefault();
         event.stopImmediatePropagation();
         this.adapter.runBlockTune?.("delete", { preferredRange: this.savedRange })
@@ -746,16 +765,19 @@ export class TCloudInlineToolbarController {
         return;
       }
 
-      // 3) Conversão (submenu "Converter para") — data-item-name contém o nome da tool
+      // 3) Conversão (submenu "Converter para" ou toolbox) — data-item-name
+      //    contém o nome da tool. Para "list"/"header" o nome é ambíguo, então
+      //    derivamos style/level a partir do título localizado.
       if (CONVERSION_NAMES.has(dataName)) {
         event.preventDefault();
         event.stopImmediatePropagation();
         const range = this.savedRange;
+        const { type: convType, data: convData } = resolveConversionPayload(dataName, title);
         if (this.adapter.hasMultiBlockSelection?.(range) && typeof this.adapter.convertSelectedBlocks === "function") {
-          this.adapter.convertSelectedBlocks?.(dataName, {}, range)
+          this.adapter.convertSelectedBlocks?.(convType, convData, range)
             ?.catch((error) => console.warn("[TCloud Notes] convertSelectedBlocks falhou", error));
         } else {
-          this.adapter.convertCurrentBlock?.(dataName)
+          this.adapter.convertCurrentBlock?.(convType, convData)
             ?.catch((error) => console.warn("[TCloud Notes] convertCurrentBlock falhou", error));
         }
         return;
@@ -2972,19 +2994,34 @@ export class EditorAdapter {
 
   async currentBlockIndex() {
     await this.init();
+    const holderElement = typeof this.holder === "string" ? document.getElementById(this.holder) : this.holder;
+    const blocks = Array.from(holderElement?.querySelectorAll(".ce-block") || []);
+
     const selection = window.getSelection();
     if (selection?.rangeCount) {
       const node = selection.getRangeAt(0).commonAncestorContainer;
       const element = node?.nodeType === Node.TEXT_NODE ? node.parentElement : node;
       const blockElement = element?.closest?.(".ce-block");
-      const holderElement = typeof this.holder === "string" ? document.getElementById(this.holder) : this.holder;
-      const blocks = Array.from(holderElement?.querySelectorAll(".ce-block") || []);
       const domIndex = blocks.indexOf(blockElement);
       if (domIndex >= 0) return domIndex;
     }
+
     if (typeof this.editor.blocks?.getCurrentBlockIndex === "function") {
-      return this.editor.blocks.getCurrentBlockIndex();
+      const apiIndex = this.editor.blocks.getCurrentBlockIndex();
+      if (Number.isInteger(apiIndex) && apiIndex >= 0) return apiIndex;
     }
+
+    // Fallbacks: quando o popover de bloco rouba o foco da seleção, a API do
+    // Editor.js e o range do browser podem nao apontar para um bloco. Usamos
+    // os mesmos marcadores visiveis que o resto do adapter mantem.
+    const activeBlock = holderElement?.querySelector?.(
+      ".ce-block.is-tcloud-active-block, .ce-block--selected"
+    );
+    if (activeBlock) {
+      const idx = blocks.indexOf(activeBlock);
+      if (idx >= 0) return idx;
+    }
+
     return -1;
   }
 
@@ -3866,9 +3903,36 @@ export class EditorAdapter {
 
   async convertCurrentBlock(type, data = {}) {
     await this.init();
-    const content = normalizeEditorData(await this.save());
     const index = await this.currentBlockIndex();
-    if (!Number.isInteger(index) || index < 0 || !content.blocks[index]) return;
+    if (!Number.isInteger(index) || index < 0) return;
+
+    // Native path: Editor.js v2.31 api.blocks.convert() faz o swap real da
+    // tool instance (replace), evitando o revert que acontece quando usamos
+    // apenas editor.blocks.render() com o mesmo block id (a tool Header
+    // interna nao e trocada e o DOM volta para header no proximo save/caret).
+    const block = this.editor.blocks?.getBlockByIndex?.(index);
+    const blockId = block?.id;
+    if (blockId && typeof this.editor.blocks?.convert === "function") {
+      try {
+        const converted = await this.editor.blocks.convert(blockId, type, data);
+        const target = converted || index;
+        if (typeof this.editor.caret?.setToBlock === "function") {
+          try {
+            this.editor.caret.setToBlock(target, "end");
+          } catch (error) {
+            await this.focus();
+          }
+        }
+        await this.notifyManualChange();
+        return;
+      } catch (error) {
+        console.warn("[TCloud Notes] api.blocks.convert falhou, fallback para render", error);
+      }
+    }
+
+    // Fallback: re-render baseado em content (cenario sem API nativa).
+    const content = normalizeEditorData(await this.save());
+    if (!content.blocks[index]) return;
     const currentBlock = content.blocks[index];
     const sourceText = blockPlainText(currentBlock);
     const nextData = convertBlockData(type, sourceText, {

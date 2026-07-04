@@ -110,7 +110,11 @@ export class EditorJsPopoverController {
 
     if (!this.isOpen) return;
     const target = event.target;
+
     if (this.surface?.contains?.(target) || this.menu?.contains?.(target) || this.anchor?.contains?.(target)) return;
+
+    if (target?.closest?.(EDITORJS_POPOVER_SELECTOR)) return;
+
     this.clear("outside");
   }
 
@@ -253,6 +257,15 @@ export class EditorJsPopoverController {
       portal.id = "tcloud-notes-editor-popover-portal";
       portal.className = "codex-editor";
       this.ownerDocument.body.appendChild(portal);
+    }
+    if (!portal.dataset.tcloudPointerdownGuard) {
+      portal.dataset.tcloudPointerdownGuard = "true";
+      const guard = (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+      };
+      portal.addEventListener("pointerdown", guard, true);
+      portal.addEventListener("mousedown", guard, true);
     }
     return portal;
   }
