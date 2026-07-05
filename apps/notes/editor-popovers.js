@@ -43,11 +43,12 @@ function visualBounds(viewportRoot) {
 }
 
 export class EditorJsPopoverController {
-  constructor({ root, viewportRoot = null, onOpen = null, onClose = null } = {}) {
+  constructor({ root, viewportRoot = null, onOpen = null, onClose = null, onChange = null } = {}) {
     this.root = root || document.body;
     this.viewportRoot = viewportRoot || this.root?.closest?.(".notes-app") || document.body;
     this.onOpen = typeof onOpen === "function" ? onOpen : null;
     this.onClose = typeof onClose === "function" ? onClose : null;
+    this.onChange = typeof onChange === "function" ? onChange : null;
     this.ownerDocument = this.root?.ownerDocument || document;
     this.anchor = null;
     this.menu = null;
@@ -62,11 +63,13 @@ export class EditorJsPopoverController {
     this.suppressViewportChangeUntil = 0;
     this.lastObservedScrollY = 0;
     this.isBatchAction = false;
+    this.changeNotifyTimer = null;
 
     this.handlePointerDown = this.handlePointerDown.bind(this);
     this.handleClick = this.handleClick.bind(this);
     this.handleKeyDown = this.handleKeyDown.bind(this);
     this.handleViewportChange = this.handleViewportChange.bind(this);
+    this.handleInput = this.handleInput.bind(this);
   }
 
   connect() {
@@ -75,6 +78,7 @@ export class EditorJsPopoverController {
     this.ownerDocument.addEventListener("pointerdown", this.handlePointerDown, true);
     this.ownerDocument.addEventListener("click", this.handleClick, true);
     this.ownerDocument.addEventListener("keydown", this.handleKeyDown, true);
+    this.ownerDocument.addEventListener("input", this.handleInput, true);
 
     if (this.root && typeof this.root.contains === "function") {
       const originalContains = this.root.contains;
@@ -93,6 +97,11 @@ export class EditorJsPopoverController {
     this.ownerDocument.removeEventListener("pointerdown", this.handlePointerDown, true);
     this.ownerDocument.removeEventListener("click", this.handleClick, true);
     this.ownerDocument.removeEventListener("keydown", this.handleKeyDown, true);
+    this.ownerDocument.removeEventListener("input", this.handleInput, true);
+    if (this.changeNotifyTimer) {
+      clearTimeout(this.changeNotifyTimer);
+      this.changeNotifyTimer = null;
+    }
     if (this.root && this.originalContains) {
       this.root.contains = this.originalContains;
       this.originalContains = null;
@@ -134,10 +143,25 @@ export class EditorJsPopoverController {
     const el = document.activeElement;
     this.prevEl = el;
     if (event.key === "Escape") {
+      if (el?.closest?.(".cdx-list-start-with-field")) {
+        el.blur();
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
       this.clear("escape");
       return;
     }
     if (this.isOpen) this.scheduleVerify();
+  }
+
+  handleInput(event) {
+    if (!event.target?.closest?.(".cdx-list-start-with-field")) return;
+    if (this.changeNotifyTimer) clearTimeout(this.changeNotifyTimer);
+    this.changeNotifyTimer = setTimeout(() => {
+      this.changeNotifyTimer = null;
+      if (typeof this.onChange === "function") this.onChange();
+    }, 400);
   }
 
   markBatchAction(active = true) {
@@ -261,6 +285,17 @@ export class EditorJsPopoverController {
     if (!portal.dataset.tcloudPointerdownGuard) {
       portal.dataset.tcloudPointerdownGuard = "true";
       const guard = (event) => {
+        const target = event.target;
+        const startInput = target?.closest?.(".cdx-list-start-with-field__input");
+        if (startInput) {
+          if (document.activeElement !== startInput) {
+            startInput.focus();
+          }
+          return;
+        }
+        if (target?.closest?.("input, textarea, select, button, [contenteditable='true'], .ce-popover-item-html, .cdx-list-start-with-field")) {
+          return;
+        }
         event.preventDefault();
         event.stopPropagation();
       };
@@ -329,6 +364,11 @@ export class EditorJsPopoverController {
     this.surface = surface;
 
     this.portElement(this.menu);
+
+    const existingStartInput = this.menu?.querySelector(".cdx-list-start-with-field__input");
+    if (existingStartInput && existingStartInput.getAttribute("tabindex") === "-1") {
+      existingStartInput.setAttribute("tabindex", "0");
+    }
 
     // Se o menu tem sub-popovers aninhados (ex: "Converter para" dentro de "Ajustar bloco"),
     // NÃO adicionar POSITIONED_CLASS no menu — o CSS dessa classe aplica
@@ -539,6 +579,12 @@ export class EditorJsPopoverController {
           if (isNested && this.menu?.classList.contains(POSITIONED_CLASS)) {
             this.menu.classList.remove(POSITIONED_CLASS);
             this.positionActiveMenu();
+          }
+          const startInput = node.matches?.(".cdx-list-start-with-field__input")
+            ? node
+            : node.querySelector?.(".cdx-list-start-with-field__input");
+          if (startInput && startInput.getAttribute("tabindex") === "-1") {
+            startInput.setAttribute("tabindex", "0");
           }
         }
       }

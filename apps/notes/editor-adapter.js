@@ -735,15 +735,11 @@ export class TCloudInlineToolbarController {
       const dataName = item.dataset?.itemName || item.dataset?.name || "";
       const title = (item.querySelector?.(".ce-popover-item__title")?.textContent || item.textContent || "").trim();
 
-      // 1) Tune "delete" com confirmação de 2 cliques
-      //    Vendor mostra "Clique para excluir" no 2º clique. Só disparamos no estado confirmado.
+      // 1) Tune "delete" — exclusão imediata, sem confirmação
       if (dataName === "delete" || title === "Excluir") {
-        const isConfirming = item.classList.contains("ce-popover-item--confirmation")
-          || title === "Clique para excluir"
-          || item.getAttribute("data-confirmed") === "true";
-        if (!isConfirming) return;
         event.preventDefault();
         event.stopImmediatePropagation();
+        this.adapter.popoverController?.clear("delete-block");
         this.adapter.runBlockTune?.("delete", { preferredRange: this.savedRange })
           ?.catch((error) => console.warn("[TCloud Notes] runBlockTune delete falhou", error));
         return;
@@ -753,6 +749,7 @@ export class TCloudInlineToolbarController {
       if (dataName === "move-up" || title === "Mover para cima") {
         event.preventDefault();
         event.stopImmediatePropagation();
+        this.adapter.popoverController?.clear("move-up-block");
         this.adapter.runBlockTune?.("moveUp", { preferredRange: this.savedRange })
           ?.catch((error) => console.warn("[TCloud Notes] runBlockTune moveUp falhou", error));
         return;
@@ -760,6 +757,7 @@ export class TCloudInlineToolbarController {
       if (dataName === "move-down" || title === "Mover para baixo") {
         event.preventDefault();
         event.stopImmediatePropagation();
+        this.adapter.popoverController?.clear("move-down-block");
         this.adapter.runBlockTune?.("moveDown", { preferredRange: this.savedRange })
           ?.catch((error) => console.warn("[TCloud Notes] runBlockTune moveDown falhou", error));
         return;
@@ -773,13 +771,22 @@ export class TCloudInlineToolbarController {
         event.stopImmediatePropagation();
         const range = this.savedRange;
         const { type: convType, data: convData } = resolveConversionPayload(dataName, title);
-        if (this.adapter.hasMultiBlockSelection?.(range) && typeof this.adapter.convertSelectedBlocks === "function") {
-          this.adapter.convertSelectedBlocks?.(convType, convData, range)
-            ?.catch((error) => console.warn("[TCloud Notes] convertSelectedBlocks falhou", error));
-        } else {
-          this.adapter.convertCurrentBlock?.(convType, convData)
-            ?.catch((error) => console.warn("[TCloud Notes] convertCurrentBlock falhou", error));
+        const hasMulti = this.adapter.hasMultiBlockSelection?.(range);
+
+        if (hasMulti) {
+          this.adapter.popoverController?.markBatchAction?.(true);
         }
+
+        const promise = (hasMulti && typeof this.adapter.convertSelectedBlocks === "function")
+          ? this.adapter.convertSelectedBlocks?.(convType, convData, range)
+          : this.adapter.convertCurrentBlock?.(convType, convData);
+
+        promise
+          ?.finally(() => {
+            if (hasMulti) this.adapter.popoverController?.markBatchAction?.(false);
+            this.adapter.popoverController?.clear("convert-block");
+          })
+          ?.catch((error) => console.warn("[TCloud Notes] conversão falhou", error));
         return;
       }
 
@@ -2626,6 +2633,18 @@ export class EditorAdapter {
             tcloudFolder: "Pasta do TCloud",
           },
           tools: {
+            list: {
+              "Unordered": "Lista",
+              "Ordered": "Lista numerada",
+              "Checklist": "Checklist",
+              "Numeric": "Numérico",
+              "Lower Roman": "Romano minúsculo",
+              "Upper Roman": "Romano maiúsculo",
+              "Lower Alpha": "Alfabético minúsculo",
+              "Upper Alpha": "Alfabético maiúsculo",
+              "Start with": "Começar em",
+              "Counter type": "Tipo de numeração",
+            },
             link: {
               "Add a link": "Inserir link",
               "Link": "Link",
@@ -2780,6 +2799,9 @@ export class EditorAdapter {
         viewportRoot: root?.closest?.(".notes-app") || document.body,
         onOpen: () => this.toolbarController?.setExternalEditorMenuOpen(true, "editor-popover"),
         onClose: () => this.toolbarController?.setExternalEditorMenuOpen(false, "editor-popover"),
+        onChange: () => this.notifyManualChange().catch((error) => {
+          console.warn("Falha ao notificar mudanca no popover", error);
+        }),
       });
       this.popoverController.connect();
     }
@@ -3234,31 +3256,49 @@ export class EditorAdapter {
   async runBlockTune(tuneName, options = {}) {
     await this.init();
     const preferredRange = options.preferredRange || null;
+    const hasMulti = this.blockSelectionController?.hasMultiBlockSelection?.(preferredRange);
 
-    if (tuneName === "delete") {
-      if (this.blockSelectionController?.hasMultiBlockSelection?.(preferredRange)) {
-        return this.deleteSelectedBlocks(preferredRange);
-      }
-      return this.deleteBlock();
+    if (hasMulti) {
+      this.popoverController?.markBatchAction?.(true);
     }
 
-    if (tuneName === "moveUp" || tuneName === "moveDown") {
-      const direction = tuneName === "moveUp" ? -1 : 1;
-      const indexes = this.getSelectedBlockIndexes(preferredRange);
-      if (indexes.length > 1) {
-        return this.shiftSelectedBlocks(direction, preferredRange);
-      }
-      const index = await this.currentBlockIndex();
-      if (!Number.isInteger(index) || index < 0) return { changed: false, reason: "no-current-block" };
-      const total = this.lastSavedContent?.blocks?.length || 0;
-      if (!total) return { changed: false, reason: "empty-editor" };
-      const target = index + direction;
-      if (target < 0) return { changed: false, reason: "first-block" };
-      if (target >= total) return { changed: false, reason: "last-block" };
-      return this.swapBlocks(index, target);
-    }
+    const releaseBatch = () => {
+      if (hasMulti) this.popoverController?.markBatchAction?.(false);
+    };
 
-    return { changed: false, reason: "unknown-tune" };
+    try {
+      if (tuneName === "delete") {
+        if (hasMulti) {
+          const result = await this.deleteSelectedBlocks(preferredRange);
+          releaseBatch();
+          return result;
+        }
+        return this.deleteBlock();
+      }
+
+      if (tuneName === "moveUp" || tuneName === "moveDown") {
+        const direction = tuneName === "moveUp" ? -1 : 1;
+        const indexes = this.getSelectedBlockIndexes(preferredRange);
+        if (indexes.length > 1) {
+          const result = await this.shiftSelectedBlocks(direction, preferredRange);
+          releaseBatch();
+          return result;
+        }
+        const index = await this.currentBlockIndex();
+        if (!Number.isInteger(index) || index < 0) return { changed: false, reason: "no-current-block" };
+        const total = this.lastSavedContent?.blocks?.length || 0;
+        if (!total) return { changed: false, reason: "empty-editor" };
+        const target = index + direction;
+        if (target < 0) return { changed: false, reason: "first-block" };
+        if (target >= total) return { changed: false, reason: "last-block" };
+        return this.swapBlocks(index, target);
+      }
+
+      return { changed: false, reason: "unknown-tune" };
+    } catch (error) {
+      releaseBatch();
+      throw error;
+    }
   }
 
   async swapBlocks(fromIndex, toIndex) {

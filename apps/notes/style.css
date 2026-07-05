@@ -9054,6 +9054,64 @@ body,
 }
 
 /* =========================================================
+   Destaque da opção ativa no menu flutuante do Editor.js
+   ========================================================= */
+.editorjs-host .ce-popover-item--active,
+.ce-popover-item--active,
+#tcloud-notes-editor-popover-portal .ce-popover-item--active {
+  background: var(--accent) !important;
+  color: #fff !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18) !important;
+}
+
+.editorjs-host .ce-popover-item--active .ce-popover-item__icon,
+.ce-popover-item--active .ce-popover-item__icon,
+#tcloud-notes-editor-popover-portal .ce-popover-item--active .ce-popover-item__icon {
+  background: rgba(255, 255, 255, 0.18) !important;
+  border-color: rgba(255, 255, 255, 0.22) !important;
+  color: #fff !important;
+}
+
+.editorjs-host .ce-popover-item--active .ce-popover-item__title,
+.editorjs-host .ce-popover-item--active .ce-popover-item__secondary-title,
+.editorjs-host .ce-popover-item--active .ce-popover-item__shortcut,
+.ce-popover-item--active .ce-popover-item__title,
+.ce-popover-item--active .ce-popover-item__secondary-title,
+.ce-popover-item--active .ce-popover-item__shortcut,
+#tcloud-notes-editor-popover-portal .ce-popover-item--active .ce-popover-item__title,
+#tcloud-notes-editor-popover-portal .ce-popover-item--active .ce-popover-item__secondary-title,
+#tcloud-notes-editor-popover-portal .ce-popover-item--active .ce-popover-item__shortcut {
+  color: #fff !important;
+}
+
+/* =========================================================
+   Tema do campo "Começar em" do plugin de listas
+   ========================================================= */
+.editorjs-host .cdx-list-start-with-field,
+.cdx-list-start-with-field,
+#tcloud-notes-editor-popover-portal .cdx-list-start-with-field {
+  background: var(--notes-editor-menu-bg-strong) !important;
+  border-color: var(--notes-editor-menu-border) !important;
+  color: var(--notes-editor-menu-text) !important;
+  pointer-events: auto !important;
+}
+
+.editorjs-host .cdx-list-start-with-field__input,
+.cdx-list-start-with-field__input,
+#tcloud-notes-editor-popover-portal .cdx-list-start-with-field__input {
+  color: var(--notes-editor-menu-text) !important;
+  background: transparent !important;
+  pointer-events: auto !important;
+}
+
+.editorjs-host .cdx-list-start-with-field:focus-within,
+.cdx-list-start-with-field:focus-within,
+#tcloud-notes-editor-popover-portal .cdx-list-start-with-field:focus-within {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 2px rgba(var(--accent-rgb, 52, 120, 246), 0.25) !important;
+}
+
+/* =========================================================
    Dark mode — ajustes de hover/seleção de blocos
    ========================================================= */
 @media (prefers-color-scheme: dark) {

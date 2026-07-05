@@ -362,3 +362,110 @@ describe("Problema 2 — Aplicação de cor de fundo em seleção múltipla", ()
     expect(bgPatch.color).toBeUndefined();
   });
 });
+
+describe("Menu flutuante de lista — Start with e destaque ativo", () => {
+  let host;
+  let controller;
+
+  beforeEach(() => {
+    document.body.innerHTML = "";
+    host = document.createElement("div");
+    host.className = "editorjs-host";
+    document.body.appendChild(host);
+  });
+
+  afterEach(() => {
+    if (controller) {
+      controller.disconnect();
+      controller = null;
+    }
+    const portal = document.getElementById("tcloud-notes-editor-popover-portal");
+    if (portal) portal.remove();
+  });
+
+  test("portal NÃO cancela pointerdown/mousedown dentro do input .cdx-list-start-with-field", () => {
+    controller = new EditorJsPopoverController({ root: host });
+    controller.connect();
+
+    const portal = document.getElementById("tcloud-notes-editor-popover-portal");
+    expect(portal).not.toBeNull();
+
+    const wrapper = document.createElement("div");
+    wrapper.className = "cdx-list-start-with-field";
+    const input = document.createElement("input");
+    input.className = "cdx-list-start-with-field__input";
+    input.type = "text";
+    wrapper.appendChild(input);
+    portal.appendChild(wrapper);
+
+    const mouseEvent = new MouseEvent("mousedown", { bubbles: true, cancelable: true });
+    input.dispatchEvent(mouseEvent);
+    expect(mouseEvent.defaultPrevented).toBe(false);
+  });
+
+  test("portal foca explicitamente o input .cdx-list-start-with-field__input ao clicar", () => {
+    controller = new EditorJsPopoverController({ root: host });
+    controller.connect();
+
+    const portal = document.getElementById("tcloud-notes-editor-popover-portal");
+    const wrapper = document.createElement("div");
+    wrapper.className = "cdx-list-start-with-field";
+    const input = document.createElement("input");
+    input.className = "cdx-list-start-with-field__input";
+    input.type = "text";
+    wrapper.appendChild(input);
+    portal.appendChild(wrapper);
+
+    const other = document.createElement("button");
+    document.body.appendChild(other);
+    other.focus();
+    expect(document.activeElement).toBe(other);
+
+    input.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true }));
+    expect(document.activeElement).toBe(input);
+
+    other.remove();
+  });
+
+  test("input de Start with notifica onChange após debounce", async () => {
+    const onChange = jest.fn();
+    controller = new EditorJsPopoverController({ root: host, onChange });
+    controller.connect();
+
+    const wrapper = document.createElement("div");
+    wrapper.className = "cdx-list-start-with-field";
+    const input = document.createElement("input");
+    input.className = "cdx-list-start-with-field__input";
+    wrapper.appendChild(input);
+    document.getElementById("tcloud-notes-editor-popover-portal").appendChild(wrapper);
+
+    input.value = "5";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    expect(onChange).not.toHaveBeenCalled();
+
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    expect(onChange).toHaveBeenCalledTimes(1);
+  });
+
+  test("Escape no input de Start with tira o foco e não fecha o menu imediatamente", () => {
+    controller = new EditorJsPopoverController({ root: host });
+    controller.connect();
+    controller.isOpen = true;
+
+    const wrapper = document.createElement("div");
+    wrapper.className = "cdx-list-start-with-field";
+    const input = document.createElement("input");
+    input.className = "cdx-list-start-with-field__input";
+    wrapper.appendChild(input);
+    document.getElementById("tcloud-notes-editor-popover-portal").appendChild(wrapper);
+    input.focus();
+    expect(document.activeElement).toBe(input);
+
+    const escapeEvent = new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true });
+    input.dispatchEvent(escapeEvent);
+
+    expect(document.activeElement).not.toBe(input);
+    expect(controller.isOpen).toBe(true);
+    expect(escapeEvent.defaultPrevented).toBe(true);
+  });
+});
